@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cludoku — A Murder in Nine Rooms</title>
+<style>
+  /* ----------------------------------------------------------------------
+     CLUDOKU — noir case-file styling
+     ---------------------------------------------------------------------- */
+  :root{
+    --bg:#0d0f14; --panel:#171a22; --panel-2:#1f2330;
+    --ink:#e8dcc0; --ink-dim:#9aa0ae; --line:#3a3f4c;
+    --amber:#e7b94d; --amber-soft:#f0d98c; --blood:#c1272d;
+    --given:#cbd2dd; --good:#4caf7d; --bad:#e1554c;
+    --grid-thick:#776b4f; --grid-thin:#2c313d;
+    --cell:64px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    color:var(--ink); background:#0d0f14;
+    min-height:100vh; padding:18px clamp(10px,3vw,40px) 60px;
+  }
+  /* fixed backdrop layer (avoids background-attachment:fixed repaint stalls) */
+  body::before{
+    content:"";position:fixed;inset:0;z-index:-1;
+    background-image:linear-gradient(rgba(8,9,13,.78),rgba(8,9,13,.92)),
+                     url("assets/bg-desktop.jpg");
+    background-size:cover; background-position:center;
+  }
+  @media (max-width:700px){
+    body::before{background-image:linear-gradient(rgba(8,9,13,.80),rgba(8,9,13,.93)),
+                          url("assets/bg-mobile.jpg");}
+  }
+  header.app{display:flex;align-items:center;justify-content:space-between;
+    gap:16px;flex-wrap:wrap;max-width:1180px;margin:0 auto 20px;}
+  header.app img.logo{height:62px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));}
+  .tagline{color:var(--ink-dim);font-style:italic;font-size:14px;margin-top:2px;}
+  .top-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  select,button{font-family:inherit;}
+
+  .layout{display:grid;grid-template-columns:auto 360px;gap:26px;
+    max-width:1180px;margin:0 auto;align-items:start;}
+  @media (max-width:980px){.layout{grid-template-columns:1fr;}}
+
+  /* ---- Board ---------------------------------------------------------- */
+  .board-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;}
+  .board{
+    display:grid;grid-template-columns:repeat(9,var(--cell));
+    grid-template-rows:repeat(9,var(--cell));
+    background:var(--grid-thick);gap:1px;padding:3px;
+    border:3px solid var(--grid-thick);border-radius:6px;
+    box-shadow:0 14px 40px rgba(0,0,0,.6),inset 0 0 0 1px #000;
+    user-select:none;
+  }
+  @media (max-width:560px){:root{--cell:min(10.5vw,40px);}}
+  .cell{
+    position:relative;display:flex;align-items:center;justify-content:center;
+    background:var(--panel);cursor:pointer;font-size:calc(var(--cell)*.34);
+    transition:background .12s;
+  }
+  /* thick room borders every 3 cells */
+  .cell[data-c="2"],.cell[data-c="5"]{margin-right:2px;}
+  .cell[data-r="2"],.cell[data-r="5"]{margin-bottom:2px;}
+  .cell.given{cursor:default;}
+  .cell.sel{background:#3a3526 !important;box-shadow:inset 0 0 0 2px var(--amber);}
+  .cell.peer{background:#232737;}
+  .cell.match{background:#2c3a33;}
+  .cell.bad-cell .token{outline:2px solid var(--bad);outline-offset:-2px;}
+  .room-tag{position:absolute;top:2px;left:3px;font-size:9px;letter-spacing:.4px;
+    color:rgba(231,220,192,.30);text-transform:uppercase;pointer-events:none;
+    font-family:"Courier New",monospace;}
+
+  .token{
+    width:80%;height:80%;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-weight:700;color:#fff;
+    text-shadow:0 1px 2px rgba(0,0,0,.7);
+    box-shadow:0 2px 6px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.18);
+  }
+  .cell.given .token{box-shadow:0 2px 6px rgba(0,0,0,.45),
+    inset 0 0 0 2px rgba(255,255,255,.55);}
+  .cell.given .token::after{content:"";position:absolute;}
+
+  /* ---- Suspect tray --------------------------------------------------- */
+  .tray{display:grid;grid-template-columns:repeat(9,1fr);gap:8px;
+    width:min(100%,9*var(--cell));}
+  .susp{
+    position:relative;aspect-ratio:1/1.18;border-radius:8px;cursor:pointer;
+    background-size:cover;background-position:center;border:2px solid transparent;
+    box-shadow:0 3px 8px rgba(0,0,0,.5);overflow:hidden;transition:transform .1s;
+  }
+  .susp:hover{transform:translateY(-3px);}
+  .susp.sel{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber),0 6px 14px rgba(0,0,0,.6);}
+  .susp.done{filter:grayscale(.7) brightness(.55);}
+  .susp .key{position:absolute;top:2px;left:4px;font-size:11px;color:#fff;
+    text-shadow:0 1px 2px #000;font-family:"Courier New",monospace;}
+  .susp .left{position:absolute;bottom:0;left:0;right:0;text-align:center;
+    font-size:12px;font-weight:700;background:rgba(0,0,0,.55);color:var(--amber-soft);
+    padding:1px 0;}
+
+  /* ---- Toolbar -------------------------------------------------------- */
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+  .btn{
+    display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+    background:linear-gradient(180deg,#262b38,#1b1f2a);
+    color:var(--ink);border:1px solid var(--line);border-radius:8px;
+    padding:9px 14px;font-size:14px;transition:.12s;
+  }
+  .btn:hover{border-color:var(--amber);color:var(--amber-soft);}
+  .btn:active{transform:translateY(1px);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn img{width:18px;height:18px;}
+  .btn.primary{background:linear-gradient(180deg,#7a5e1f,#5a4314);
+    border-color:var(--amber);color:#fff;}
+  .pill{padding:9px 12px;border-radius:8px;border:1px solid var(--line);
+    background:#1b1f2a;color:var(--ink);}
+
+  /* ---- Clues panel ---------------------------------------------------- */
+  .casefile{
+    background:linear-gradient(180deg,#1c1f29,#15171f);
+    border:1px solid var(--line);border-radius:10px;padding:20px 22px;
+    box-shadow:0 14px 40px rgba(0,0,0,.55);position:relative;
+  }
+  .casefile::before{content:"CONFIDENTIAL";position:absolute;top:14px;right:-6px;
+    transform:rotate(8deg);border:2px solid rgba(193,39,45,.55);color:rgba(193,39,45,.7);
+    font-family:"Courier New",monospace;font-weight:700;font-size:11px;
+    padding:3px 8px;letter-spacing:1px;border-radius:3px;}
+  .casefile h2{font-size:13px;letter-spacing:3px;color:var(--ink-dim);
+    text-transform:uppercase;margin:0 0 4px;font-family:"Courier New",monospace;}
+  .case-title{font-size:23px;color:var(--blood);margin:0 0 2px;
+    font-variant:small-caps;letter-spacing:1px;}
+  .case-sub{color:var(--ink-dim);font-style:italic;font-size:14px;margin-bottom:14px;}
+  .sec{margin:16px 0 6px;font-family:"Courier New",monospace;font-size:11px;
+    letter-spacing:2px;color:var(--amber);text-transform:uppercase;
+    border-bottom:1px dashed var(--line);padding-bottom:4px;}
+  .clues{list-style:none;margin:0;padding:0;font-size:14.5px;line-height:1.5;}
+  .clues li{padding:5px 0 5px 22px;position:relative;color:var(--ink);}
+  .clues li::before{content:"\2022";position:absolute;left:4px;color:var(--blood);font-size:18px;top:2px;}
+  .clues li b{color:var(--amber-soft);}
+  .status{margin-top:14px;min-height:20px;font-size:14px;font-style:italic;}
+  .status.good{color:var(--good);} .status.bad{color:var(--bad);}
+
+  .legend{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-top:6px;}
+  .legend .rm{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-dim);}
+  .legend .rm img{width:18px;height:18px;opacity:.85;}
+  .legend .rm i{width:11px;height:11px;border-radius:3px;display:inline-block;flex:none;}
+
+  /* ---- Modals --------------------------------------------------------- */
+  .modal-bg{position:fixed;inset:0;background:rgba(4,5,8,.82);display:none;
+    align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .modal-bg.show{display:flex;}
+  .modal{background:linear-gradient(180deg,#1d212c,#13151d);border:1px solid var(--amber);
+    border-radius:12px;max-width:520px;width:100%;padding:28px;position:relative;
+    box-shadow:0 20px 60px rgba(0,0,0,.7);text-align:center;}
+  .modal .x{position:absolute;top:12px;right:12px;cursor:pointer;background:none;
+    border:none;padding:6px;} .modal .x img{width:20px;height:20px;}
+  .modal h2{margin:.2em 0;color:var(--amber-soft);font-variant:small-caps;letter-spacing:2px;}
+  .reveal-token{width:96px;height:96px;border-radius:50%;margin:10px auto;
+    display:flex;align-items:center;justify-content:center;font-size:46px;font-weight:700;
+    color:#fff;box-shadow:0 0 0 4px rgba(231,185,77,.4),0 8px 20px rgba(0,0,0,.6);}
+  .killer-name{font-size:30px;color:var(--blood);font-variant:small-caps;letter-spacing:1px;}
+  .modal p{color:var(--ink);line-height:1.55;}
+  .modal .weapon{display:inline-flex;align-items:center;gap:6px;color:var(--amber-soft);}
+  .modal .weapon img{width:20px;height:20px;}
+  .diff-row{display:flex;gap:10px;justify-content:center;margin:18px 0;flex-wrap:wrap;}
+  footer{max-width:1180px;margin:30px auto 0;color:var(--ink-dim);font-size:12px;
+    text-align:center;font-style:italic;}
+</style>
+</head>
+<body>
+  <header class="app">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <img class="logo" src="assets/logo.svg" alt="Cludoku" />
+    </div>
+    <div class="top-controls">
+      <span class="pill" id="metaInfo">New case</span>
+      <button class="btn" id="settingsBtn"><img src="assets/icons/settings.svg" alt=""/>New Case</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- LEFT: board, tray, toolbar -->
+    <div class="board-wrap">
+      <div class="board" id="board"></div>
+
+      <div class="tray" id="tray"></div>
+
+      <div class="toolbar">
+        <button class="btn" id="undoBtn"><img src="assets/icons/undo.svg" alt=""/>Undo</button>
+        <button class="btn" id="redoBtn"><img src="assets/icons/redo.svg" alt=""/>Redo</button>
+        <button class="btn" id="eraseBtn"><img src="assets/icons/erase.svg" alt=""/>Erase</button>
+        <button class="btn" id="hintBtn"><img src="assets/icons/hint.svg" alt=""/>Hint</button>
+        <button class="btn primary" id="checkBtn"><img src="assets/icons/check.svg" alt=""/>Check</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: case file -->
+    <aside class="casefile">
+      <h2>Case File</h2>
+      <div class="case-title" id="caseTitle">—</div>
+      <div class="case-sub" id="caseSub">Assembling the file…</div>
+
+      <div class="sec">Confirmed Sightings</div>
+      <ul class="clues" id="clueList"></ul>
+
+      <div class="sec">Detective's Notes</div>
+      <ul class="clues">
+        <li>Each <b>suspect (A–I)</b> appears exactly once in every <b>row</b>, <b>column</b>, and <b>room</b>.</li>
+        <li>Pick a suspect from the tray, then click a cell — or press <b>A–I</b> / <b>1–9</b>.</li>
+        <li>The killer was last seen <b>alone in the heart of the <span id="murderRoomName">Hall</span></b>. Place every suspect correctly to unmask them.</li>
+      </ul>
+
+      <div class="sec">The Nine Rooms</div>
+      <div class="legend" id="legend"></div>
+
+      <div class="status" id="status"></div>
+    </aside>
+  </div>
+
+  <footer>Cludoku prototype · placeholder art — drop final portraits into <code>/assets</code> · a true 9×9 Latin-square sudoku under the hood.</footer>
+
+  <!-- New-case / settings modal -->
+  <div class="modal-bg" id="settingsModal">
+    <div class="modal">
+      <button class="x" id="settingsClose"><img src="assets/icons/close.svg" alt="close"/></button>
+      <h2>Open a New Case</h2>
+      <p>Choose the difficulty of the investigation.</p>
+      <div class="diff-row">
+        <button class="btn" data-diff="easy">Rookie</button>
+        <button class="btn" data-diff="medium">Detective</button>
+        <button class="btn" data-diff="hard">Inspector</button>
+      </div>
+      <button class="btn" id="settingsBack"><img src="assets/icons/back.svg" alt=""/>Keep current case</button>
+    </div>
+  </div>
+
+  <!-- Win / reveal modal -->
+  <div class="modal-bg" id="winModal">
+    <div class="modal">
+      <button class="x" id="winClose"><img src="assets/icons/close.svg" alt="close"/></button>
+      <h2>Mystery Solved!</h2>
+      <div class="reveal-token" id="revealToken">?</div>
+      <p>The killer was</p>
+      <div class="killer-name" id="killerName">—</div>
+      <p id="winStory" style="margin-top:14px;"></p>
+      <button class="btn primary" id="winNew" style="margin-top:8px;">Open the Next Case</button>
+    </div>
+  </div>
+
+<script>
+"use strict";
+/* ======================================================================
+   CLUDOKU — game logic
+   A real, uniquely-solvable 9×9 sudoku (Latin square). Digits 1–9 are
+   reskinned as nine murder suspects; the nine 3×3 boxes as nine rooms.
+   ====================================================================== */
+
+/* ---- Theme data ----------------------------------------------------- */
+const SUSPECTS = [ // index 0..8  => value 1..9
+  {L:"A", name:"Scarlet", color:"#c1272d", img:"assets/suspect-01.png"},
+  {L:"B", name:"Mustard", color:"#d69e2e", img:"assets/suspect-02.png"},
+  {L:"C", name:"Plum",    color:"#7b4091", img:"assets/suspect-03.png"},
+  {L:"D", name:"Green",   color:"#2e8b57", img:"assets/suspect-04.png"},
+  {L:"E", name:"Peacock", color:"#206b9c", img:"assets/suspect-05.png"},
+  {L:"F", name:"Orchid",  color:"#c766a8", img:"assets/suspect-06.png"},
+  {L:"G", name:"Slate",   color:"#606c7a", img:"assets/suspect-07.png"},
+  {L:"H", name:"Azure",   color:"#34a8bc", img:"assets/suspect-08.png"},
+  {L:"I", name:"Ivory",   color:"#b9a878", img:"assets/suspect-09.png"},
+];
+// Nine rooms, in box order 0..8 (left→right, top→bottom). hue for tint + icon.
+const ROOMS = [
+  {name:"The Study",          hue:35,  icon:"bookshelf"},
+  {name:"The Conservatory",   hue:140, icon:"plant"},
+  {name:"The Garden Room",    hue:95,  icon:"bush"},
+  {name:"The Dining Room",    hue:20,  icon:"table"},
+  {name:"The Grand Hall",     hue:0,   icon:"rug"},   // box 4 = murder room
+  {name:"The Lounge",         hue:265, icon:"tv"},
+  {name:"The Library",        hue:48,  icon:"lamp"},
+  {name:"The Master Bedroom", hue:205, icon:"bed"},
+  {name:"The Parlor",         hue:300, icon:"chair"},
+];
+const WEAPONS = [
+  {n:"the heavy gilt painting", icon:"painting"},
+  {n:"a tarnished brass lamp",  icon:"lamp"},
+  {n:"the solid oak chair",     icon:"chair"},
+  {n:"the ornate Persian rug",  icon:"rug"},
+  {n:"a weighted potted plant", icon:"plant"},
+];
+const MURDER_BOX = 4; // center room
+
+/* ---- Sudoku engine -------------------------------------------------- */
+const boxOf = (r,c)=> Math.floor(r/3)*3 + Math.floor(c/3);
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function valid(g,r,c,n){
+  for(let i=0;i<9;i++){
+    if(g[r*9+i]===n) return false;
+    if(g[i*9+c]===n) return false;
+  }
+  const br=Math.floor(r/3)*3, bc=Math.floor(c/3)*3;
+  for(let i=0;i<3;i++)for(let j=0;j<3;j++) if(g[(br+i)*9+(bc+j)]===n) return false;
+  return true;
+}
+function fillGrid(g){
+  const pos=g.indexOf(0);
+  if(pos<0) return true;
+  const r=Math.floor(pos/9), c=pos%9;
+  for(const n of shuffle([1,2,3,4,5,6,7,8,9])){
+    if(valid(g,r,c,n)){ g[pos]=n; if(fillGrid(g)) return true; g[pos]=0; }
+  }
+  return false;
+}
+// count solutions, early-exit at `limit` (used to guarantee uniqueness)
+function countSolutions(g,limit){
+  const pos=g.indexOf(0);
+  if(pos<0) return 1;
+  const r=Math.floor(pos/9), c=pos%9;
+  let count=0;
+  for(let n=1;n<=9;n++){
+    if(valid(g,r,c,n)){
+      g[pos]=n;
+      count+=countSolutions(g,limit);
+      g[pos]=0;
+      if(count>=limit) return count;
+    }
+  }
+  return count;
+}
+function generate(givensTarget){
+  const solution=new Array(81).fill(0);
+  fillGrid(solution);
+  const puzzle=solution.slice();
+  let clues=81;
+  for(const pos of shuffle([...Array(81).keys()])){
+    if(clues<=givensTarget) break;
+    const saved=puzzle[pos];
+    puzzle[pos]=0;
+    const copy=puzzle.slice();
+    if(countSolutions(copy,2)!==1){ puzzle[pos]=saved; } else { clues--; }
+  }
+  return {solution,puzzle};
+}
+
+/* ---- Game state ----------------------------------------------------- */
+let solution, puzzle, board, given, sel=-1, selSuspect=-1;
+let undoStack=[], redoStack=[], hintsUsed=0, solved=false;
+let theCase=null;
+const DIFF={easy:42, medium:34, hard:28};
+
+const $=id=>document.getElementById(id);
+const boardEl=$("board"), trayEl=$("tray");
+
+function newGame(diff){
+  const g=generate(DIFF[diff]||34);
+  solution=g.solution; puzzle=g.puzzle;
+  board=puzzle.slice();
+  given=puzzle.map(v=>v!==0);
+  sel=-1; selSuspect=-1; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false;
+  buildCase();
+  renderBoard(); renderTray(); renderLegend(); renderClues();
+  setStatus(`Case opened — ${countEmpty()} suspects still to place.`,"");
+  $("metaInfo").textContent = ({easy:"Rookie",medium:"Detective",hard:"Inspector"}[diff]||"Detective")+" case";
+  updateButtons();
+}
+
+function countEmpty(){return board.filter(v=>v===0).length;}
+
+/* ---- Build the mystery from the solution ---------------------------- */
+function buildCase(){
+  // killer = whoever stands alone in the heart of the murder room
+  const killerVal = solution[4*9+4];           // center cell value (1..9)
+  let victimVal = solution[0];                  // a corner suspect
+  if(victimVal===killerVal) victimVal = solution[80];
+  if(victimVal===killerVal) victimVal = solution[8];
+  const weapon = WEAPONS[(killerVal-1)%WEAPONS.length];
+  const caseNo = 100 + (killerVal*7 + victimVal*3) % 800;
+  theCase = {killerVal, victimVal, weapon, room:ROOMS[MURDER_BOX], caseNo};
+  $("murderRoomName").textContent = ROOMS[MURDER_BOX].name.replace(/^The /,"");
+}
+
+/* ---- Rendering ------------------------------------------------------ */
+function suspectToken(val){
+  const s=SUSPECTS[val-1];
+  const t=document.createElement("div");
+  t.className="token";
+  t.style.background=`radial-gradient(circle at 35% 30%, ${s.color}, ${shade(s.color,-35)})`;
+  t.textContent=s.L;
+  return t;
+}
+function shade(hex,amt){
+  const n=parseInt(hex.slice(1),16);
+  let r=(n>>16)+amt,g=((n>>8)&255)+amt,b=(n&255)+amt;
+  r=Math.max(0,Math.min(255,r));g=Math.max(0,Math.min(255,g));b=Math.max(0,Math.min(255,b));
+  return `#${(r<<16|g<<8|b).toString(16).padStart(6,"0")}`;
+}
+
+function renderBoard(){
+  boardEl.innerHTML="";
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    const i=r*9+c;
+    const cell=document.createElement("div");
+    cell.className="cell"+(given[i]?" given":"");
+    cell.dataset.r=r; cell.dataset.c=c; cell.dataset.i=i;
+    const box=boxOf(r,c);
+    const room=ROOMS[box];
+    cell.style.backgroundColor = `hsla(${room.hue},38%,${box===MURDER_BOX?42:50}%,0.10)`;
+    // room tag in the top-left cell of each box
+    if(r%3===0 && c%3===0){
+      const tag=document.createElement("span");
+      tag.className="room-tag";
+      tag.textContent=room.name.replace(/^The /,"");
+      cell.appendChild(tag);
+    }
+    if(board[i]!==0) cell.appendChild(suspectToken(board[i]));
+    cell.addEventListener("click",()=>onCellClick(i));
+    boardEl.appendChild(cell);
+  }
+  refreshHighlights();
+}
+
+function renderTray(){
+  trayEl.innerHTML="";
+  const counts=remainingCounts();
+  SUSPECTS.forEach((s,k)=>{
+    const v=k+1;
+    const el=document.createElement("div");
+    el.className="susp"+(selSuspect===v?" sel":"")+(counts[v]<=0?" done":"");
+    el.style.backgroundImage=`linear-gradient(180deg,rgba(0,0,0,0) 55%,rgba(0,0,0,.15)),url("${s.img}")`;
+    el.style.backgroundColor=s.color;
+    el.innerHTML=`<span class="key">${s.L}</span><span class="left">${counts[v]>0?counts[v]:'✓'}</span>`;
+    el.title=`${s.name} — press ${s.L}`;
+    el.addEventListener("click",()=>selectSuspect(v));
+    trayEl.appendChild(el);
+  });
+}
+function remainingCounts(){
+  const c={}; for(let v=1;v<=9;v++)c[v]=9;
+  for(const v of board) if(v!==0) c[v]--;
+  return c;
+}
+
+function renderLegend(){
+  const L=$("legend"); L.innerHTML="";
+  ROOMS.forEach((room,box)=>{
+    const d=document.createElement("div");
+    d.className="rm";
+    const murder = box===MURDER_BOX ? ' style="color:var(--blood);font-weight:700"' : '';
+    d.innerHTML=`<i style="background:hsl(${room.hue},45%,50%)"></i>`+
+      `<img src="assets/icons/${room.icon}.svg" alt=""/><span${murder}>${room.name}</span>`;
+    L.appendChild(d);
+  });
+}
+
+function renderClues(){
+  $("caseTitle").textContent = `The ${SUSPECTS[theCase.victimVal-1].name} Affair`;
+  $("caseSub").textContent =
+    `Case №${theCase.caseNo}. ${SUSPECTS[theCase.victimVal-1].name} found slain in ${theCase.room.name.toLowerCase()}, struck with ${theCase.weapon.n}. Nine suspects. One is lying.`;
+  // narrate a handful of givens as "confirmed sightings"
+  const sightings=[];
+  for(let i=0;i<81;i++) if(given[i]) sightings.push(i);
+  shuffle(sightings);
+  const list=$("clueList"); list.innerHTML="";
+  sightings.slice(0,7)
+    .sort((a,b)=>boxOf(Math.floor(a/9),a%9)-boxOf(Math.floor(b/9),b%9))
+    .forEach(i=>{
+      const s=SUSPECTS[solution[i]-1];
+      const room=ROOMS[boxOf(Math.floor(i/9),i%9)];
+      const li=document.createElement("li");
+      li.innerHTML=`A witness places <b>${s.name} (${s.L})</b> in ${room.name.toLowerCase()}.`;
+      list.appendChild(li);
+    });
+}
+
+/* ---- Interaction ---------------------------------------------------- */
+function onCellClick(i){
+  if(solved) return;
+  if(given[i]){ sel=i; selSuspect=-1; refreshHighlights(); renderTray(); return; }
+  sel=i;
+  if(selSuspect>0){ place(i,selSuspect); }
+  refreshHighlights();
+}
+function selectSuspect(v){
+  if(solved) return;
+  selSuspect = (selSuspect===v? -1 : v);
+  if(selSuspect>0 && sel>=0 && !given[sel]) place(sel,selSuspect);
+  renderTray(); refreshHighlights();
+}
+function place(i,v){
+  if(given[i]||board[i]===v) return;
+  undoStack.push({i,prev:board[i]}); redoStack=[];
+  board[i]=v;
+  paintCell(i);
+  refreshHighlights(); renderTray(); updateButtons();
+  setStatus(`${SUSPECTS[v-1].name} placed in ${ROOMS[boxOf(Math.floor(i/9),i%9)].name.toLowerCase()}.`,"");
+  checkWin();
+}
+function erase(){
+  if(solved||sel<0||given[sel]||board[sel]===0) return;
+  undoStack.push({i:sel,prev:board[sel]}); redoStack=[];
+  board[sel]=0; paintCell(sel);
+  refreshHighlights(); renderTray(); updateButtons();
+}
+function undo(){
+  if(!undoStack.length) return;
+  const m=undoStack.pop(); redoStack.push({i:m.i,prev:board[m.i]});
+  board[m.i]=m.prev; paintCell(m.i);
+  refreshHighlights(); renderTray(); updateButtons();
+}
+function redo(){
+  if(!redoStack.length) return;
+  const m=redoStack.pop(); undoStack.push({i:m.i,prev:board[m.i]});
+  board[m.i]=m.prev; paintCell(m.i);
+  refreshHighlights(); renderTray(); updateButtons();
+}
+function paintCell(i){
+  const cell=boardEl.children[i];
+  const tok=cell.querySelector(".token"); if(tok) tok.remove();
+  if(board[i]!==0) cell.appendChild(suspectToken(board[i]));
+}
+
+function hint(){
+  if(solved) return;
+  let target = (sel>=0 && !given[sel] && board[sel]===0) ? sel : -1;
+  if(target<0){
+    const empties=[]; for(let i=0;i<81;i++) if(board[i]===0) empties.push(i);
+    if(!empties.length) return;
+    target=empties[Math.floor(Math.random()*empties.length)];
+  }
+  undoStack.push({i:target,prev:board[target]}); redoStack=[];
+  board[target]=solution[target]; paintCell(target);
+  hintsUsed++; sel=target;
+  refreshHighlights(); renderTray(); updateButtons();
+  const s=SUSPECTS[solution[target]-1];
+  setStatus(`Hint: forensics confirm ${s.name} (${s.L}) belongs there. (${hintsUsed} hint${hintsUsed>1?"s":""} used)`,"");
+  checkWin();
+}
+
+function check(){
+  if(solved) return;
+  let wrong=0, empty=0;
+  for(let i=0;i<81;i++){
+    const cell=boardEl.children[i];
+    cell.classList.remove("bad-cell");
+    if(board[i]===0){empty++;continue;}
+    if(board[i]!==solution[i]){ wrong++; cell.classList.add("bad-cell"); }
+  }
+  if(wrong===0 && empty===0){ /* win handled elsewhere */ }
+  else if(wrong===0) setStatus(`So far so good — no contradictions. ${empty} cell${empty>1?"s":""} still empty.`,"good");
+  else setStatus(`${wrong} suspect${wrong>1?"s are":" is"} in the wrong room (marked in red).`,"bad");
+  setTimeout(()=>{for(let i=0;i<81;i++)boardEl.children[i].classList.remove("bad-cell");},2200);
+}
+
+/* ---- Highlights ----------------------------------------------------- */
+function conflictSet(){
+  const bad=new Set();
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    const i=r*9+c, v=board[i]; if(!v) continue;
+    for(let k=0;k<9;k++){
+      const ri=r*9+k, ci=k*9+c;
+      if(ri!==i && board[ri]===v){bad.add(i);bad.add(ri);}
+      if(ci!==i && board[ci]===v){bad.add(i);bad.add(ci);}
+    }
+    const br=Math.floor(r/3)*3, bc=Math.floor(c/3)*3;
+    for(let a=0;a<3;a++)for(let b=0;b<3;b++){
+      const j=(br+a)*9+(bc+b);
+      if(j!==i && board[j]===v){bad.add(i);bad.add(j);}
+    }
+  }
+  return bad;
+}
+function refreshHighlights(){
+  const bad=conflictSet();
+  const selVal = sel>=0 ? board[sel] : 0;
+  const matchVal = selSuspect>0 ? selSuspect : selVal;
+  for(let i=0;i<81;i++){
+    const cell=boardEl.children[i];
+    cell.classList.remove("sel","peer","match");
+    if(i===sel) cell.classList.add("sel");
+    else if(sel>=0 && isPeer(i,sel)) cell.classList.add("peer");
+    if(matchVal>0 && board[i]===matchVal) cell.classList.add("match");
+    const tok=cell.querySelector(".token");
+    if(tok) tok.style.outline = bad.has(i)?"2px solid var(--bad)":"";
+  }
+}
+function isPeer(a,b){
+  const ra=Math.floor(a/9),ca=a%9,rb=Math.floor(b/9),cb=b%9;
+  return ra===rb||ca===cb||boxOf(ra,ca)===boxOf(rb,cb);
+}
+
+/* ---- Win ------------------------------------------------------------ */
+function checkWin(){
+  for(let i=0;i<81;i++) if(board[i]!==solution[i]) return;
+  solved=true;
+  const killer=SUSPECTS[theCase.killerVal-1];
+  const victim=SUSPECTS[theCase.victimVal-1];
+  const tok=$("revealToken");
+  tok.textContent=killer.L;
+  tok.style.background=`radial-gradient(circle at 35% 30%, ${killer.color}, ${shade(killer.color,-40)})`;
+  $("killerName").textContent=`${killer.name} (${killer.L})`;
+  $("winStory").innerHTML =
+    `Standing alone in the heart of ${theCase.room.name.toLowerCase()}, `+
+    `<b>${killer.name}</b> struck down <b>${victim.name}</b> with `+
+    `<span class="weapon"><img src="assets/icons/${theCase.weapon.icon}.svg" alt=""/>${theCase.weapon.n}</span>. `+
+    `Case №${theCase.caseNo} closed${hintsUsed?` (with ${hintsUsed} hint${hintsUsed>1?"s":""})`:""}.`;
+  setStatus(`Solved! The killer was ${killer.name}.`,"good");
+  $("winModal").classList.add("show");
+}
+
+/* ---- UI plumbing ---------------------------------------------------- */
+function setStatus(msg,kind){const s=$("status");s.textContent=msg;s.className="status"+(kind?" "+kind:"");}
+function updateButtons(){
+  $("undoBtn").disabled=!undoStack.length;
+  $("redoBtn").disabled=!redoStack.length;
+}
+
+$("undoBtn").onclick=undo;
+$("redoBtn").onclick=redo;
+$("eraseBtn").onclick=erase;
+$("hintBtn").onclick=hint;
+$("checkBtn").onclick=check;
+
+$("settingsBtn").onclick=()=>$("settingsModal").classList.add("show");
+$("settingsClose").onclick=$("settingsBack").onclick=()=>$("settingsModal").classList.remove("show");
+document.querySelectorAll("[data-diff]").forEach(b=>b.onclick=()=>{
+  $("settingsModal").classList.remove("show"); newGame(b.dataset.diff);
+});
+$("winClose").onclick=()=>$("winModal").classList.remove("show");
+$("winNew").onclick=()=>{$("winModal").classList.remove("show");newGame("medium");};
+
+document.addEventListener("keydown",e=>{
+  if(solved) return;
+  const k=e.key.toUpperCase();
+  if(k>="A"&&k<="I"){ selectSuspect(k.charCodeAt(0)-64); e.preventDefault(); return; }
+  if(e.key>="1"&&e.key<="9"){ selectSuspect(+e.key); e.preventDefault(); return; }
+  if(e.key==="Backspace"||e.key==="Delete"){ erase(); e.preventDefault(); return; }
+  if(sel<0) return;
+  const r=Math.floor(sel/9),c=sel%9;
+  if(e.key==="ArrowUp"&&r>0){sel-=9;refreshHighlights();e.preventDefault();}
+  if(e.key==="ArrowDown"&&r<8){sel+=9;refreshHighlights();e.preventDefault();}
+  if(e.key==="ArrowLeft"&&c>0){sel-=1;refreshHighlights();e.preventDefault();}
+  if(e.key==="ArrowRight"&&c<8){sel+=1;refreshHighlights();e.preventDefault();}
+});
+
+/* ---- Go ------------------------------------------------------------- */
+newGame("medium");
+</script>
+</body>
+</html>
