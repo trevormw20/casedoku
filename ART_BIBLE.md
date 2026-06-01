@@ -2,6 +2,9 @@
 **Direction: Cozy Cartoon Noir**
 _Single source of truth for all visual assets. Generate everything against this so the suspects, rooms, weapons, UI, and board read as one game. Built to be reskinned later for DLC theme packs (medieval, kid-friendly, etc.)._
 
+## 0. Master style reference (LOCKED) — `assets/reference/style-reference.png`
+This image is the **canonical style anchor** for the entire game: a clean, bold-outlined cozy-cartoon-noir female detective with a magnifying glass. **Every other asset — suspects, rooms, weapons, objects, UI icons, branding — must be generated to match its exact line weight, cel shading, proportions, palette, and warmth.** Feed it as the reference image into the generator ("match this exact style") before producing anything else. If a new asset doesn't sit beside this frame as obviously the same game, regenerate it.
+
 ## 1. The vibe in one line
 Charming, rounded cartoon characters and cozy interiors, wrapped in a warm-but-moody mystery atmosphere — think a friendly whodunit board game lit by a single desk lamp. Approachable, never grim.
 
@@ -104,7 +107,7 @@ Rule: noir base + warm woods carry the world; jewel-tone suspect colors are the 
 The style + 3-layer board are theme-agnostic by design. A pack = same slots, redrawn: medieval → knight/maid suspects, dagger/mace weapons, great-hall/armory/dungeon rooms; kid-friendly → softer palette, rounder characters, "missing cookie" tone. Keep outline weight, shading, and top-down camera identical so packs feel like the same game.
 
 ## 16. nano banana workflow
-- Generate ONE "style frame" you love first; feed it as the reference image for everything else ("match this exact style").
+- The "style frame" is already chosen and locked: **`assets/reference/style-reference.png`** (see §0). Feed it as the reference image for everything else ("match this exact style").
 - Make the suspect cast in a single batch for consistency.
 - Generate on a plain flat background and cut out for transparency; never pre-crop tokens to circles (CSS handles that).
 - 1:1 for suspects/objects/icons; 16:9 and 9:16 for backgrounds; generate at 1024+ and downscale.
