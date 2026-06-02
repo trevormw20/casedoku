@@ -21,9 +21,9 @@
     min-height:100vh; padding:16px clamp(8px,2.5vw,34px) 60px;
   }
   body::before{content:"";position:fixed;inset:0;z-index:-1;
-    background-image:linear-gradient(rgba(8,9,13,.80),rgba(8,9,13,.93)),url("assets/bg-desktop.jpg");
+    background-image:linear-gradient(rgba(8,9,13,.80),rgba(8,9,13,.93)),url("assets/ui/bg-desktop.jpg");
     background-size:cover;background-position:center;}
-  @media (max-width:700px){body::before{background-image:linear-gradient(rgba(8,9,13,.82),rgba(8,9,13,.94)),url("assets/bg-mobile.jpg");}}
+  @media (max-width:700px){body::before{background-image:linear-gradient(rgba(8,9,13,.82),rgba(8,9,13,.94)),url("assets/ui/bg-mobile.jpg");}}
 
   header.app{display:flex;align-items:center;justify-content:space-between;gap:14px;
     flex-wrap:wrap;max-width:1240px;margin:0 auto 16px;}
@@ -147,11 +147,11 @@
 </head>
 <body>
   <header class="app">
-    <img class="logo" src="assets/logo.svg" alt="Casedoku" />
+    <img class="logo" src="assets/ui/logo.svg" alt="Casedoku" />
     <div class="top-controls">
       <span class="pill" id="diffPill">—</span>
       <span class="pill" id="codePill" title="Click to copy case code" style="cursor:pointer">Case —</span>
-      <button class="btn" id="newBtn"><img src="assets/icons/settings.svg" alt=""/>New Case</button>
+      <button class="btn" id="newBtn"><img src="assets/ui/icon-settings.svg" alt=""/>New Case</button>
     </div>
   </header>
 
@@ -160,11 +160,11 @@
       <div class="board" id="board"></div>
       <div class="tray" id="tray"></div>
       <div class="toolbar">
-        <button class="btn" id="undoBtn"><img src="assets/icons/undo.svg" alt=""/>Undo</button>
-        <button class="btn" id="redoBtn"><img src="assets/icons/redo.svg" alt=""/>Redo</button>
-        <button class="btn" id="eraseBtn"><img src="assets/icons/erase.svg" alt=""/>Erase</button>
-        <button class="btn" id="hintBtn"><img src="assets/icons/hint.svg" alt=""/>Hint</button>
-        <button class="btn primary" id="checkBtn"><img src="assets/icons/check.svg" alt=""/>Check</button>
+        <button class="btn" id="undoBtn"><img src="assets/ui/icon-undo.svg" alt=""/>Undo</button>
+        <button class="btn" id="redoBtn"><img src="assets/ui/icon-redo.svg" alt=""/>Redo</button>
+        <button class="btn" id="eraseBtn"><img src="assets/ui/icon-erase.svg" alt=""/>Erase</button>
+        <button class="btn" id="hintBtn"><img src="assets/ui/icon-hint.svg" alt=""/>Hint</button>
+        <button class="btn primary" id="checkBtn"><img src="assets/ui/icon-check.svg" alt=""/>Check</button>
       </div>
     </div>
 
@@ -189,7 +189,7 @@
   <!-- New case modal -->
   <div class="modal-bg" id="newModal">
     <div class="modal center">
-      <button class="x" id="newClose"><img src="assets/icons/close.svg" alt="close"/></button>
+      <button class="x" id="newClose"><img src="assets/ui/icon-close.svg" alt="close"/></button>
       <h2>Open a New Case</h2>
       <p style="color:var(--ink-dim);font-style:italic;margin:.2em 0 0">Choose the difficulty of the investigation.</p>
       <div class="diff-row" id="diffRow">
@@ -200,13 +200,13 @@
       </div>
       <div class="field">
         <input id="seedInput" placeholder="case code" maxlength="12"/>
-        <button class="btn" id="loadCodeBtn"><img src="assets/icons/check.svg" alt=""/>Load code</button>
+        <button class="btn" id="loadCodeBtn"><img src="assets/ui/icon-check.svg" alt=""/>Load code</button>
       </div>
       <div class="field" style="margin-top:4px">
         <button class="btn" id="dailyBtn">Daily Case</button>
-        <button class="btn" id="randomBtn"><img src="assets/icons/redo.svg" alt=""/>Random case</button>
+        <button class="btn" id="randomBtn"><img src="assets/ui/icon-redo.svg" alt=""/>Random case</button>
       </div>
-      <button class="btn" id="newBack" style="margin-top:6px"><img src="assets/icons/back.svg" alt=""/>Keep current case</button>
+      <button class="btn" id="newBack" style="margin-top:6px"><img src="assets/ui/icon-back.svg" alt=""/>Keep current case</button>
       <p style="color:var(--ink-dim);font-size:12px;font-style:italic;margin-top:10px">
         A case code reproduces the exact same mystery. Share it.</p>
     </div>
@@ -215,7 +215,7 @@
   <!-- Reveal modal -->
   <div class="modal-bg" id="winModal">
     <div class="modal center">
-      <button class="x" id="winClose"><img src="assets/icons/close.svg" alt="close"/></button>
+      <button class="x" id="winClose"><img src="assets/ui/icon-close.svg" alt="close"/></button>
       <h2>Case Closed</h2>
       <div class="reveal-token" id="revealToken">?</div>
       <p style="margin:.2em 0">The killer was</p>
@@ -636,35 +636,47 @@ GLOBAL.CludokuEngine = {
 
 const MANOR = {
   id:"manor", name:"Blackwood Manor (Classic Whodunit)",
+  // each suspect carries a `role` slug -> assets/themes/manor/suspects/suspect-<role>.png
   suspects:[
-    {L:"A",name:"Miss Scarlet", color:"#c1272d", motive:"a ruinous gambling debt"},
-    {L:"B",name:"Col. Mustard",  color:"#d69e2e", motive:"a blackmail letter"},
-    {L:"C",name:"Prof. Plum",    color:"#7b4091", motive:"a stolen discovery"},
-    {L:"D",name:"Rev. Green",    color:"#2e8b57", motive:"a buried scandal"},
-    {L:"E",name:"Mrs. Peacock",  color:"#206b9c", motive:"a contested will"},
-    {L:"F",name:"Mme. Orchid",   color:"#c766a8", motive:"a jilted heart"},
-    {L:"G",name:"Mr. Slate",     color:"#606c7a", motive:"an old grudge"},
-    {L:"H",name:"Dr. Azure",     color:"#34a8bc", motive:"a malpractice cover-up"},
-    {L:"I",name:"Lady Ivory",    color:"#b9a878", motive:"a fortune withheld"},
+    {role:"colonel",     L:"A", name:"The Colonel",     color:"#D4A017", motive:"a buried war secret"},
+    {role:"widow",       L:"B", name:"The Widow",       color:"#7D3C98", motive:"a contested inheritance"},
+    {role:"butler",      L:"C", name:"The Butler",      color:"#5D6D7E", motive:"years of unpaid loyalty"},
+    {role:"chef",        L:"D", name:"The Chef",        color:"#C0392B", motive:"a stolen recipe"},
+    {role:"professor",   L:"E", name:"The Professor",   color:"#1E8449", motive:"a discredited theory"},
+    {role:"heiress",     L:"F", name:"The Heiress",     color:"#C2407A", motive:"a cut from the will"},
+    {role:"gardener",    L:"G", name:"The Gardener",    color:"#D86A1E", motive:"a dismissed grievance"},
+    {role:"captain",     L:"H", name:"The Captain",     color:"#2471A3", motive:"a mutinous grudge"},
+    {role:"doctor",      L:"I", name:"The Doctor",      color:"#17A2A2", motive:"a malpractice cover-up"},
+    {role:"actress",     L:"J", name:"The Actress",     color:"#B03060", motive:"a ruined reputation"},
+    {role:"inspector",   L:"K", name:"The Inspector",   color:"#3A4250", motive:"a case gone wrong"},
+    {role:"maid",        L:"L", name:"The Maid",        color:"#4FA3D1", motive:"a withheld wage"},
+    {role:"heir",        L:"M", name:"The Heir",        color:"#7A8B3C", motive:"an impatient fortune"},
+    {role:"magician",    L:"N", name:"The Magician",    color:"#3D348B", motive:"an exposed trick"},
+    {role:"antiquarian", L:"O", name:"The Antiquarian", color:"#9C6B30", motive:"a priceless forgery"},
+    {role:"nurse",       L:"P", name:"The Nurse",       color:"#D98C9A", motive:"a fatal prescription"},
   ],
   victims:["Lord Blackwood","the Dowager Countess","Sir Hugh Pennington","the family solicitor","old Mr. Ashford"],
+  // each weapon carries a `slug` -> assets/themes/manor/weapons/weapon-<slug>.png
   weapons:[
-    {n:"the candlestick", icon:"lamp"}, {n:"the lead pipe", icon:"table"},
-    {n:"the dagger", icon:"painting"}, {n:"the revolver", icon:"chair"},
-    {n:"the heavy rope", icon:"rug"}, {n:"a poisoned glass", icon:"plant"},
+    {n:"the kitchen knife", slug:"knife"},   {n:"the candlestick", slug:"candlestick"},
+    {n:"the revolver", slug:"revolver"},     {n:"the heavy rope", slug:"rope"},
+    {n:"the wrench", slug:"wrench"},          {n:"a vial of poison", slug:"poison"},
+    {n:"the lead pipe", slug:"pipe"},         {n:"the fireplace poker", slug:"poker"},
+    {n:"the cast-iron pan", slug:"pan"},      {n:"the letter opener", slug:"letteropener"},
+    {n:"the rolling pin", slug:"rollingpin"}, {n:"the garden shears", slug:"shears"},
   ],
   times:["just before midnight","at the stroke of nine","during the thunderstorm","at supper","as the clock struck two"],
-  // rooms indexed by box id (need >=9)
+  // rooms indexed by box id (need >=9). slug -> room floor png; icon -> object png on the room tag
   rooms:[
-    {name:"the Study", icon:"bookshelf", hue:35},
-    {name:"the Conservatory", icon:"plant", hue:140},
-    {name:"the Garden Room", icon:"bush", hue:95},
-    {name:"the Dining Room", icon:"table", hue:20},
-    {name:"the Grand Hall", icon:"rug", hue:0},
-    {name:"the Lounge", icon:"tv", hue:265},
-    {name:"the Library", icon:"lamp", hue:48},
-    {name:"the Bedroom", icon:"bed", hue:205},
-    {name:"the Parlor", icon:"chair", hue:300},
+    {name:"the Study", slug:"study", icon:"bookshelf", hue:35},
+    {name:"the Library", slug:"library", icon:"lamp", hue:48},
+    {name:"the Conservatory", slug:"conservatory", icon:"plant", hue:140},
+    {name:"the Billiard Room", slug:"billiard", icon:"chair", hue:175},
+    {name:"the Grand Hall", slug:"hall", icon:"rug", hue:0},
+    {name:"the Lounge", slug:"lounge", icon:"tv", hue:265},
+    {name:"the Kitchen", slug:"kitchen", icon:"table", hue:200},
+    {name:"the Bedroom", slug:"bedroom", icon:"bed", hue:320},
+    {name:"the Dining Room", slug:"dining", icon:"painting", hue:20},
   ],
 };
 
@@ -738,7 +750,17 @@ GLOBAL.CludokuSkin={ renderClue, roomName, spotName, sName, vocab, TYPE_LABEL,
 (function(){
 "use strict";
 if(typeof document==="undefined") return;
-const E=window.CludokuEngine, Skin=window.CludokuSkin, THEME=window.CLUDOKU_THEMES.manor;
+/* ---- active theme + asset paths (data-driven; swap ACTIVE_THEME for a pack) ---- */
+const ACTIVE_THEME="manor";
+const THEME=window.CLUDOKU_THEMES[ACTIVE_THEME];
+const E=window.CludokuEngine, Skin=window.CludokuSkin;
+const tAsset=(kind,file)=>`assets/themes/${ACTIVE_THEME}/${kind}/${file}`;
+const uiAsset=file=>`assets/ui/${file}`;
+/* graceful fallback: any <img> whose file is missing simply hides (no broken icon),
+   leaving the CSS/placeholder underneath. background-image assets fall back to their
+   background-color automatically, so the board never breaks on a partial asset set. */
+document.addEventListener("error",e=>{ const t=e.target;
+  if(t && t.tagName==="IMG"){ t.style.visibility="hidden"; } }, true);
 const $=id=>document.getElementById(id);
 const boardEl=$("board"), trayEl=$("tray");
 
@@ -792,10 +814,15 @@ function renderBoard(){
     if(c%cfg.bw===0 && c!==0) cell.classList.add("bl");
     if(i===C.murderCell) cell.classList.add("scene");
     const box=E.boxOf(cfg,r,c), room=THEME.rooms[box%THEME.rooms.length];
-    cell.style.backgroundColor=`hsla(${room.hue},38%,50%,0.10)`;
+    const sr=r%cfg.bh, sc=c%cfg.bw;                                  // sub-position within the room
+    const fx=cfg.bw>1?(sc/(cfg.bw-1))*100:0, fy=cfg.bh>1?(sr/(cfg.bh-1))*100:0;
+    cell.style.backgroundColor=`hsla(${room.hue},38%,50%,0.12)`;      // fallback tint if floor png is missing
+    cell.style.backgroundImage=`linear-gradient(rgba(13,15,20,.42),rgba(13,15,20,.42)),url("${tAsset('rooms','room-'+room.slug+'.png')}")`;
+    cell.style.backgroundSize=`${cfg.bw*100}% ${cfg.bh*100}%`;        // one floor image tiled across the room
+    cell.style.backgroundPosition=`${fx}% ${fy}%`;
     cell.dataset.i=i;
     if(r%cfg.bh===0 && c%cfg.bw===0){ const tag=document.createElement("span"); tag.className="room-tag";
-      tag.innerHTML=`<img src="assets/icons/${room.icon}.svg" alt="">`+room.name.replace(/^the /i,""); cell.appendChild(tag); }
+      tag.innerHTML=`<img src="${tAsset('objects','object-'+room.icon+'.png')}" alt="">`+room.name.replace(/^the /i,""); cell.appendChild(tag); }
     if(board[i]!==0) cell.appendChild(tokenEl(board[i]));
     cell.addEventListener("click",()=>onCell(i));
     boardEl.appendChild(cell);
@@ -809,7 +836,7 @@ function renderTray(){
   for(let v=1;v<=cfg.N;v++){
     const s=Skin.sName(THEME,v), el=document.createElement("div");
     el.className="susp"+(selSuspect===v?" sel":"")+(counts[v]<=0?" done":"");
-    el.style.backgroundImage=`linear-gradient(180deg,rgba(0,0,0,0) 55%,rgba(0,0,0,.2)),url("assets/suspect-${String(v).padStart(2,"0")}.png")`;
+    el.style.backgroundImage=`linear-gradient(180deg,rgba(0,0,0,0) 55%,rgba(0,0,0,.2)),url("${tAsset('suspects','suspect-'+s.role+'.png')}")`;
     el.style.backgroundColor=s.color;
     el.innerHTML=`<span class="key">${s.L}</span><span class="left">${counts[v]>0?counts[v]:'✓'}</span>`;
     el.title=`${s.name} — press ${s.L}`;
@@ -820,8 +847,8 @@ function renderTray(){
 function renderCase(){
   $("caseTitle").textContent=`The ${story.victim} Murder`;
   $("caseSub").innerHTML=`Case №${story.caseNo}. ${story.victim} was found slain in ${story.sceneRoom}, `+
-    `${story.time}, with <img class="wicon" src="assets/icons/${story.weapon.icon}.svg" alt="">${story.weapon.n}. `+
-    `Nine guests. Every alibi but one will hold.`;
+    `${story.time}, with <img class="wicon" src="${tAsset('weapons','weapon-'+story.weapon.slug+'.png')}" alt="">${story.weapon.n}. `+
+    `Every guest has an alibi — every alibi but one will hold.`;
   // evidence
   const list=$("clueList"); list.innerHTML="";
   C.clues.forEach((cl,idx)=>{
@@ -918,7 +945,7 @@ function reveal(){ solved=true; const k=Skin.sName(THEME,C.killer);
   chain.appendChild(tail);
   $("winStory").innerHTML=`${k.name} had sworn they spent the evening in ${story.alibiRoom} — `+
     `but the evidence places them at the scene in ${story.sceneRoom}, `+
-    `<img class="wicon" src="assets/icons/${story.weapon.icon}.svg" alt="">${story.weapon.n} in hand. Case closed`+
+    `<img class="wicon" src="${tAsset('weapons','weapon-'+story.weapon.slug+'.png')}" alt="">${story.weapon.n} in hand. Case closed`+
     (hintsUsed?` (with ${hintsUsed} hint${hintsUsed>1?"s":""}).`:".");
   setStatus(`Solved! The killer was ${k.name}.`,"good");
   $("winModal").classList.add("show");

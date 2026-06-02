@@ -105,18 +105,29 @@ node tests/stats.mjs              # difficulty-balance probe (givens / completio
 ## Placeholder art
 
 All visuals are placeholder (CSS tokens, simple SVG icons, generated stand-ins). Real art
-drops into `/assets` with **no code changes** — the app already references the final names:
+drops into the **theme-pack folder structure** with **no code changes** — the loader uses
+named files and the active theme is a variable (`ACTIVE_THEME = "manor"`). Each folder has a
+README listing its exact expected filenames.
 
 ```
 assets/
-  suspect-01.png … suspect-09.png   512×512   suspect portraits (tray)
-  logo.svg                          wordmark
-  bg-desktop.jpg / bg-mobile.jpg    1920×1080 / 1080×1920 backgrounds
-  icons/
-    plant table chair bush tv bookshelf rug lamp bed painting   .svg  (rooms / weapons)
-    undo redo erase hint check settings back close              .svg  (UI)
+  reference/style-reference.png        — locked master style anchor
+  themes/manor/
+    suspects/  suspect-<role>.png  (+ -victim.png)   — 16 roles
+    objects/   object-<name>.png                     — 12
+    rooms/     room-<name>.png                        — 9 (top-down floors)
+    weapons/   weapon-<name>.png                      — 12
+  ui/          logo.svg, logo-subtitle.png, bg-desktop.jpg, bg-mobile.jpg,
+               badge-<tier>.png, stamp-caseclosed.png, frame-spotlight.png,
+               ui-evidence-card.png, icon-<name>.svg, appicon.png, appicon-192.png
 ```
-Regenerate placeholders any time with `python make_assets.py`.
+
+**Graceful fallback:** a missing named file never breaks the board — suspects fall back to
+the colored lettered token, room floors to a flat color tint, and any missing `<img>` simply
+hides. Real files override the placeholders automatically when present, so art can be added
+incrementally. A new theme pack is the same slots under `assets/themes/<theme>/`.
+
+Regenerate all placeholders any time with `python make_assets.py`.
 
 ## How to play
 
