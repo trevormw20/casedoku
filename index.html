@@ -264,7 +264,13 @@
   .reveal-token{width:84px;height:84px;display:flex;align-items:center;justify-content:center;}
   .killer-name{font-size:27px;color:var(--blood);font-variant:small-caps;letter-spacing:1px;text-align:center;}
   /* accusation modal */
-  .accuse-intro{color:var(--ink-dim);font-style:italic;text-align:center;font-size:14px;margin:.2em 0 10px;}
+  .accuse-intro{color:var(--ink-dim);font-style:italic;text-align:center;font-size:14px;margin:.2em 0 6px;}
+  .accuse-intro b{color:var(--amber-soft);font-style:normal;}
+  .accuse-guesses{text-align:center;font-family:"Courier New",monospace;font-size:12px;letter-spacing:.5px;
+    color:var(--amber);margin-bottom:8px;}
+  .accuse-guesses b{color:var(--amber-soft);}
+  .modal.failed{border-color:var(--bad);}
+  .modal.failed .reveal-wrap{background-image:none;background:radial-gradient(circle,rgba(193,39,45,.25),transparent 68%);}
   .accuse-q{font-family:"Courier New",monospace;font-size:11px;letter-spacing:1.5px;color:var(--amber);
     text-transform:uppercase;margin:14px 0 6px;}
   .accuse-suspects{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px;}
@@ -348,6 +354,7 @@
     </div>
     <div class="top-controls">
       <span class="pill" id="timerPill" title="Time on this case">⏱ 00:00</span>
+      <span class="pill" id="guessPill" title="Accusation attempts left (a wrong one costs +1:00)">Guesses: 3</span>
       <span class="pill" id="diffPill">—</span>
       <span class="pill" id="codePill" title="Copy share code" style="cursor:pointer">Case No. —</span>
       <button class="btn" id="howtoBtn" title="How to play">? How to Play</button>
@@ -372,6 +379,7 @@
         <button class="btn" id="notesBtn" title="Pencil-mark candidates (press N)">✎ Notes</button>
         <button class="btn" id="hintBtn"><img src="assets/ui/icon-hint.png" alt=""/>Ask the Clerk</button>
         <button class="btn" id="checkBtn"><img src="assets/ui/icon-check.png" alt=""/>Check</button>
+        <button class="btn primary" id="accuseBtn" title="Name the killer (you have 3 guesses)">⚖ Accuse</button>
         <button class="btn" id="atmoBtn" title="Toggle board atmosphere">Atmosphere: —</button>
       </div>
       <div class="assistant" id="assistant" hidden>
@@ -457,7 +465,7 @@
         <li><b>Use the evidence</b> to resolve what sudoku alone can't — the clues break the ties the grid leaves open. (You can't finish by sudoku alone.)</li>
         <li><b>Make your accusation</b> once the grid is complete: name the culprit, the proof, and the motive.</li>
       </ol>
-      <p class="howto-foot">Tap a cell to select it, then tap a suspect to place them. <b>★</b> marks <b>key</b> evidence (required); the rest corroborate. <b>Every clue is true.</b></p>
+      <p class="howto-foot">Tap a cell to select it, then tap a suspect to place them. <b>★</b> marks <b>key</b> evidence (required); the rest corroborate. <b>Every clue is true.</b><br>You may <b>Accuse</b> at any time — but you get only <b>3 guesses</b>, and each wrong accusation adds <b>+1:00</b> to your time. Three misses and the case goes cold.</p>
       <button class="btn primary" id="howtoGo" style="margin-top:6px">Start sleuthing</button>
     </div>
   </div>
@@ -467,7 +475,8 @@
     <div class="modal">
       <button class="x" id="accuseClose"><img src="assets/ui/icon-close.png" alt="close"/></button>
       <h2 style="text-align:center">Final Deduction</h2>
-      <p class="accuse-intro">The house is in order and every guest is placed. Detective — make your accusation.</p>
+      <p class="accuse-intro">Name the killer. You don't have to finish the grid first — but you get only <b>3 guesses</b>, and a wrong accusation adds <b>+1:00</b> to your time.</p>
+      <div class="accuse-guesses" id="accuseGuesses"></div>
       <div class="accuse-q">1 · Who is the culprit?</div>
       <div class="accuse-suspects" id="accuseSuspects"></div>
       <div class="accuse-q">2 · What proves it?</div>
@@ -1158,7 +1167,8 @@ const boardEl=$("board"), trayEl=$("tray");
 
 let C=null, cfg=null, board=null, given=null, sel=-1, selSuspect=-1;
 let undoStack=[], redoStack=[], hintsUsed=0, solved=false, story=null, cluesUsed=new Set();
-let accuseCulprit=-1, attempts=0, clueStep=0, hintLevel=0, hintTarget=-1;
+let accuseCulprit=-1, guessesLeft=3, clueStep=0, hintLevel=0, hintTarget=-1;
+const MAX_GUESSES=3;
 let notesMode=false, candidates=[];   // candidates[i] = Set of suspect values pencilled into cell i
 
 /* ---- persistence (localStorage; runs locally) ---- */
@@ -1245,7 +1255,7 @@ function startCase(opts){
   C=E.generateCase(opts); cfg=C.cfg;
   board=C.givens.slice(); given=C.givens.map(v=>v!==0);
   sel=-1; selSuspect=-1; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false; cluesUsed=new Set();
-  accuseCulprit=-1; attempts=0; hintLevel=0; hintTarget=-1;
+  accuseCulprit=-1; guessesLeft=MAX_GUESSES; hintLevel=0; hintTarget=-1; updateGuessPill();
   candidates=Array.from({length:cfg.N*cfg.N},()=>new Set());
   notesMode=false; applyNotesMode();
   const as=$("assistant"); if(as) as.hidden=true;
@@ -1266,11 +1276,13 @@ function startCase(opts){
 }
 function setVar(k,v){ document.documentElement.style.setProperty(k,v); }
 /* ---- simple MM:SS case timer (freezes on solve/accusation; resets each case) ---- */
-let timerStart=0, timerId=null, timerFrozen=false;
-function tickTimer(){ if(timerFrozen)return; const s=Math.max(0,Math.floor((Date.now()-timerStart)/1000));
-  $("timerPill").textContent=`⏱ ${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`; }
-function startTimer(){ if(timerId)clearInterval(timerId); timerStart=Date.now(); timerFrozen=false; tickTimer(); timerId=setInterval(tickTimer,1000); }
-function freezeTimer(){ timerFrozen=true; if(timerId){ clearInterval(timerId); timerId=null; } }
+let timerStart=0, timerId=null, timerFrozen=false, frozenMs=0, penaltyMs=0;
+function fmtTime(ms){ const s=Math.max(0,Math.floor(ms/1000)); return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`; }
+function elapsedMs(){ return (timerFrozen?frozenMs:Math.max(0,Date.now()-timerStart)) + penaltyMs; }
+function tickTimer(){ $("timerPill").textContent=`⏱ ${fmtTime(elapsedMs())}`; }
+function startTimer(){ if(timerId)clearInterval(timerId); timerStart=Date.now(); penaltyMs=0; frozenMs=0; timerFrozen=false; tickTimer(); timerId=setInterval(tickTimer,1000); }
+function freezeTimer(){ if(!timerFrozen){ frozenMs=Math.max(0,Date.now()-timerStart); timerFrozen=true; } if(timerId){ clearInterval(timerId); timerId=null; } }
+function addPenalty(ms){ penaltyMs+=ms; tickTimer(); }   // reflected in the timer immediately (running or frozen)
 
 /* ---- board ---- */
 function tokenEl(val){ return makeToken(val); }
@@ -1451,7 +1463,7 @@ function hint(){ if(solved)return;
 }
 
 function check(){ if(solved)return;
-  if(gridComplete()){ freezeTimer(); openAccusation(); return; }   // complete & correct -> straight to the accusation
+  if(gridComplete()){ openAccusation(); return; }   // complete & correct -> straight to the accusation
   let wrong=0, empty=0;
   for(let i=0;i<cfg.N*cfg.N;i++){ const cell=boardEl.children[i]; const tok=cell.querySelector(".token"); if(tok)tok.classList.remove("bad");
     if(board[i]===0){empty++;continue;} if(board[i]!==C.solution[i]){ wrong++; if(tok)tok.classList.add("bad"); } }
@@ -1489,7 +1501,9 @@ function refresh(){ const bad=conflicts(); const N=cfg.N;
 
 /* ---- grid complete -> player makes the accusation -> payoff ---- */
 function gridComplete(){ for(let i=0;i<cfg.N*cfg.N;i++) if(board[i]!==C.solution[i]) return false; return true; }
-function checkWin(){ if(solved) return; if(gridComplete() && !$("accuseModal").classList.contains("show")){ freezeTimer(); openAccusation(); } }
+function checkWin(){ if(solved) return; if(gridComplete() && !$("accuseModal").classList.contains("show")) openAccusation(); }
+function updateGuessPill(){ const p=$("guessPill"); if(!p)return; p.textContent=`Guesses: ${guessesLeft}`;
+  p.style.color = guessesLeft<=1 ? "var(--bad)" : (guessesLeft<=2 ? "var(--amber-soft)" : ""); }
 
 function openAccusation(){
   // (1) culprit — clickable suspect tokens
@@ -1513,51 +1527,75 @@ function openAccusation(){
   const rng=E.makeRNG((C.seed^E.hashStr("accuse"))>>>0);
   for(let i=order.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; }
   order.forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=cap(Skin.sName(THEME,v).motive); mo.appendChild(o); });
+  const placed=board.filter(v=>v).length, total=cfg.N*cfg.N;
+  $("accuseGuesses").innerHTML=`<b>${guessesLeft}</b> guess${guessesLeft===1?"":"es"} left`+
+    (placed<total?` · board ${placed}/${total} placed (you can still accuse)`:` · grid complete`);
   setAccuseFeedback("",""); $("accuseModal").classList.add("show");
 }
 function setAccuseFeedback(msg,kind){ const f=$("accuseFeedback"); f.textContent=msg; f.className="accuse-feedback"+(kind?" "+kind:""); }
 function submitAccusation(){
   if(accuseCulprit<1){ setAccuseFeedback("Name a culprit first.",""); return; }
   if(accuseCulprit!==C.killer){
-    attempts++;
-    setAccuseFeedback("That isn't who the evidence points to. Re-examine the dashed scene — whoever stands there is the killer.","");
+    guessesLeft--; addPenalty(60000); updateGuessPill();      // wrong: lose a guess, +1:00 penalty
+    if(guessesLeft<=0){                                       // out of guesses -> case fails
+      $("accuseModal").classList.remove("show");
+      payoff(null, false);
+      return;
+    }
+    setAccuseFeedback(`Wrong accusation. +1:00 added to your time. ${guessesLeft} guess${guessesLeft===1?"":"es"} left.`,"bad");
     return;
   }
+  // correct culprit
   const evPick=+$("accuseEvidence").value, moPick=+$("accuseMotive").value;
   const proving=new Set(C.proofClues);                                   // the KEY evidence tying culprit to scene
   const grade={ evidenceRight: evPick>=0 && proving.has(evPick),         // Q2: real check
                 motiveRight: moPick>=1 && moPick===C.killer,             // Q3: real check vs culprit's motive
                 evPick };
   $("accuseModal").classList.remove("show");
-  payoff(grade);
+  payoff(grade, true);
 }
 
-function payoff(grade){
-  solved=true; const k=Skin.sName(THEME,C.killer);
+function payoff(grade, won){
+  solved=true; freezeTimer();
+  const k=Skin.sName(THEME,C.killer), modal=$("winModal").querySelector(".modal");
+  modal.classList.toggle("failed", !won);
+  // reveal the true culprit either way, so the player learns
   const rt=$("revealToken"); rt.innerHTML=""; rt.appendChild(makeToken(C.killer,"big"));
   $("killerName").textContent=k.name;
   $("killerMotive").textContent=`Motive: ${k.motive}.`;
-  $("newsHeadline").textContent=makeHeadline(k.name);
-  // key evidence: the player's pick if it was a proving clue, else the actual key proof
-  const proveIdx=(grade.evidenceRight && grade.evPick>=0)?grade.evPick:(C.proofClues.length?C.proofClues[0]:-1);
+  const correctProof=C.proofClues.length?stripTags(Skin.renderClue(cfg,THEME,C.clues[C.proofClues[0]])):"the arrangement of the house";
+  const proveIdx=(won && grade.evidenceRight && grade.evPick>=0)?grade.evPick:(C.proofClues.length?C.proofClues[0]:-1);
   $("poEvidence").innerHTML=proveIdx>=0?Skin.renderClue(cfg,THEME,C.clues[proveIdx]):"the arrangement of the house";
-  const troName=cap(story.weapon.n.replace(/^(the|a|an)\s+/i,""));
-  $("poTrophy").innerHTML=`<img class="wicon" src="${tAsset('weapons','weapon-'+story.weapon.slug+'.png')}" alt="">${troName}`;
-  // grade all three; culprit is always right here. proof + motive add accuracy.
-  const acc=1+(grade.evidenceRight?1:0)+(grade.motiveRight?1:0), perfect=acc===3;
-  const correctProof=C.proofClues.length?stripTags(Skin.renderClue(cfg,THEME,C.clues[C.proofClues[0]])):"";
-  const solvedTime=$("timerPill").textContent.replace("⏱ ","");
-  $("accuseScore").innerHTML=
-    `<div class="acc-stars">${"★".repeat(acc)}${"☆".repeat(3-acc)} <span class="acc-num">Accuracy ${acc}/3</span></div>`+
-    `<div class="acc-bits">Culprit ✓ · Proof ${grade.evidenceRight?"✓":"✗"} · Motive ${grade.motiveRight?"✓":"✗"} · ⏱ ${solvedTime}</div>`+
-    (perfect ? `<div class="acc-correct good">Flawless deduction.</div>`
-             : `<div class="acc-correct">`+
-               (grade.evidenceRight?"":`The proof was “${correctProof}”. `)+
-               (grade.motiveRight?"":`The motive was ${cap(k.motive)}.`)+`</div>`);
+  const totalTime=fmtTime(elapsedMs()), guessesUsed=MAX_GUESSES-guessesLeft;
+  const penaltyStr=penaltyMs?` · penalty +${fmtTime(penaltyMs)}`:"";
+  if(won){
+    $("newsHeadline").textContent=makeHeadline(k.name);
+    const troName=cap(story.weapon.n.replace(/^(the|a|an)\s+/i,""));
+    $("poTrophy").innerHTML=`<img class="wicon" src="${tAsset('weapons','weapon-'+story.weapon.slug+'.png')}" alt="">${troName}`;
+    const acc=1+(grade.evidenceRight?1:0)+(grade.motiveRight?1:0), perfect=acc===3;
+    $("accuseScore").innerHTML=
+      `<div class="acc-stars">${"★".repeat(acc)}${"☆".repeat(3-acc)} <span class="acc-num">Accuracy ${acc}/3</span></div>`+
+      `<div class="acc-bits">Culprit ✓ · Proof ${grade.evidenceRight?"✓":"✗"} · Motive ${grade.motiveRight?"✓":"✗"} · ⏱ ${totalTime}${penaltyStr} · ${guessesUsed+1}/${MAX_GUESSES} guesses used</div>`+
+      (perfect ? `<div class="acc-correct good">Flawless deduction.</div>`
+               : `<div class="acc-correct">`+(grade.evidenceRight?"":`The proof was “${correctProof}”. `)+(grade.motiveRight?"":`The motive was ${cap(k.motive)}.`)+`</div>`);
+    recordSolved(makeHeadline(k.name), perfect);
+    setStatus(`Case closed — ${k.name} arrested.`,"good");
+  } else {
+    $("newsHeadline").textContent=failHeadline();
+    $("poTrophy").innerHTML=`<span class="muted">none — case unsolved</span>`;
+    $("accuseScore").innerHTML=
+      `<div class="acc-stars" style="color:var(--bad)">CASE UNSOLVED</div>`+
+      `<div class="acc-bits">Out of guesses — the killer walked free. ⏱ ${totalTime}${penaltyStr} · ${MAX_GUESSES}/${MAX_GUESSES} guesses used</div>`+
+      `<div class="acc-correct">The culprit was <b>${k.name}</b>. The proof: “${correctProof}”. Motive: ${cap(k.motive)}.</div>`;
+    setStatus(`Case unsolved — ${k.name} got away.`,"bad");
+  }
   buildChain();
-  recordSolved(makeHeadline(k.name), perfect);
-  setStatus(`Case closed — ${k.name} arrested${hintsUsed?` (with ${hintsUsed} hint${hintsUsed>1?"s":""})`:""}.`,"good");
   $("winModal").classList.add("show");
+}
+function failHeadline(){
+  const opts=["THE KILLER WALKS FREE — CASE GOES COLD","NO ARREST AT {PLACE}: KILLER ESCAPES","{PLACE} MURDER LEFT UNSOLVED"];
+  const rng=E.makeRNG((C.seed^E.hashStr("fail"))>>>0);
+  return opts[Math.floor(rng()*opts.length)].replace(/\{PLACE\}/g,(THEME.place||"the manor").toUpperCase());
 }
 function makeHeadline(killerName){
   const S=THEME.story; if(!S||!S.headlines) return "CASE CLOSED";
@@ -1626,6 +1664,7 @@ $("winClose").onclick=()=>$("winModal").classList.remove("show");
 $("winNew").onclick=()=>{ $("winModal").classList.remove("show"); startCase({difficulty:C.tier, rand:Math.random()}); };
 $("accuseClose").onclick=()=>{ $("accuseModal").classList.remove("show"); setStatus("Ready to accuse — press Check when you're sure.",""); };
 $("accuseSubmit").onclick=submitAccusation;
+$("accuseBtn").onclick=()=>{ if(solved)return; openAccusation(); };   // accuse any time, full board not required
 $("archiveBtn").onclick=openArchive;
 $("howtoBtn").onclick=()=>$("howtoModal").classList.add("show");
 $("howtoClose").onclick=()=>$("howtoModal").classList.remove("show");
