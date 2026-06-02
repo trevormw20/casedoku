@@ -80,6 +80,12 @@
     border:1px solid rgba(231,185,77,.45);box-shadow:0 1px 4px rgba(0,0,0,.55);}
   .room-tag img{width:12px;height:12px;opacity:.95;}
   .wicon{width:14px;height:14px;vertical-align:-2px;}
+  /* on-board object landmark (bottom-left corner) + murder weapon on the scene cell (top-right);
+     small + cornered + above the centred token so they never collide with the suspect */
+  .cell-object{position:absolute;bottom:1px;left:1px;width:36%;max-width:17px;max-height:17px;z-index:4;
+    opacity:.9;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7));}
+  .cell-weapon{position:absolute;top:1px;right:1px;width:44%;max-width:21px;max-height:21px;z-index:5;
+    pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.85));}
   /* ---- suspect token: colored disc + per-case ring + portrait/letter ---- */
   .token{position:relative;width:82%;height:82%;border-radius:50%;
     display:flex;align-items:center;justify-content:center;
@@ -918,6 +924,15 @@ function generateCase(opts){
   // the key evidence that ties the culprit to the scene (used to grade the accusation's "proof")
   const proofClues=[...new Set(reasoning.map(r=>r.clue).filter(i=>i>=0))];
 
+  // one object landmark per room (box), placed at a fixed cell (not the scene), so the
+  // board's furniture art is meaningful and clues can read "next to the bookshelf".
+  const objectCells=[];
+  for(let box=0;box<cfg.N;box++){
+    const {r0,c0}=rcOfBox(cfg,box), bc=[];
+    for(let i=0;i<cfg.bh;i++)for(let j=0;j<cfg.bw;j++){ const ci=(r0+i)*cfg.N+(c0+j); if(ci!==murderCell) bc.push(ci); }
+    objectCells[box]=bc[Math.floor(rng()*bc.length)];
+  }
+
   return {
     tier, seed, code:caseCode(tier,seed), cfg,
     solution, givens,
@@ -926,7 +941,7 @@ function generateCase(opts){
     requiredCount: required.length,
     completionsWithout: completions.length,
     ambiguousCells: ambig,
-    murderCell, killer, sceneCandidates, reasoning, proofClues,
+    murderCell, killer, sceneCandidates, reasoning, proofClues, objectCells,
   };
 }
 
@@ -1132,11 +1147,20 @@ function spotName(cfg,theme,cell){
 }
 
 /* render a structured clue to English */
+let CASE_OBJECTS=[];                       // box -> object landmark cell, for "next to the X" clue text
+function setCaseObjects(arr){ CASE_OBJECTS=Array.isArray(arr)?arr:[]; }
+const OBJ_NAME={tv:"television"};          // slug -> readable; default = the slug itself
+function objName(slug){ return OBJ_NAME[slug]||slug; }
 function renderClue(cfg,theme,clue){
   const V=vocab(cfg), p=clue.p, S=v=>sName(theme,v).name;
   const list=arr=>arr.length<=1?arr[0]:arr.slice(0,-1).join(", ")+" and "+arr[arr.length-1];
   switch(clue.type){
     case "sighting":{ const x=spotName(cfg,theme,p.cell);
+      // if the sighted cell sits beside its room's object, reference the object landmark
+      const E=GLOBAL.CludokuEngine, N=cfg.N, r=Math.floor(p.cell/N), c=p.cell%N, box=E.boxOf(cfg,r,c), oc=CASE_OBJECTS[box];
+      if(oc!=null){ const dr=r-Math.floor(oc/N), dc=c-(oc%N);
+        if(Math.abs(dr)+Math.abs(dc)===1)
+          return `A witness places <b>${S(p.val)}</b> ${DIRWORD(dr,dc)} the ${objName(theme.rooms[box%theme.rooms.length].icon)} in ${x.room}.`; }
       return `A witness places <b>${S(p.val)}</b> in ${x.spot} of ${x.room}.`; }
     case "exclusion":{ const x=spotName(cfg,theme,p.cell);
       return `Whoever stood in ${x.spot} of ${x.room}, it was <b>not</b> ${S(p.val)}.`; }
@@ -1170,7 +1194,7 @@ function renderStory(theme, facts, rng){
 
 GLOBAL.CLUDOKU_THEMES={manor:MANOR};
 GLOBAL.CludokuSkin={ renderClue, renderStory, roomName, spotName, sName, vocab, TYPE_LABEL,
-  pick:(rng,arr)=>arr[Math.floor(rng()*arr.length)] };
+  setCaseObjects, objName, pick:(rng,arr)=>arr[Math.floor(rng()*arr.length)] };
 })(typeof window!=="undefined" ? window : globalThis);
 </script>
 
@@ -1291,6 +1315,7 @@ function startCase(opts){
   const as=$("assistant"); if(as) as.hidden=true;
   RING=assignRings(cfg.N);                                    // distinct ring colour per active suspect
   document.documentElement.style.setProperty("--disc-cream",DISC_CREAM);
+  Skin.setCaseObjects(C.objectCells);                         // object landmarks for "next to the X" clues
   dressStory();
   setVar("--cell", cfg.N<=6 ? "72px" : "62px");
   boardEl.style.gridTemplateColumns=`repeat(${cfg.N}, var(--cell))`;
@@ -1336,8 +1361,14 @@ function renderBoard(){
     cell.dataset.i=i;
     if(r%cfg.bh===0 && c%cfg.bw===0){ const tag=document.createElement("span"); tag.className="room-tag";
       tag.innerHTML=`<img src="${tAsset('objects','object-'+room.icon+'.png')}" alt="">`+room.name.replace(/^the /i,""); cell.appendChild(tag); }
+    // object landmark for this room (behind the token) — gives the furniture art a purpose
+    if(C.objectCells && C.objectCells[box]===i){ const o=document.createElement("img"); o.className="cell-object";
+      o.src=tAsset('objects','object-'+room.icon+'.png'); o.alt=""; cell.appendChild(o); }
     if(board[i]!==0) cell.appendChild(tokenEl(board[i]));
     else if(candidates[i] && candidates[i].size) cell.appendChild(candGrid(i));
+    // murder weapon on the crime-scene (dashed) cell, above everything
+    if(i===C.murderCell && story){ const w=document.createElement("img"); w.className="cell-weapon";
+      w.src=tAsset('weapons','weapon-'+story.weapon.slug+'.png'); w.alt=""; w.title=story.weapon.n; cell.appendChild(w); }
     cell.addEventListener("click",()=>onCell(i));
     boardEl.appendChild(cell);
   }
