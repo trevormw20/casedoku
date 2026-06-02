@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Casedoku — Deduction</title>
 <link rel="icon" href="assets/ui/appicon-192.png" />
 <link rel="apple-touch-icon" href="assets/ui/appicon.png" />
@@ -20,7 +20,9 @@
     --ring-w:2.4px;         /* token ring thickness */
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;height:100%;}
+  /* hard guard: the page can never be wider than the device, so the browser renders at
+     true device width (never the 980px "wide content" fallback that zooms the page out) */
+  html,body{margin:0;height:100%;max-width:100%;overflow-x:hidden;}
   body{
     font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;
     color:var(--ink); background:#0d0f14;
@@ -47,11 +49,13 @@
 
   .layout{display:grid;grid-template-columns:auto 410px;gap:24px;
     max-width:1240px;margin:0 auto;align-items:start;}
+  .layout>*{min-width:0;}   /* allow columns to shrink below content width (no overflow) */
   @media (max-width:1040px){
     .layout{grid-template-columns:1fr;}
     body{padding-left:8px;padding-right:8px;}
-    /* board fits the viewport width once it stacks; min() caps it at the desktop size */
-    :root{--cell:min(var(--cell-max), calc((100vw - 40px) / var(--ncols)));}
+    /* once stacked, the board becomes the hero: cells GROW to fill the viewport width
+       (the 62px --cell-max cap is desktop-only). ~95% of width here, ~98% on phones. */
+    :root{--cell:calc((100vw - 40px) / var(--ncols));}
   }
 
   .board-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;}
@@ -391,10 +395,11 @@
 
   /* ============ phone portrait (<=600px) ============ */
   @media (max-width:600px){
-    html,body{overflow-x:hidden;}                                  /* belt-and-suspenders: nothing spills sideways */
-    body{padding:10px max(8px,env(safe-area-inset-left))
-                calc(36px + env(safe-area-inset-bottom))
-                max(8px,env(safe-area-inset-right));}
+    body{padding:8px max(4px,env(safe-area-inset-left))
+                calc(32px + env(safe-area-inset-bottom))
+                max(4px,env(safe-area-inset-right));}
+    /* phone: board spans almost the full width (~4px margin each side), cells at their largest */
+    :root{--cell:calc((100vw - 30px) / var(--ncols));}
 
     /* --- compact header: small brand + pills, icon-only secondary buttons, Accuse keeps its label --- */
     header.app{gap:8px;margin-bottom:10px;}
