@@ -216,6 +216,20 @@
   .cell.hint-cell{box-shadow:inset 0 0 0 3px var(--amber),0 0 16px rgba(231,185,77,.7);
     animation:hintpulse 1s ease-in-out infinite alternate;}
   @keyframes hintpulse{to{box-shadow:inset 0 0 0 3px var(--amber),0 0 24px rgba(231,185,77,.95);}}
+  /* pencil-mark candidates (P3-notes): fixed 3x3 sub-grid of colored dots */
+  .cand-grid{position:absolute;inset:5px;display:grid;grid-template-columns:repeat(3,1fr);
+    grid-template-rows:repeat(3,1fr);gap:1px;pointer-events:none;}
+  .cand{display:flex;align-items:center;justify-content:center;}
+  .cand i{width:84%;height:84%;max-width:14px;max-height:14px;border-radius:50%;font-style:normal;
+    font-size:7px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;
+    text-shadow:0 1px 1px rgba(0,0,0,.8);box-shadow:0 0 0 1px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.3);}
+  /* notes-mode active: toolbar button lit + selected cell turns teal so the mode is obvious */
+  .btn.on{border-color:var(--amber);background:linear-gradient(180deg,#7a5e1f,#5a4314);color:#fff;}
+  body.notes .cell.sel{box-shadow:inset 0 0 0 3px #34a8bc, 0 0 13px rgba(52,168,188,.6) !important;}
+  body.notes .cell.sel::before{background:rgba(52,168,188,.18);}
+  .board-wrap{position:relative;}
+  body.notes .board-wrap::after{content:"✎ NOTES MODE";position:absolute;top:-6px;right:0;background:#34a8bc;color:#08222a;
+    font:700 9px "Courier New",monospace;letter-spacing:1px;padding:3px 8px;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.5);}
 
   .modal-bg{position:fixed;inset:0;background:rgba(4,5,8,.82);display:none;align-items:center;
     justify-content:center;z-index:50;padding:18px;overflow:auto;}
@@ -319,6 +333,7 @@
         <button class="btn" id="undoBtn"><img src="assets/ui/icon-undo.png" alt=""/>Undo</button>
         <button class="btn" id="redoBtn"><img src="assets/ui/icon-redo.png" alt=""/>Redo</button>
         <button class="btn" id="eraseBtn"><img src="assets/ui/icon-erase.png" alt=""/>Erase</button>
+        <button class="btn" id="notesBtn" title="Pencil-mark candidates (press N)">✎ Notes</button>
         <button class="btn" id="hintBtn"><img src="assets/ui/icon-hint.png" alt=""/>Ask the Clerk</button>
         <button class="btn primary" id="checkBtn"><img src="assets/ui/icon-check.png" alt=""/>Check</button>
         <button class="btn" id="atmoBtn" title="Toggle board atmosphere">Atmosphere: —</button>
@@ -1075,6 +1090,7 @@ const boardEl=$("board"), trayEl=$("tray");
 let C=null, cfg=null, board=null, given=null, sel=-1, selSuspect=-1;
 let undoStack=[], redoStack=[], hintsUsed=0, solved=false, story=null, cluesUsed=new Set();
 let accuseCulprit=-1, attempts=0, clueStep=0, hintLevel=0, hintTarget=-1;
+let notesMode=false, candidates=[];   // candidates[i] = Set of suspect values pencilled into cell i
 
 /* ---- persistence (localStorage; runs locally) ---- */
 const LS={
@@ -1161,6 +1177,8 @@ function startCase(opts){
   board=C.givens.slice(); given=C.givens.map(v=>v!==0);
   sel=-1; selSuspect=-1; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false; cluesUsed=new Set();
   accuseCulprit=-1; attempts=0; hintLevel=0; hintTarget=-1;
+  candidates=Array.from({length:cfg.N*cfg.N},()=>new Set());
+  notesMode=false; applyNotesMode();
   const as=$("assistant"); if(as) as.hidden=true;
   RING=assignRings(cfg.N);                                    // distinct ring colour per active suspect
   document.documentElement.style.setProperty("--disc-cream",DISC_CREAM);
@@ -1201,6 +1219,7 @@ function renderBoard(){
     if(r%cfg.bh===0 && c%cfg.bw===0){ const tag=document.createElement("span"); tag.className="room-tag";
       tag.innerHTML=`<img src="${tAsset('objects','object-'+room.icon+'.png')}" alt="">`+room.name.replace(/^the /i,""); cell.appendChild(tag); }
     if(board[i]!==0) cell.appendChild(tokenEl(board[i]));
+    else if(candidates[i] && candidates[i].size) cell.appendChild(candGrid(i));
     cell.addEventListener("click",()=>onCell(i));
     boardEl.appendChild(cell);
   }
@@ -1266,19 +1285,40 @@ function onCell(i){ if(solved)return; sel=i; refresh(); renderTray(); }   // sel
 function selectSuspect(v){ if(solved)return;
   if(sel<0){ setStatus("Tap a cell on the board first — then tap a suspect to place them there.",""); return; }
   if(given[sel]){ setStatus("That cell is fixed by the evidence — pick an open cell.",""); return; }
-  place(sel,v);
+  if(notesMode) toggleNote(sel,v); else place(sel,v);
 }
+function toggleNote(i,v){ if(board[i]!==0) return;       // notes only on empty cells
+  if(candidates[i].has(v)) candidates[i].delete(v); else candidates[i].add(v);
+  paint(i); refresh(); }
 function place(i,v){ if(given[i]||board[i]===v)return; undoStack.push({i,prev:board[i]}); redoStack=[];
-  board[i]=v; paint(i); clearHints(); refresh(); renderTray(); updateBtns(); checkWin(); }
-function erase(){ if(solved||sel<0||given[sel]||board[sel]===0)return; undoStack.push({i:sel,prev:board[sel]}); redoStack=[];
-  board[sel]=0; paint(sel); clearHints(); refresh(); renderTray(); updateBtns(); }
+  board[i]=v; candidates[i].clear();
+  // tidy: remove this suspect's pencil mark from peers (same row, column or room)
+  for(let j=0;j<cfg.N*cfg.N;j++) if(j!==i && candidates[j] && candidates[j].has(v) && isPeer(j,i)){ candidates[j].delete(v); paint(j); }
+  paint(i); clearHints(); refresh(); renderTray(); updateBtns(); checkWin(); }
+function erase(){ if(solved||sel<0||given[sel])return;
+  if(board[sel]===0 && (!candidates[sel]||!candidates[sel].size)) return;
+  if(board[sel]!==0){ undoStack.push({i:sel,prev:board[sel]}); redoStack=[]; board[sel]=0; }
+  if(candidates[sel]) candidates[sel].clear();
+  paint(sel); clearHints(); refresh(); renderTray(); updateBtns(); }
 function undo(){ if(!undoStack.length)return; const m=undoStack.pop(); redoStack.push({i:m.i,prev:board[m.i]});
   board[m.i]=m.prev; paint(m.i); refresh(); renderTray(); updateBtns(); }
 function redo(){ if(!redoStack.length)return; const m=redoStack.pop(); undoStack.push({i:m.i,prev:board[m.i]});
   board[m.i]=m.prev; paint(m.i); refresh(); renderTray(); updateBtns(); }
-function paint(i){ const cell=boardEl.children[i]; const t=cell.querySelector(".token"); if(t)t.remove();
+function candGrid(i){
+  const g=document.createElement("div"); g.className="cand-grid";
+  candidates[i].forEach(v=>{ const s=Skin.sName(THEME,v), idx=v-1;
+    const slot=document.createElement("div"); slot.className="cand";
+    slot.style.gridRow=Math.floor(idx/3)+1; slot.style.gridColumn=(idx%3)+1;   // fixed, learnable sub-position
+    const dot=document.createElement("i"); dot.style.background=RING[v-1]||s.color; dot.textContent=s.L;
+    slot.appendChild(dot); g.appendChild(slot); });
+  return g;
+}
+function paint(i){ const cell=boardEl.children[i];
+  const t=cell.querySelector(".token"); if(t)t.remove();
+  const g=cell.querySelector(".cand-grid"); if(g)g.remove();
   cell.classList.toggle("empty", board[i]===0);
-  if(board[i]!==0) cell.appendChild(tokenEl(board[i])); }
+  if(board[i]!==0) cell.appendChild(tokenEl(board[i]));
+  else if(candidates[i] && candidates[i].size) cell.appendChild(candGrid(i)); }
 
 /* ---- Case Assistant: escalating investigation help (P7) ---- */
 function assist(html){ const a=$("assistant"); if(!a) return; a.hidden=false; $("assistantText").innerHTML=html; }
@@ -1501,6 +1541,10 @@ function applyAtmosphere(){
   document.body.classList.toggle("focus", focus);
   $("atmoBtn").textContent = focus ? "Atmosphere: Focus" : "Atmosphere: High";
 }
+function applyNotesMode(){ document.body.classList.toggle("notes", notesMode);
+  const b=$("notesBtn"); if(b) b.classList.toggle("on", notesMode); }
+$("notesBtn").onclick=()=>{ notesMode=!notesMode; applyNotesMode();
+  setStatus(notesMode?"Notes ON — select a cell, then tap suspects to pencil in candidates.":"Notes off — tap a suspect to place them.",""); };
 $("atmoBtn").onclick=()=>{ settings.atmosphere = settings.atmosphere==="high"?"low":"high";
   LS.set("settings",settings); applyAtmosphere(); if(C) renderBoard(); };
 // first-time sudoku rule callout (once per browser)
@@ -1524,6 +1568,7 @@ $("seedInput").addEventListener("keydown",e=>{ if(e.key==="Enter")$("loadCodeBtn
 document.addEventListener("keydown",e=>{
   if(solved||$("newModal").classList.contains("show"))return;
   const k=e.key.toUpperCase(), code=k.charCodeAt(0)-64;
+  if(k==="N"&&cfg.N<14){ notesMode=!notesMode; applyNotesMode(); e.preventDefault(); return; }   // 'N' toggles notes
   if(k>="A"&&k<="Z"&&code>=1&&code<=cfg.N){ selectSuspect(code); e.preventDefault(); return; }
   if(e.key>="1"&&e.key<="9"&&(+e.key)<=cfg.N){ selectSuspect(+e.key); e.preventDefault(); return; }
   if(e.key==="Backspace"||e.key==="Delete"){ erase(); e.preventDefault(); return; }
