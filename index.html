@@ -79,6 +79,8 @@
     background:rgba(11,13,18,.78);padding:2px 7px;border-radius:7px;
     border:1px solid rgba(231,185,77,.45);box-shadow:0 1px 4px rgba(0,0,0,.55);}
   .room-tag img{width:12px;height:12px;opacity:.95;}
+  /* room label is an orientation aid on empty cells — never let it cover pencil-mark notes */
+  .cell:has(.cand-grid) .room-tag{display:none;}
   .wicon{width:14px;height:14px;vertical-align:-2px;}
   /* on-board landmarks: room object (bottom-left), murder weapon (scene, top-right),
      victim body (scene, bottom-right). Sizeable corner badges with a subtle dark backing
