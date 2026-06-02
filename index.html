@@ -71,14 +71,16 @@
   /* highlight overlays via ::before so they read over the floor art (token stays on top) */
   .cell::before{content:"";position:absolute;inset:0;pointer-events:none;background-repeat:no-repeat;}
   .cell.room-hl::before{background:rgba(231,185,77,.12);}
-  /* row/column selection = red dashed "crime-scene tape" trail along the cross
-     (a cell is only ever peer-row OR peer-col — both would be the selected cell) */
-  .cell.peer-row::before{background-color:rgba(120,28,30,.14);
-    background-image:repeating-linear-gradient(90deg,#7a2a2c 0 11px,transparent 11px 19px);
-    background-size:100% 3px;background-position:center;}
-  .cell.peer-col::before{background-color:rgba(120,28,30,.14);
-    background-image:repeating-linear-gradient(0deg,#7a2a2c 0 11px,transparent 11px 19px);
-    background-size:3px 100%;background-position:center;}
+  /* row/column selection = a trail of muted-red FOOTSTEPS along the cross: horizontal prints
+     walk along the row, upright prints walk down the column. Each repeating tile holds a
+     left + right foot offset across the path so it reads as walking. Inline SVG data-URIs
+     keep it self-contained. A cell is only ever peer-row OR peer-col (never the selected cell). */
+  .cell.peer-row::before{background-color:rgba(120,28,30,.12);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 22' fill='%237a2a2c' fill-opacity='.62'%3E%3Cellipse cx='9' cy='7' rx='5.5' ry='4'/%3E%3Cellipse cx='3.5' cy='7' rx='2.8' ry='3'/%3E%3Ccircle cx='14.5' cy='4.5' r='1'/%3E%3Ccircle cx='15.2' cy='7' r='1.1'/%3E%3Ccircle cx='14.5' cy='9.5' r='1'/%3E%3Cellipse cx='29' cy='15' rx='5.5' ry='4'/%3E%3Cellipse cx='23.5' cy='15' rx='2.8' ry='3'/%3E%3Ccircle cx='34.5' cy='12.5' r='1'/%3E%3Ccircle cx='35.2' cy='15' r='1.1'/%3E%3Ccircle cx='34.5' cy='17.5' r='1'/%3E%3C/svg%3E");
+    background-repeat:repeat-x;background-position:left center;background-size:40px 22px;}
+  .cell.peer-col::before{background-color:rgba(120,28,30,.12);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 40' fill='%237a2a2c' fill-opacity='.62'%3E%3Cellipse cx='7' cy='9' rx='4' ry='5.5'/%3E%3Cellipse cx='7' cy='16.5' rx='2.8' ry='3'/%3E%3Ccircle cx='4.5' cy='3.5' r='1'/%3E%3Ccircle cx='7' cy='2.8' r='1.1'/%3E%3Ccircle cx='9.5' cy='3.5' r='1'/%3E%3Cellipse cx='15' cy='27' rx='4' ry='5.5'/%3E%3Cellipse cx='15' cy='34.5' rx='2.8' ry='3'/%3E%3Ccircle cx='12.5' cy='21' r='1'/%3E%3Ccircle cx='15' cy='20.3' r='1.1'/%3E%3Ccircle cx='17.5' cy='21' r='1'/%3E%3C/svg%3E");
+    background-repeat:repeat-y;background-position:center top;background-size:22px 40px;}
   .cell.sel::before{background:rgba(231,185,77,.20);}
   .cell.sel{box-shadow:inset 0 0 0 3px var(--amber), 0 0 13px rgba(231,185,77,.7) !important;z-index:3;}
   .cell.scene::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(193,39,45,.7);
