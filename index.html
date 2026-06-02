@@ -285,8 +285,25 @@
   .po-cell{background:#171a22;border:1px solid var(--line);border-radius:8px;padding:8px 10px;}
   .po-label{display:block;font-family:"Courier New",monospace;font-size:9.5px;letter-spacing:1px;color:var(--amber);text-transform:uppercase;margin-bottom:3px;}
   .po-val{font-size:13px;color:var(--ink);} .po-val .wicon{width:18px;height:18px;}
-  .accuse-score{text-align:center;font-weight:700;color:var(--amber-soft);margin:6px 0;font-size:14px;}
-  .reasoning-details{text-align:left;margin-top:6px;}
+  .accuse-score{text-align:center;margin:8px 0;}
+  .acc-stars{font-size:20px;color:var(--amber);letter-spacing:2px;}
+  .acc-stars .acc-num{font-size:13px;color:var(--amber-soft);letter-spacing:0;vertical-align:1px;margin-left:4px;}
+  .acc-bits{font-size:13px;color:var(--ink-dim);margin-top:2px;font-weight:700;}
+  .acc-correct{font-size:12.5px;color:var(--ink-dim);font-style:italic;margin-top:4px;line-height:1.4;}
+  .acc-correct.good{color:var(--good);font-style:normal;font-weight:700;}
+  /* how-to-play modal */
+  .howto-lead{color:var(--ink);font-size:14.5px;line-height:1.55;margin:.3em 0 10px;text-align:center;}
+  .howto-steps{margin:0 0 10px;padding-left:22px;}
+  .howto-steps li{margin:7px 0;font-size:14px;line-height:1.5;color:var(--ink);}
+  .howto-steps li b{color:var(--amber-soft);}
+  .howto-foot{font-size:13px;color:var(--ink-dim);line-height:1.5;background:rgba(231,185,77,.07);
+    border-left:3px solid var(--amber);border-radius:0 6px 6px 0;padding:8px 11px;margin:0 0 6px;}
+  .howto-foot b{color:var(--amber-soft);}
+  /* star legend near the evidence */
+  .star-legend{font-size:12px;color:var(--ink-dim);line-height:1.45;margin:6px 0 2px;
+    border-top:1px dashed var(--line);padding-top:6px;}
+  .star-legend .keymark{color:var(--amber);}
+  .star-legend b{color:var(--amber-soft);}
   .reasoning-details summary{cursor:pointer;color:var(--ink-dim);font-size:13px;font-family:"Courier New",monospace;
     letter-spacing:1px;text-transform:uppercase;padding:4px 0;}
   .payoff-actions{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap;}
@@ -323,8 +340,10 @@
       <span class="brand-text" id="brandText" hidden>CASEDOKU<small>MANOR</small></span>
     </div>
     <div class="top-controls">
+      <span class="pill" id="timerPill" title="Time on this case">⏱ 00:00</span>
       <span class="pill" id="diffPill">—</span>
       <span class="pill" id="codePill" title="Copy share code" style="cursor:pointer">Case No. —</span>
+      <button class="btn" id="howtoBtn" title="How to play">? How to Play</button>
       <button class="btn" id="archiveBtn"><img src="assets/ui/icon-notebook.png" alt=""/>Archive</button>
       <button class="btn" id="newBtn"><img src="assets/ui/icon-settings.png" alt=""/>New Case</button>
     </div>
@@ -378,6 +397,7 @@
         <summary>All evidence <span class="req">★ = key</span></summary>
         <ul class="clues" id="clueList"></ul>
       </details>
+      <p class="star-legend"><span class="keymark">★</span> <b>Key evidence</b> — required to crack the case. The rest corroborate. <b>Every clue is true.</b></p>
       <p class="ev-note" id="evProgress"></p>
 
       <!-- BOTTOM: roster, collapsed by default -->
@@ -416,6 +436,22 @@
       <button class="btn" id="newBack" style="margin-top:6px"><img src="assets/ui/icon-back.png" alt=""/>Keep current case</button>
       <p style="color:var(--ink-dim);font-size:12px;font-style:italic;margin-top:10px">
         A case code reproduces the exact same mystery. Share it.</p>
+    </div>
+  </div>
+
+  <!-- How to Play -->
+  <div class="modal-bg" id="howtoModal">
+    <div class="modal">
+      <button class="x" id="howtoClose"><img src="assets/ui/icon-close.png" alt="close"/></button>
+      <h2 style="text-align:center">How to Play</h2>
+      <p class="howto-lead">A sudoku you finish with detective work. The starting clues are <b>intentionally not enough</b> on their own — sudoku logic and the evidence work <b>together</b>, interleaved.</p>
+      <ol class="howto-steps">
+        <li><b>Place the suspects</b> so each appears exactly once in every <b>row</b>, every <b>column</b>, and every <b>room</b> (3×3 block).</li>
+        <li><b>Use the evidence</b> to resolve what sudoku alone can't — the clues break the ties the grid leaves open. (You can't finish by sudoku alone.)</li>
+        <li><b>Make your accusation</b> once the grid is complete: name the culprit, the proof, and the motive.</li>
+      </ol>
+      <p class="howto-foot">Tap a cell to select it, then tap a suspect to place them. <b>★</b> marks <b>key</b> evidence (required); the rest corroborate. <b>Every clue is true.</b></p>
+      <button class="btn primary" id="howtoGo" style="margin-top:6px">Start sleuthing</button>
     </div>
   </div>
 
@@ -1219,8 +1255,15 @@ function startCase(opts){
     `Sudoku logic alone leaves <b>${C.completionsWithout}</b> possible arrangements of this house — `+
     `only the evidence narrows it to one. The scene (dashed) hides the killer.`;
   setStatus(`Case No. ${story.caseNo} opened — ${board.filter(v=>!v).length} positions to place.`,"");
+  startTimer();
 }
 function setVar(k,v){ document.documentElement.style.setProperty(k,v); }
+/* ---- simple MM:SS case timer (freezes on solve/accusation; resets each case) ---- */
+let timerStart=0, timerId=null, timerFrozen=false;
+function tickTimer(){ if(timerFrozen)return; const s=Math.max(0,Math.floor((Date.now()-timerStart)/1000));
+  $("timerPill").textContent=`⏱ ${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`; }
+function startTimer(){ if(timerId)clearInterval(timerId); timerStart=Date.now(); timerFrozen=false; tickTimer(); timerId=setInterval(tickTimer,1000); }
+function freezeTimer(){ timerFrozen=true; if(timerId){ clearInterval(timerId); timerId=null; } }
 
 /* ---- board ---- */
 function tokenEl(val){ return makeToken(val); }
@@ -1392,7 +1435,7 @@ function hint(){ if(solved)return;
 }
 
 function check(){ if(solved)return;
-  if(gridComplete()){ openAccusation(); return; }   // complete & correct -> straight to the accusation
+  if(gridComplete()){ freezeTimer(); openAccusation(); return; }   // complete & correct -> straight to the accusation
   let wrong=0, empty=0;
   for(let i=0;i<cfg.N*cfg.N;i++){ const cell=boardEl.children[i]; const tok=cell.querySelector(".token"); if(tok)tok.classList.remove("bad");
     if(board[i]===0){empty++;continue;} if(board[i]!==C.solution[i]){ wrong++; if(tok)tok.classList.add("bad"); } }
@@ -1427,7 +1470,7 @@ function refresh(){ const bad=conflicts(); const N=cfg.N;
 
 /* ---- grid complete -> player makes the accusation -> payoff ---- */
 function gridComplete(){ for(let i=0;i<cfg.N*cfg.N;i++) if(board[i]!==C.solution[i]) return false; return true; }
-function checkWin(){ if(solved) return; if(gridComplete() && !$("accuseModal").classList.contains("show")) openAccusation(); }
+function checkWin(){ if(solved) return; if(gridComplete() && !$("accuseModal").classList.contains("show")){ freezeTimer(); openAccusation(); } }
 
 function openAccusation(){
   // (1) culprit — clickable suspect tokens
@@ -1462,8 +1505,10 @@ function submitAccusation(){
     return;
   }
   const evPick=+$("accuseEvidence").value, moPick=+$("accuseMotive").value;
-  const proving=new Set(C.reasoning.map(r=>r.clue));
-  const grade={ evidenceRight: proving.has(evPick), motiveRight: moPick===C.killer, evPick };
+  const proving=new Set(C.proofClues);                                   // the KEY evidence tying culprit to scene
+  const grade={ evidenceRight: evPick>=0 && proving.has(evPick),         // Q2: real check
+                motiveRight: moPick>=1 && moPick===C.killer,             // Q3: real check vs culprit's motive
+                evPick };
   $("accuseModal").classList.remove("show");
   payoff(grade);
 }
@@ -1474,14 +1519,22 @@ function payoff(grade){
   $("killerName").textContent=k.name;
   $("killerMotive").textContent=`Motive: ${k.motive}.`;
   $("newsHeadline").textContent=makeHeadline(k.name);
-  // key evidence: the player's pick if it was a proving clue, else the first proving clue
-  const proveIdx=(grade.evidenceRight && grade.evPick>=0)?grade.evPick:(C.reasoning.length?C.reasoning[0].clue:-1);
+  // key evidence: the player's pick if it was a proving clue, else the actual key proof
+  const proveIdx=(grade.evidenceRight && grade.evPick>=0)?grade.evPick:(C.proofClues.length?C.proofClues[0]:-1);
   $("poEvidence").innerHTML=proveIdx>=0?Skin.renderClue(cfg,THEME,C.clues[proveIdx]):"the arrangement of the house";
   const troName=cap(story.weapon.n.replace(/^(the|a|an)\s+/i,""));
   $("poTrophy").innerHTML=`<img class="wicon" src="${tAsset('weapons','weapon-'+story.weapon.slug+'.png')}" alt="">${troName}`;
-  const perfect=grade.evidenceRight&&grade.motiveRight;
-  $("accuseScore").textContent=(perfect?"Flawless deduction — ":"Culprit caught — ")+
-    `Culprit ✓  ·  Evidence ${grade.evidenceRight?"✓":"✗"}  ·  Motive ${grade.motiveRight?"✓":"✗"}`;
+  // grade all three; culprit is always right here. proof + motive add accuracy.
+  const acc=1+(grade.evidenceRight?1:0)+(grade.motiveRight?1:0), perfect=acc===3;
+  const correctProof=C.proofClues.length?stripTags(Skin.renderClue(cfg,THEME,C.clues[C.proofClues[0]])):"";
+  const solvedTime=$("timerPill").textContent.replace("⏱ ","");
+  $("accuseScore").innerHTML=
+    `<div class="acc-stars">${"★".repeat(acc)}${"☆".repeat(3-acc)} <span class="acc-num">Accuracy ${acc}/3</span></div>`+
+    `<div class="acc-bits">Culprit ✓ · Proof ${grade.evidenceRight?"✓":"✗"} · Motive ${grade.motiveRight?"✓":"✗"} · ⏱ ${solvedTime}</div>`+
+    (perfect ? `<div class="acc-correct good">Flawless deduction.</div>`
+             : `<div class="acc-correct">`+
+               (grade.evidenceRight?"":`The proof was “${correctProof}”. `)+
+               (grade.motiveRight?"":`The motive was ${cap(k.motive)}.`)+`</div>`);
   buildChain();
   recordSolved(makeHeadline(k.name), perfect);
   setStatus(`Case closed — ${k.name} arrested${hintsUsed?` (with ${hintsUsed} hint${hintsUsed>1?"s":""})`:""}.`,"good");
@@ -1555,6 +1608,10 @@ $("winNew").onclick=()=>{ $("winModal").classList.remove("show"); startCase({dif
 $("accuseClose").onclick=()=>{ $("accuseModal").classList.remove("show"); setStatus("Ready to accuse — press Check when you're sure.",""); };
 $("accuseSubmit").onclick=submitAccusation;
 $("archiveBtn").onclick=openArchive;
+$("howtoBtn").onclick=()=>$("howtoModal").classList.add("show");
+$("howtoClose").onclick=()=>$("howtoModal").classList.remove("show");
+$("howtoGo").onclick=()=>{ $("howtoModal").classList.remove("show"); LS.set("seenHowTo",true); };
+if(!LS.get("seenHowTo",false)) $("howtoModal").classList.add("show");   // first-time intro
 $("archiveClose").onclick=()=>$("archiveModal").classList.remove("show");
 $("winArchive").onclick=openArchive;
 $("evPrev").onclick=()=>{ clueStep--; renderEvCurrent(); };
