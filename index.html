@@ -1363,23 +1363,33 @@ function selectSuspect(v){ if(solved)return;
   if(given[sel]){ setStatus("That cell is fixed by the evidence — pick an open cell.",""); return; }
   if(notesMode) toggleNote(sel,v); else place(sel,v);
 }
+/* ---- undo/redo capture board value AND candidate set for every cell an action touches ---- */
+function snapCells(cells){ return [...new Set(cells)].map(c=>({c, v:board[c], cand:[...candidates[c]]})); }
+function restoreSnap(snap){ for(const s of snap){ board[s.c]=s.v; candidates[s.c]=new Set(s.cand); paint(s.c); } }
+function applyAction(cells, mutate){
+  const list=[...new Set(cells)];
+  const before=snapCells(list); mutate(); const after=snapCells(list);
+  undoStack.push({before, after}); redoStack=[];
+  for(const c of list) paint(c);
+}
 function toggleNote(i,v){ if(board[i]!==0) return;       // notes only on empty cells
-  if(candidates[i].has(v)) candidates[i].delete(v); else candidates[i].add(v);
-  paint(i); refresh(); }
-function place(i,v){ if(given[i]||board[i]===v)return; undoStack.push({i,prev:board[i]}); redoStack=[];
-  board[i]=v; candidates[i].clear();
-  // tidy: remove this suspect's pencil mark from peers (same row, column or room)
-  for(let j=0;j<cfg.N*cfg.N;j++) if(j!==i && candidates[j] && candidates[j].has(v) && isPeer(j,i)){ candidates[j].delete(v); paint(j); }
-  paint(i); clearHints(); refresh(); renderTray(); updateBtns(); checkWin(); }
+  applyAction([i], ()=>{ if(candidates[i].has(v)) candidates[i].delete(v); else candidates[i].add(v); });
+  refresh(); }
+function place(i,v){ if(given[i]||board[i]===v)return;
+  // every cell this action changes: the target + peers holding this suspect as a pencil mark
+  const cells=[i];
+  for(let j=0;j<cfg.N*cfg.N;j++) if(j!==i && candidates[j] && candidates[j].has(v) && isPeer(j,i)) cells.push(j);
+  applyAction(cells, ()=>{ board[i]=v; candidates[i].clear();
+    for(const j of cells) if(j!==i) candidates[j].delete(v); });   // tidy: clear this suspect's notes from peers
+  clearHints(); refresh(); renderTray(); updateBtns(); checkWin(); }
 function erase(){ if(solved||sel<0||given[sel])return;
   if(board[sel]===0 && (!candidates[sel]||!candidates[sel].size)) return;
-  if(board[sel]!==0){ undoStack.push({i:sel,prev:board[sel]}); redoStack=[]; board[sel]=0; }
-  if(candidates[sel]) candidates[sel].clear();
-  paint(sel); clearHints(); refresh(); renderTray(); updateBtns(); }
-function undo(){ if(!undoStack.length)return; const m=undoStack.pop(); redoStack.push({i:m.i,prev:board[m.i]});
-  board[m.i]=m.prev; paint(m.i); refresh(); renderTray(); updateBtns(); }
-function redo(){ if(!redoStack.length)return; const m=redoStack.pop(); undoStack.push({i:m.i,prev:board[m.i]});
-  board[m.i]=m.prev; paint(m.i); refresh(); renderTray(); updateBtns(); }
+  applyAction([sel], ()=>{ board[sel]=0; candidates[sel].clear(); });
+  clearHints(); refresh(); renderTray(); updateBtns(); }
+function undo(){ if(!undoStack.length)return; const e=undoStack.pop(); restoreSnap(e.before); redoStack.push(e);
+  clearHints(); refresh(); renderTray(); updateBtns(); }
+function redo(){ if(!redoStack.length)return; const e=redoStack.pop(); restoreSnap(e.after); undoStack.push(e);
+  clearHints(); refresh(); renderTray(); updateBtns(); }
 function candGrid(i){
   const g=document.createElement("div"); g.className="cand-grid";
   candidates[i].forEach(v=>{ const s=Skin.sName(THEME,v), idx=v-1;
@@ -1434,8 +1444,7 @@ function hint(){ if(solved)return;
     boardEl.children[i].classList.add("hint-cell"); sel=i; refresh();
     assist(`This exact spot (highlighted) is the one to settle next. The evidence and elimination decide it.`);
   } else {
-    undoStack.push({i,prev:board[i]}); redoStack=[]; board[i]=C.solution[i]; paint(i); sel=i;
-    refresh(); renderTray(); updateBtns();
+    sel=i; place(i, C.solution[i]);    // routed through the undoable placement (also tidies peer notes)
     assist(`Confirmed — <b>${correct.name}</b> belongs here. One more piece of the file in place.`);
     hintLevel=0; hintTarget=-1; clearHints(); checkWin();
   }
