@@ -699,8 +699,9 @@ function makePred(cfg,type,p){
   return ()=>true;
 }
 
-/* build a pool of candidate clues, all true of the solution */
-function buildPool(cfg, solution, givens, ambigCells, rng){
+/* build a pool of candidate clues, all true of the solution.
+   sceneCell = the crime-scene cell: no clue may reference it (would name the culprit). */
+function buildPool(cfg, solution, givens, ambigCells, rng, sceneCell){
   const N=cfg.N, pool=[];
   // the cells a clue actually pins; a clue is redundant if all of them are already GIVEN
   const subjectCells=(type,p)=>{
@@ -712,7 +713,9 @@ function buildPool(cfg, solution, givens, ambigCells, rng){
     return [];
   };
   const fullyGiven=cells=> cells.length>0 && cells.every(ci=>givens[ci]!==0);
-  const add=(type,p)=>{ if(fullyGiven(subjectCells(type,p))) return;   // skip clues already revealed by the givens
+  const add=(type,p)=>{ const cells=subjectCells(type,p);
+    if(fullyGiven(cells)) return;                         // skip clues already revealed by the givens
+    if(sceneCell>=0 && cells.includes(sceneCell)) return; // never name the crime-scene cell's occupant
     const c={type,p,pred:makePred(cfg,type,p)}; if(c.pred(solution)) pool.push(c); };
 
   // SIGHTINGS on every ambiguous cell — guarantees a covering set always exists.
@@ -801,21 +804,50 @@ function coverAndMinimize(pool, completions, solIdx, bias, rng){
    already forces it) and never mislead (every one holds for the solution). Selected
    round-robin across clue types for texture, deduped against the required set. */
 function clueKey(c){ return c.type+":"+JSON.stringify(c.p); }
-function pickExtras(pool, required, goal, rng){
+/* the facts a clue establishes about a suspect — used to drop information-redundant
+   clues. A sighting subsumes the suspect's row-band and column-band, so a later
+   position clue about the same suspect/band adds nothing and is skipped. */
+function clueInfoKeys(cfg, solution, c){
+  const N=cfg.N, p=c.p;
+  if(c.type==="sighting"){ const e=cellOfValInBox(cfg,solution,boxOf(cfg,Math.floor(p.cell/N),p.cell%N),p.val);
+    const box=boxOf(cfg,Math.floor(p.cell/N),p.cell%N);
+    return ["pos:"+p.val+":"+p.cell, "rb:"+p.val+":"+box+":"+(e?e.sr:-1), "cb:"+p.val+":"+box+":"+(e?e.sc:-1)]; }
+  if(c.type==="position") return [(p.axis==="row"?"rb:":"cb:")+p.val+":"+p.box+":"+p.band];
+  if(c.type==="relative")  return ["rel:"+Math.min(p.val,p.val2)+":"+Math.max(p.val,p.val2)+":"+p.box];
+  if(c.type==="adjacency") return ["adj:"+Math.min(p.val,p.val2)+":"+Math.max(p.val,p.val2)+":"+p.box];
+  if(c.type==="exclusion") return ["notat:"+p.val+":"+p.cell];
+  return [];
+}
+function pickExtras(pool, required, goal, rng, cfg, solution){
   const want=Math.max(0, (goal||required.length)-required.length);
   if(want<=0) return [];
   const seen=new Set(required.map(clueKey)), byType={};
   for(const c of pool){ const k=clueKey(c); if(seen.has(k)) continue; seen.add(k);
     (byType[c.type]=byType[c.type]||[]).push(c); }
+  // facts already established; knownFull = suspects whose exact cell a sighting pins
+  const established=new Set(), knownFull=new Set();
+  const record=c=>{ clueInfoKeys(cfg,solution,c).forEach(k=>established.add(k)); if(c.type==="sighting") knownFull.add(c.p.val); };
+  const redundant=c=>{
+    // a relation between two suspects adds nothing once both their positions are known
+    if(c.type==="relative"||c.type==="adjacency") return knownFull.has(c.p.val) && knownFull.has(c.p.val2);
+    const keys=clueInfoKeys(cfg,solution,c); return keys.length && keys.every(k=>established.has(k));
+  };
+  required.forEach(record);
   const types=shuffle(rng, Object.keys(byType));
   for(const t of types) shuffle(rng, byType[t]);
   const out=[];
   while(out.length<want){
     let progress=false;
     for(const t of types){
-      if(byType[t] && byType[t].length){ out.push(byType[t].shift()); progress=true; if(out.length>=want) break; }
+      const arr=byType[t];
+      while(arr && arr.length){
+        const c=arr.shift();
+        if(redundant(c)) continue;            // adds no new fact about the suspect(s)
+        record(c); out.push(c); progress=true; break;
+      }
+      if(out.length>=want) break;
     }
-    if(!progress) break;   // pool exhausted
+    if(!progress) break;   // pool exhausted (or only redundant clues remain)
   }
   return out;
 }
@@ -851,7 +883,11 @@ function generateCase(opts){
   const ambig=[]; for(let i=0;i<NN;i++){ const v=completions[0][i]; if(completions.some(g=>g[i]!==v)) ambig.push(i); }
   const solIdx=completions.findIndex(g=>g.every((v,i)=>v===solution[i]));
 
-  const pool=buildPool(cfg,solution,givens,ambig,rng);
+  // crime-scene = the most ambiguous cell; pick it FIRST so no clue can reference its occupant
+  let murderCell=ambig[0], bestSpread=-1;
+  for(const cell of ambig){ const s=new Set(completions.map(g=>g[cell])); if(s.size>bestSpread){ bestSpread=s.size; murderCell=cell; } }
+
+  const pool=buildPool(cfg,solution,givens,ambig,rng,murderCell);
   const required=coverAndMinimize(pool,completions,solIdx,T.bias,rng);
 
   // --- verification (the heart): the REQUIRED set alone must force the solution ---
@@ -863,19 +899,12 @@ function generateCase(opts){
     return generateCase(Object.assign({},opts,{seed:(seed+0x9E3779B9)>>>0, difficulty:tier}));
   }
 
-  // add true corroborating clues for a richer case file; required stay load-bearing
+  // add true, NON-REDUNDANT corroborating clues for a richer case file; required stay load-bearing
   const keySet=new Set(required);
-  const allClues=required.concat(pickExtras(pool, required, T.clueGoal, rng));
+  const allClues=required.concat(pickExtras(pool, required, T.clueGoal, rng, cfg, solution));
   shuffle(rng, allClues);                          // natural display order
 
-  // --- murder scene + provable killer ---
-  // scene = the most ambiguous cell (most possible suspects under sudoku+givens);
-  // the killer is whoever the EVIDENCE forces there.
-  let murderCell=ambig[0], bestSpread=-1;
-  for(const cell of ambig){
-    const set=new Set(completions.map(g=>g[cell]));
-    if(set.size>bestSpread){ bestSpread=set.size; murderCell=cell; }
-  }
+  // --- provable killer (scene cell chosen above, never named by a clue) ---
   const killer=solution[murderCell];
   const sceneCandidates=[...new Set(completions.map(g=>g[murderCell]))];
   const reasoning=[];
