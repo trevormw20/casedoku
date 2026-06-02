@@ -57,9 +57,13 @@
   .cell.bt{border-top:2px solid var(--grid-thick);}
   .cell.bl{border-left:2px solid var(--grid-thick);}
   .cell.given{cursor:default;}
-  .cell.sel{box-shadow:inset 0 0 0 2px var(--amber);background:#3a3526 !important;}
-  .cell.peer{background:#232737;}
-  .cell.match{background:#2c3a33;}
+  /* highlight overlays via ::before so they read over the floor art (token stays on top) */
+  .cell::before{content:"";position:absolute;inset:0;pointer-events:none;transition:background .1s;}
+  .cell.peer::before{background:rgba(150,170,230,.10);}
+  .cell.room-hl::before{background:rgba(231,185,77,.12);}
+  .cell.match::before{background:rgba(76,175,125,.20);}
+  .cell.sel::before{background:rgba(231,185,77,.20);}
+  .cell.sel{box-shadow:inset 0 0 0 3px var(--amber), 0 0 13px rgba(231,185,77,.65) !important;z-index:2;}
   .cell.scene::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(193,39,45,.7);
     border-radius:5px;pointer-events:none;}
   .room-tag{position:absolute;top:3px;left:3px;z-index:3;font-size:10px;font-weight:700;letter-spacing:.5px;
@@ -1208,7 +1212,7 @@ function renderTray(){
   for(const v of board) if(v) counts[v]--;
   for(let v=1;v<=cfg.N;v++){
     const s=Skin.sName(THEME,v), el=document.createElement("div");
-    el.className="susp"+(selSuspect===v?" sel":"")+(counts[v]<=0?" done":"");
+    el.className="susp"+((sel>=0 && board[sel]===v)?" sel":"")+(counts[v]<=0?" done":"");  // marks who's in the selected cell
     el.title=counts[v]>0?`${s.name}: ${counts[v]} left to place · press ${s.L}`:`${s.name}: all placed`;
     const name=document.createElement("div"); name.className="susp-name";
     name.textContent=s.name.replace(/^The\s+/i,"");        // "The Colonel" -> "Colonel"
@@ -1257,11 +1261,13 @@ function renderEvCurrent(){
   $("evStep").textContent=`${clueStep+1} / ${n}`;
 }
 
-/* ---- interactions ---- */
-function onCell(i){ if(solved)return; if(given[i]){ sel=i; selSuspect=-1; refresh(); renderTray(); return; }
-  sel=i; if(selSuspect>0) place(i,selSuspect); refresh(); }
-function selectSuspect(v){ if(solved)return; selSuspect=(selSuspect===v?-1:v);
-  if(selSuspect>0 && sel>=0 && !given[sel]) place(sel,selSuspect); renderTray(); refresh(); }
+/* ---- interactions (cell-first: tap a cell to select, then tap a suspect to place) ---- */
+function onCell(i){ if(solved)return; sel=i; refresh(); renderTray(); }   // select only — never auto-places
+function selectSuspect(v){ if(solved)return;
+  if(sel<0){ setStatus("Tap a cell on the board first — then tap a suspect to place them there.",""); return; }
+  if(given[sel]){ setStatus("That cell is fixed by the evidence — pick an open cell.",""); return; }
+  place(sel,v);
+}
 function place(i,v){ if(given[i]||board[i]===v)return; undoStack.push({i,prev:board[i]}); redoStack=[];
   board[i]=v; paint(i); clearHints(); refresh(); renderTray(); updateBtns(); checkWin(); }
 function erase(){ if(solved||sel<0||given[sel]||board[sel]===0)return; undoStack.push({i:sel,prev:board[sel]}); redoStack=[];
@@ -1342,10 +1348,15 @@ function conflicts(){ const N=cfg.N, bad=new Set();
   return bad; }
 function isPeer(a,b){ const N=cfg.N; const ra=Math.floor(a/N),ca=a%N,rb=Math.floor(b/N),cb=b%N;
   return ra===rb||ca===cb||E.boxOf(cfg,ra,ca)===E.boxOf(cfg,rb,cb); }
-function refresh(){ const bad=conflicts(); const matchVal=selSuspect>0?selSuspect:(sel>=0?board[sel]:0);
-  for(let i=0;i<cfg.N*cfg.N;i++){ const cell=boardEl.children[i]; cell.classList.remove("sel","peer","match");
-    if(i===sel)cell.classList.add("sel"); else if(sel>=0 && isPeer(i,sel))cell.classList.add("peer");
-    if(matchVal>0 && board[i]===matchVal)cell.classList.add("match");
+function refresh(){ const bad=conflicts(); const N=cfg.N;
+  const selVal=sel>=0?board[sel]:0;
+  const sr=sel>=0?Math.floor(sel/N):-1, sc=sel>=0?sel%N:-1, sb=sel>=0?E.boxOf(cfg,sr,sc):-1;
+  for(let i=0;i<N*N;i++){ const cell=boardEl.children[i]; cell.classList.remove("sel","peer","match","room-hl");
+    if(sel>=0 && i!==sel){ const r=Math.floor(i/N),c=i%N;
+      if(E.boxOf(cfg,r,c)===sb) cell.classList.add("room-hl");          // subtle room (3x3) highlight
+      else if(r===sr||c===sc) cell.classList.add("peer"); }             // row/column cross
+    if(i===sel)cell.classList.add("sel");
+    if(selVal>0 && board[i]===selVal)cell.classList.add("match");       // same suspect elsewhere
     const t=cell.querySelector(".token"); if(t)t.classList.toggle("bad",bad.has(i)); } }
 
 /* ---- grid complete -> player makes the accusation -> payoff ---- */
