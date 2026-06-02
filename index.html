@@ -1532,7 +1532,7 @@ function renderBoard(){
     if(i===C.murderCell && story){
       const b=document.createElement("img"); b.className="cell-victim img-missing";
       b.alt=""; b.title=`${story.victimDisplay||"the victim"} (deceased)`; cell.appendChild(b);
-      if(story.victimSlug) loadOptionalImg(b, tAsset('victims','victim-'+story.victimSlug+'-dead.png'));
+      if(story.victimSlug) loadOptionalImg(b, tAsset('victims','victim-'+story.victimSlug+'.png'));
       const w=document.createElement("img"); w.className="cell-weapon";
       w.src=tAsset('weapons','weapon-'+story.weapon.slug+'.png'); w.alt=""; w.title=story.weapon.n; cell.appendChild(w);
     }
