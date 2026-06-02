@@ -582,10 +582,12 @@ function isValidFull(cfg,g){
 const TIERS = {
   // clueGoal = total displayed clues to aim for (required load-bearing set + true
   // corroborating clues). Required-only count is far smaller; see pickExtras().
-  easy:    {key:"easy",    label:"Easy",    cfg:{N:6,bh:2,bw:3}, targetMin:3,  cap:8,  bias:"direct",   clueGoal:4},
-  medium:  {key:"medium",  label:"Medium",  cfg:{N:9,bh:3,bw:3}, targetMin:6,  cap:18, bias:"mixed",    clueGoal:6},
-  hard:    {key:"hard",    label:"Hard",    cfg:{N:9,bh:3,bw:3}, targetMin:16, cap:46, bias:"indirect", clueGoal:8},
-  extreme: {key:"extreme", label:"Extreme", cfg:{N:9,bh:3,bw:3}, targetMin:34, cap:96, bias:"cryptic",  clueGoal:11},
+  // Gentler curve: lower targetMin => fewer pre-clue arrangements => MORE givens; more
+  // DIRECT bias on the lower tiers. Easy = quick, mostly-sudoku; Extreme = the hard one.
+  easy:    {key:"easy",    label:"Easy",    cfg:{N:6,bh:2,bw:3}, targetMin:2,  cap:6,  bias:"direct",   clueGoal:3},
+  medium:  {key:"medium",  label:"Medium",  cfg:{N:9,bh:3,bw:3}, targetMin:4,  cap:12, bias:"direct",   clueGoal:5},
+  hard:    {key:"hard",    label:"Hard",    cfg:{N:9,bh:3,bw:3}, targetMin:12, cap:36, bias:"mixed",    clueGoal:7},
+  extreme: {key:"extreme", label:"Extreme", cfg:{N:9,bh:3,bw:3}, targetMin:26, cap:72, bias:"indirect", clueGoal:10},
 };
 const TIER_CHAR = {easy:"E", medium:"M", hard:"H", extreme:"X"};
 const CHAR_TIER = {E:"easy", M:"medium", H:"hard", X:"extreme"};
@@ -645,9 +647,20 @@ function makePred(cfg,type,p){
 }
 
 /* build a pool of candidate clues, all true of the solution */
-function buildPool(cfg, solution, ambigCells, rng){
+function buildPool(cfg, solution, givens, ambigCells, rng){
   const N=cfg.N, pool=[];
-  const add=(type,p)=>{ const c={type,p,pred:makePred(cfg,type,p)}; if(c.pred(solution)) pool.push(c); };
+  // the cells a clue actually pins; a clue is redundant if all of them are already GIVEN
+  const subjectCells=(type,p)=>{
+    if(type==="sighting"||type==="exclusion") return [p.cell];
+    if(type==="position"){ const e=cellOfValInBox(cfg,solution,p.box,p.val); return e?[e.r*N+e.c]:[]; }
+    if(type==="relative"||type==="adjacency"){
+      const a=cellOfValInBox(cfg,solution,p.box,p.val), b=cellOfValInBox(cfg,solution,p.box,p.val2);
+      return [a?a.r*N+a.c:-1, b?b.r*N+b.c:-1].filter(i=>i>=0); }
+    return [];
+  };
+  const fullyGiven=cells=> cells.length>0 && cells.every(ci=>givens[ci]!==0);
+  const add=(type,p)=>{ if(fullyGiven(subjectCells(type,p))) return;   // skip clues already revealed by the givens
+    const c={type,p,pred:makePred(cfg,type,p)}; if(c.pred(solution)) pool.push(c); };
 
   // SIGHTINGS on every ambiguous cell — guarantees a covering set always exists.
   for(const cell of ambigCells) add("sighting",{cell, val:solution[cell]});
@@ -785,7 +798,7 @@ function generateCase(opts){
   const ambig=[]; for(let i=0;i<NN;i++){ const v=completions[0][i]; if(completions.some(g=>g[i]!==v)) ambig.push(i); }
   const solIdx=completions.findIndex(g=>g.every((v,i)=>v===solution[i]));
 
-  const pool=buildPool(cfg,solution,ambig,rng);
+  const pool=buildPool(cfg,solution,givens,ambig,rng);
   const required=coverAndMinimize(pool,completions,solIdx,T.bias,rng);
 
   // --- verification (the heart): the REQUIRED set alone must force the solution ---
@@ -816,9 +829,12 @@ function generateCase(opts){
   for(const v of sceneCandidates){
     if(v===killer) continue;
     const comp=completions.find(g=>g[murderCell]===v);
-    const clueIdx=allClues.findIndex(c=>!c.pred(comp));   // any clue this scenario contradicts
+    let clueIdx=allClues.findIndex(c=>keySet.has(c) && !c.pred(comp));   // prefer a load-bearing (key) clue
+    if(clueIdx<0) clueIdx=allClues.findIndex(c=>!c.pred(comp));          // fall back to any contradicting clue
     reasoning.push({ruledOut:v, clue:clueIdx});
   }
+  // the key evidence that ties the culprit to the scene (used to grade the accusation's "proof")
+  const proofClues=[...new Set(reasoning.map(r=>r.clue).filter(i=>i>=0))];
 
   return {
     tier, seed, code:caseCode(tier,seed), cfg,
@@ -828,7 +844,7 @@ function generateCase(opts){
     requiredCount: required.length,
     completionsWithout: completions.length,
     ambiguousCells: ambig,
-    murderCell, killer, sceneCandidates, reasoning,
+    murderCell, killer, sceneCandidates, reasoning, proofClues,
   };
 }
 
