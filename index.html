@@ -156,6 +156,32 @@
   .status.good{color:var(--good);} .status.bad{color:var(--bad);}
   .hint-note{font-size:12px;color:var(--ink-dim);font-style:italic;margin-top:8px;
     border-top:1px dashed var(--line);padding-top:8px;}
+  /* panel hierarchy (P3) */
+  .briefing{margin:4px 0 2px;} .briefing summary,.all-ev summary,.poi summary{
+    cursor:pointer;font-family:"Courier New",monospace;font-size:10.5px;letter-spacing:1.5px;
+    text-transform:uppercase;color:var(--ink-dim);padding:4px 0;list-style:revert;}
+  .briefing[open] .case-story{margin-top:6px;}
+  .ev-current{display:flex;align-items:stretch;gap:8px;margin:2px 0 6px;}
+  .ev-nav{flex:none;width:34px;border:1px solid var(--line);background:#171a22;color:var(--amber-soft);
+    border-radius:8px;cursor:pointer;font-size:15px;}
+  .ev-nav:hover{border-color:var(--amber);}
+  .ev-clue{flex:1;background:rgba(231,185,77,.08);border:1px solid rgba(231,185,77,.35);border-radius:8px;
+    padding:11px 13px;font-size:16px;line-height:1.45;color:var(--ink);display:flex;align-items:center;}
+  .ev-clue b{color:var(--amber-soft);}
+  .ev-progress{font-size:12.5px;color:var(--ink-dim);line-height:1.45;margin-bottom:4px;}
+  .ev-progress b{color:var(--ink);} .scene-word{color:var(--blood);font-weight:700;}
+  .all-ev{margin:4px 0;} .poi{margin:8px 0 2px;}
+  /* tray label + first-time tip + stronger selection (P6) */
+  .tray-label{font-family:"Courier New",monospace;font-size:11px;letter-spacing:1px;color:var(--amber);
+    text-transform:uppercase;text-align:center;margin-top:2px;}
+  .tray-hint{color:var(--ink-dim);text-transform:none;letter-spacing:0;font-family:inherit;font-size:12px;font-style:italic;}
+  .first-tip{display:flex;align-items:center;gap:12px;justify-content:center;flex-wrap:wrap;
+    background:#1c1f29;border:1px solid var(--amber);border-radius:9px;padding:9px 14px;
+    color:var(--ink);font-size:13.5px;max-width:9*var(--cell);box-shadow:0 4px 14px rgba(0,0,0,.5);}
+  .first-tip b{color:var(--amber-soft);}
+  .susp.sel{transform:translateY(-3px) scale(1.06);}
+  .susp.sel .susp-name{color:var(--amber-soft);}
+  .susp.sel .count{background:var(--amber);color:#1a1a22;border-color:var(--amber);}
 
   .modal-bg{position:fixed;inset:0;background:rgba(4,5,8,.82);display:none;align-items:center;
     justify-content:center;z-index:50;padding:18px;overflow:auto;}
@@ -242,7 +268,12 @@
 
   <div class="layout">
     <div class="board-wrap">
+      <div class="first-tip" id="firstTip" hidden>
+        <span>📓 Each suspect appears <b>exactly once</b> in every row, every column, and every room — then use the evidence to finish.</span>
+        <button class="btn" id="firstTipOk">Got it</button>
+      </div>
       <div class="board" id="board"></div>
+      <div class="tray-label">Suspects <span class="tray-hint">— tap to select, then a cell · badge = number left to place</span></div>
       <div class="tray" id="tray"></div>
       <div class="toolbar">
         <button class="btn" id="undoBtn"><img src="assets/ui/icon-undo.png" alt=""/>Undo</button>
@@ -254,16 +285,33 @@
     </div>
 
     <aside class="casefile">
+      <!-- TOP: case flavor -->
       <h2>Case File</h2>
       <div class="case-title" id="caseTitle">—</div>
-      <div class="case-story" id="caseStory"></div>
       <div class="case-sub" id="caseSub"></div>
+      <details class="briefing" id="briefing" open>
+        <summary>Case briefing</summary>
+        <div class="case-story" id="caseStory"></div>
+      </details>
 
-      <div class="sec">Evidence <span class="req">★ = key (required to solve)</span></div>
-      <ul class="clues" id="clueList"></ul>
+      <!-- MIDDLE: tactical current-evidence stepper -->
+      <div class="sec">Current Evidence <span class="req" id="evStep">—</span></div>
+      <div class="ev-current">
+        <button class="ev-nav" id="evPrev" title="Previous clue">◀</button>
+        <div class="ev-clue" id="evClue">—</div>
+        <button class="ev-nav" id="evNext" title="Next clue">▶</button>
+      </div>
+      <div class="ev-progress" id="evProgress"></div>
+      <details class="all-ev">
+        <summary>All evidence <span class="req">★ = key (required)</span></summary>
+        <ul class="clues" id="clueList"></ul>
+      </details>
 
-      <div class="sec">Persons of Interest</div>
-      <div class="roster" id="roster"></div>
+      <!-- BOTTOM: roster, collapsed by default -->
+      <details class="poi" id="poiDetails">
+        <summary>Persons of Interest</summary>
+        <div class="roster" id="roster"></div>
+      </details>
 
       <div class="hint-note" id="loadBearingNote"></div>
       <div class="status" id="status"></div>
@@ -986,7 +1034,7 @@ const boardEl=$("board"), trayEl=$("tray");
 
 let C=null, cfg=null, board=null, given=null, sel=-1, selSuspect=-1;
 let undoStack=[], redoStack=[], hintsUsed=0, solved=false, story=null, cluesUsed=new Set();
-let accuseCulprit=-1, attempts=0;
+let accuseCulprit=-1, attempts=0, clueStep=0;
 
 /* ---- persistence (localStorage; runs locally) ---- */
 const LS={
@@ -1121,7 +1169,7 @@ function renderTray(){
   for(let v=1;v<=cfg.N;v++){
     const s=Skin.sName(THEME,v), el=document.createElement("div");
     el.className="susp"+(selSuspect===v?" sel":"")+(counts[v]<=0?" done":"");
-    el.title=`${s.name} — press ${s.L}`;
+    el.title=counts[v]>0?`${s.name}: ${counts[v]} left to place · press ${s.L}`:`${s.name}: all placed`;
     const name=document.createElement("div"); name.className="susp-name";
     name.textContent=s.name.replace(/^The\s+/i,"");        // "The Colonel" -> "Colonel"
     const disc=document.createElement("div"); disc.className="disc";
@@ -1149,12 +1197,24 @@ function renderCase(){
     li.addEventListener("click",()=>{ li.classList.toggle("used"); if(li.classList.contains("used"))cluesUsed.add(idx); else cluesUsed.delete(idx); });
     list.appendChild(li);
   });
+  // current-evidence stepper + tactical progress readout
+  clueStep=0; renderEvCurrent();
+  $("evProgress").innerHTML=`Sudoku logic alone allows <b>${C.completionsWithout}</b> arrangements — the evidence narrows them to one. `+
+    `The culprit is hidden in the <span class="scene-word">dashed scene</span>.`;
   // roster
   const ros=$("roster"); ros.innerHTML="";
   for(let v=1;v<=cfg.N;v++){ const s=Skin.sName(THEME,v); const d=document.createElement("div"); d.className="ros";
     d.innerHTML=`<span class="dot" style="background:${s.color}">${s.L}</span>`+
       `<span><span class="nm">${s.name}</span> — <span class="mo">${s.motive}</span></span>`;
     ros.appendChild(d); }
+}
+function renderEvCurrent(){
+  const n=C.clues.length; if(!n){ $("evClue").textContent="—"; $("evStep").textContent=""; return; }
+  clueStep=((clueStep%n)+n)%n;
+  const cl=C.clues[clueStep];
+  const star=cl.key?`<span class="keymark" title="key evidence">★</span>`:"";
+  $("evClue").innerHTML=`${star}${Skin.renderClue(cfg,THEME,cl)} <span class="clue-type">[${Skin.TYPE_LABEL[cl.type]||cl.type}]</span>`;
+  $("evStep").textContent=`${clueStep+1} / ${n}`;
 }
 
 /* ---- interactions ---- */
@@ -1346,6 +1406,11 @@ $("accuseSubmit").onclick=submitAccusation;
 $("archiveBtn").onclick=openArchive;
 $("archiveClose").onclick=()=>$("archiveModal").classList.remove("show");
 $("winArchive").onclick=openArchive;
+$("evPrev").onclick=()=>{ clueStep--; renderEvCurrent(); };
+$("evNext").onclick=()=>{ clueStep++; renderEvCurrent(); };
+// first-time sudoku rule callout (once per browser)
+if(!LS.get("seenRule",false)){ const ft=$("firstTip"); if(ft) ft.hidden=false; }
+$("firstTipOk").onclick=()=>{ $("firstTip").hidden=true; LS.set("seenRule",true); };
 $("codePill").onclick=()=>{ try{ navigator.clipboard.writeText(C.code); setStatus(`Case code ${C.code} copied.`,"good"); }catch(e){} };
 
 let pendingDiff="medium";
