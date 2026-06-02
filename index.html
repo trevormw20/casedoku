@@ -12,6 +12,8 @@
     --good:#4caf7d; --bad:#e1554c;
     --grid-thick:#776b4f;
     --cell:62px;
+    --disc-cream:#efe6d0;   /* token disc fill behind transparent cutouts (theme can override) */
+    --ring-w:2.4px;         /* token ring thickness */
   }
   *{box-sizing:border-box;}
   html,body{margin:0;height:100%;}
@@ -58,23 +60,42 @@
     font-family:"Courier New",monospace;display:flex;align-items:center;gap:2px;}
   .room-tag img{width:9px;height:9px;opacity:.5;}
   .wicon{width:14px;height:14px;vertical-align:-2px;}
-  .token{width:80%;height:80%;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.7);
-    box-shadow:0 2px 6px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.18);}
-  .cell.given .token{box-shadow:0 2px 6px rgba(0,0,0,.45),inset 0 0 0 2px rgba(255,255,255,.55);}
-  .token.bad{outline:2px solid var(--bad);outline-offset:-2px;}
+  /* ---- suspect token: colored disc + per-case ring + portrait/letter ---- */
+  .token{position:relative;width:82%;height:82%;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--disc, #888);                 /* fallback: suspect-color disc (set inline) */
+    box-shadow:0 0 0 var(--ring-w) var(--ring,#fff), 0 2px 4px rgba(0,0,0,.55);
+    transition:box-shadow .1s;}
+  .token .tletter{font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.75);
+    font-size:inherit;line-height:1;}
+  .token .tportrait{position:absolute;inset:0;border-radius:50%;
+    background:var(--disc-cream);                 /* cream so transparent cutouts pop */
+    background-size:cover;background-position:center;display:none;}
+  .token.has-img{background:var(--disc-cream);}
+  .token.has-img .tportrait{display:block;}
+  .token.has-img .tletter{display:none;}
+  .token.big{width:84px;height:84px;font-size:40px;box-shadow:0 0 0 3.5px var(--ring,#fff),0 8px 20px rgba(0,0,0,.6);}
+  .token.tray{width:100%;height:100%;font-size:22px;}
+  /* selected cell's token: thicker glowing ring */
+  .cell.sel .token{box-shadow:0 0 0 calc(var(--ring-w) + 1px) var(--ring,#fff),
+    0 0 0 calc(var(--ring-w) + 4px) rgba(231,185,77,.6), 0 2px 6px rgba(0,0,0,.6);}
+  /* same-suspect highlight: soft halo */
+  .cell.match .token{box-shadow:0 0 0 var(--ring-w) var(--ring,#fff),
+    0 0 0 calc(var(--ring-w) + 3px) rgba(255,255,255,.30), 0 2px 4px rgba(0,0,0,.55);}
+  /* conflict: red ring layered OUTSIDE the colour ring so it never clashes with it */
+  .token.bad{outline:2.5px solid var(--bad);outline-offset:2px;}
 
-  .tray{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:100%;}
-  .susp{position:relative;width:58px;aspect-ratio:1/1.18;border-radius:8px;cursor:pointer;
-    background-size:cover;background-position:center;border:2px solid transparent;
-    box-shadow:0 3px 8px rgba(0,0,0,.5);overflow:hidden;transition:transform .1s;}
+  /* tray uses the SAME token disc+ring so the picker matches the board */
+  .tray{display:flex;gap:11px;flex-wrap:wrap;justify-content:center;max-width:100%;padding-top:4px;}
+  .susp{position:relative;width:54px;height:54px;cursor:pointer;border-radius:50%;
+    transition:transform .1s;}
   .susp:hover{transform:translateY(-3px);}
-  .susp.sel{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber),0 6px 14px rgba(0,0,0,.6);}
-  .susp.done{filter:grayscale(.7) brightness(.55);}
-  .susp .key{position:absolute;top:1px;left:3px;font-size:11px;color:#fff;text-shadow:0 1px 2px #000;
-    font-family:"Courier New",monospace;}
-  .susp .left{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:11px;font-weight:700;
-    background:rgba(0,0,0,.55);color:var(--amber-soft);padding:1px 0;}
+  .susp.sel .token{box-shadow:0 0 0 calc(var(--ring-w) + 1.5px) var(--ring,#fff),
+    0 0 0 calc(var(--ring-w) + 5px) rgba(231,185,77,.7), 0 4px 10px rgba(0,0,0,.6);}
+  .susp.done{filter:grayscale(.75) brightness(.6);}
+  .susp .count{position:absolute;bottom:-3px;right:-3px;min-width:18px;height:18px;border-radius:9px;
+    background:#13151d;border:1px solid var(--line);color:var(--amber-soft);font-size:11px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;font-family:"Courier New",monospace;padding:0 4px;}
 
   .toolbar{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;}
   .btn{display:inline-flex;align-items:center;gap:6px;cursor:pointer;
@@ -128,9 +149,7 @@
   .modal .x{position:absolute;top:10px;right:10px;cursor:pointer;background:none;border:none;padding:6px;}
   .modal .x img{width:20px;height:20px;}
   .modal h2{margin:.2em 0;color:var(--amber-soft);font-variant:small-caps;letter-spacing:2px;}
-  .reveal-token{width:86px;height:86px;border-radius:50%;margin:8px auto;display:flex;align-items:center;
-    justify-content:center;font-size:42px;font-weight:700;color:#fff;
-    box-shadow:0 0 0 4px rgba(231,185,77,.4),0 8px 20px rgba(0,0,0,.6);}
+  .reveal-token{width:84px;height:84px;margin:8px auto;display:flex;align-items:center;justify-content:center;}
   .killer-name{font-size:27px;color:var(--blood);font-variant:small-caps;letter-spacing:1px;text-align:center;}
   .chain{list-style:none;padding:0;margin:14px 0;text-align:left;}
   .chain li{padding:8px 10px 8px 14px;border-left:2px solid var(--amber);background:rgba(231,185,77,.06);
@@ -678,6 +697,14 @@ const MANOR = {
     {name:"the Bedroom", slug:"bedroom", icon:"bed", hue:320},
     {name:"the Dining Room", slug:"dining", icon:"painting", hue:20},
   ],
+  // token disc/ring styling (theme-aware; a pack can restyle the whole token system here)
+  tokenStyle:{
+    disc:"#efe6d0",                 // disc fill behind transparent cutouts
+    // curated high-contrast ring palette — used to keep all active tokens distinct
+    ringPalette:["#E6194B","#3CB44B","#4363D8","#F58231","#911EB4","#1FBFC4",
+                 "#F032E6","#E6C619","#9A6324","#42B0A0","#B03060","#5D6D7E",
+                 "#7A8B3C","#2471A3","#D86A1E"],
+  },
 };
 
 // structural vocabulary by board shape (bh x bw box). Falls back gracefully.
@@ -771,6 +798,51 @@ function shade(hex,amt){ const n=parseInt(hex.slice(1),16);
   let r=Math.max(0,Math.min(255,(n>>16)+amt)), g=Math.max(0,Math.min(255,((n>>8)&255)+amt)), b=Math.max(0,Math.min(255,(n&255)+amt));
   return `#${(r<<16|g<<8|b).toString(16).padStart(6,"0")}`; }
 
+/* ---- per-case token ring assignment (theme-aware, guaranteed-distinct) ---- */
+const TOKENCFG=THEME.tokenStyle||{};
+const DISC_CREAM=TOKENCFG.disc||"#efe6d0";
+const RING_PALETTE=(TOKENCFG.ringPalette&&TOKENCFG.ringPalette.length)?TOKENCFG.ringPalette:
+  ["#E6194B","#3CB44B","#4363D8","#F58231","#911EB4","#1FBFC4","#F032E6","#E6C619",
+   "#9A6324","#42B0A0","#B03060","#5D6D7E","#7A8B3C","#2471A3","#D86A1E"];
+let RING=[];                                   // per-case: suspect value (1..N) -> ring colour
+function _rgb(h){ h=h.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
+function _cdist(a,b){ const x=_rgb(a),y=_rgb(b); return Math.hypot(x[0]-y[0],x[1]-y[1],x[2]-y[2]); }
+function assignRings(N){
+  const CLOSE=78, used=[];
+  for(let i=0;i<N;i++){
+    const sig=THEME.suspects[i].color;
+    let pick = used.some(u=>_cdist(u,sig)<CLOSE) ? null : sig;        // keep signature when it stays distinct
+    if(!pick){                                                        // else take the farthest palette colour
+      let best=null,bestMin=-1;
+      for(const c of RING_PALETTE){
+        if(used.some(u=>_cdist(u,c)<14)) continue;                    // skip already-used
+        const m=used.length ? Math.min(...used.map(u=>_cdist(u,c))) : 999;
+        if(m>bestMin){ bestMin=m; best=c; }
+      }
+      pick = best || sig;
+    }
+    used.push(pick);
+  }
+  return used;
+}
+
+/* shared suspect-token builder — board, tray and reveal use the SAME disc+ring */
+function makeToken(val, variant){
+  const s=Skin.sName(THEME,val), t=document.createElement("div");
+  t.className="token"+(variant?(" "+variant):"");
+  t.style.setProperty("--ring", RING[val-1] || s.color);
+  t.style.setProperty("--disc", s.color);                            // fallback disc fill (lettered token)
+  const portrait=document.createElement("div"); portrait.className="tportrait";
+  const letter=document.createElement("span"); letter.className="tletter"; letter.textContent=s.L;
+  const url=tAsset('suspects','suspect-'+s.role+'.png');
+  t.classList.add("has-img"); portrait.style.backgroundImage=`url("${url}")`;
+  const probe=new Image();                                           // graceful fallback if file is missing
+  probe.onerror=()=>{ t.classList.remove("has-img"); };
+  probe.src=url;
+  t.appendChild(portrait); t.appendChild(letter);
+  return t;
+}
+
 function dressStory(){
   const rng=E.makeRNG((C.seed ^ E.hashStr("story"))>>>0);
   const pick=arr=>arr[Math.floor(rng()*arr.length)];
@@ -787,6 +859,8 @@ function startCase(opts){
   C=E.generateCase(opts); cfg=C.cfg;
   board=C.givens.slice(); given=C.givens.map(v=>v!==0);
   sel=-1; selSuspect=-1; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false; cluesUsed=new Set();
+  RING=assignRings(cfg.N);                                    // distinct ring colour per active suspect
+  document.documentElement.style.setProperty("--disc-cream",DISC_CREAM);
   dressStory();
   setVar("--cell", cfg.N<=6 ? "72px" : "62px");
   boardEl.style.gridTemplateColumns=`repeat(${cfg.N}, var(--cell))`;
@@ -801,9 +875,7 @@ function startCase(opts){
 function setVar(k,v){ document.documentElement.style.setProperty(k,v); }
 
 /* ---- board ---- */
-function tokenEl(val){ const s=Skin.sName(THEME,val); const t=document.createElement("div");
-  t.className="token"; t.style.background=`radial-gradient(circle at 35% 30%, ${s.color}, ${shade(s.color,-35)})`;
-  t.textContent=s.L; return t; }
+function tokenEl(val){ return makeToken(val); }
 function renderBoard(){
   boardEl.innerHTML="";
   const N=cfg.N;
@@ -836,10 +908,11 @@ function renderTray(){
   for(let v=1;v<=cfg.N;v++){
     const s=Skin.sName(THEME,v), el=document.createElement("div");
     el.className="susp"+(selSuspect===v?" sel":"")+(counts[v]<=0?" done":"");
-    el.style.backgroundImage=`linear-gradient(180deg,rgba(0,0,0,0) 55%,rgba(0,0,0,.2)),url("${tAsset('suspects','suspect-'+s.role+'.png')}")`;
-    el.style.backgroundColor=s.color;
-    el.innerHTML=`<span class="key">${s.L}</span><span class="left">${counts[v]>0?counts[v]:'✓'}</span>`;
     el.title=`${s.name} — press ${s.L}`;
+    el.appendChild(makeToken(v,"tray"));
+    const badge=document.createElement("span"); badge.className="count";
+    badge.textContent = counts[v]>0?counts[v]:'✓';
+    el.appendChild(badge);
     el.addEventListener("click",()=>selectSuspect(v));
     trayEl.appendChild(el);
   }
@@ -924,8 +997,7 @@ function refresh(){ const bad=conflicts(); const matchVal=selSuspect>0?selSuspec
 /* ---- win / reveal ---- */
 function checkWin(){ for(let i=0;i<cfg.N*cfg.N;i++) if(board[i]!==C.solution[i]) return; reveal(); }
 function reveal(){ solved=true; const k=Skin.sName(THEME,C.killer);
-  $("revealToken").textContent=k.L;
-  $("revealToken").style.background=`radial-gradient(circle at 35% 30%, ${k.color}, ${shade(k.color,-40)})`;
+  const rt=$("revealToken"); rt.innerHTML=""; rt.appendChild(makeToken(C.killer,"big"));
   $("killerName").textContent=k.name;
   $("killerMotive").textContent=`Motive: ${k.motive}.`;
   const chain=$("chain"); chain.innerHTML="";

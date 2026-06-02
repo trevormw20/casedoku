@@ -82,28 +82,26 @@ WEAPONS = ["knife", "candlestick", "revolver", "rope", "wrench", "poison",
 
 # ---- suspects -------------------------------------------------------------
 def draw_suspect(slug, letter, label, hexcol, victim=False):
+    """Placeholder portrait = a TRANSPARENT cutout: a big suspect-colored letter with a
+    warm-black outline. On the app's cream disc it reads as a clean token (cream disc +
+    colored ring + colored letter), exactly like real transparent cutout art will. The
+    cream shows through so the ring/cutout pop; real art drops in with no code change."""
     S = 512
     rgb = hex2rgb(hexcol)
     if victim:  # desaturate toward grey
         g = sum(rgb)//3
-        rgb = tuple(int(c*0.4 + g*0.6) for c in rgb)
-    img = Image.new("RGB", (S, S), tuple(int(c*0.4) for c in rgb))
+        rgb = tuple(int(c*0.45 + g*0.55) for c in rgb)
+    img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    top, bot = rgb, tuple(int(c*0.42) for c in rgb)
-    for y in range(S):
-        t = y/S
-        d.line([(0, y), (S, y)], fill=tuple(int(top[i]*(1-t)+bot[i]*t) for i in range(3)))
-    ov = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    od = ImageDraw.Draw(ov)
-    od.ellipse([196, 150, 316, 270], fill=(255, 255, 255, 34))
-    od.pieslice([140, 300, 372, 540], 180, 360, fill=(255, 255, 255, 34))
-    img = Image.alpha_composite(img.convert("RGBA"), ov).convert("RGB")
-    d = ImageDraw.Draw(img)
-    mark = letter + ("†" if victim else "")
-    centered(d, (0, 30, S, 210), mark, font(150), (235, 235, 235) if victim else (255, 255, 255))
-    d.rectangle([0, 446, S, 512], fill=(0, 0, 0))
-    plate = (label + " — VICTIM") if victim else label
-    centered(d, (0, 452, S, 510), plate.upper(), font(40), (210, 200, 175) if victim else (235, 220, 180))
+    fill = tuple(int(c*0.80) for c in rgb) + (255,)
+    outline = (26, 26, 34, 255)                       # warm black, per art bible
+    f = font(300)
+    bb = d.textbbox((0, 0), letter, font=f, stroke_width=12)
+    w, h = bb[2]-bb[0], bb[3]-bb[1]
+    d.text(((S-w)/2-bb[0], (S-h)/2-bb[1]), letter, font=f, fill=fill, stroke_width=12, stroke_fill=outline)
+    if victim:                                        # small dagger marker for the body
+        fv = font(120)
+        d.text((350, 20), "†", font=fv, fill=(60, 60, 66, 255), stroke_width=6, stroke_fill=(20, 20, 24, 255))
     img.save(os.path.join(DIRS["suspects"], f"suspect-{slug}{'-victim' if victim else ''}.png"))
 
 
