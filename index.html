@@ -42,7 +42,7 @@
   .pill b{color:var(--amber-soft);}
   select,button,input{font-family:inherit;}
 
-  .layout{display:grid;grid-template-columns:auto 380px;gap:24px;
+  .layout{display:grid;grid-template-columns:auto 410px;gap:24px;
     max-width:1240px;margin:0 auto;align-items:start;}
   @media (max-width:1040px){.layout{grid-template-columns:1fr;}}
 
@@ -61,10 +61,12 @@
   .cell.match{background:#2c3a33;}
   .cell.scene::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(193,39,45,.7);
     border-radius:5px;pointer-events:none;}
-  .room-tag{position:absolute;top:1px;left:3px;font-size:8.5px;letter-spacing:.3px;
-    color:rgba(231,220,192,.32);text-transform:uppercase;pointer-events:none;
-    font-family:"Courier New",monospace;display:flex;align-items:center;gap:2px;}
-  .room-tag img{width:9px;height:9px;opacity:.5;}
+  .room-tag{position:absolute;top:3px;left:3px;z-index:3;font-size:10px;font-weight:700;letter-spacing:.5px;
+    color:var(--amber-soft);text-transform:uppercase;pointer-events:none;white-space:nowrap;
+    font-family:"Courier New",monospace;display:inline-flex;align-items:center;gap:4px;
+    background:rgba(11,13,18,.78);padding:2px 7px;border-radius:7px;
+    border:1px solid rgba(231,185,77,.45);box-shadow:0 1px 4px rgba(0,0,0,.55);}
+  .room-tag img{width:12px;height:12px;opacity:.95;}
   .wicon{width:14px;height:14px;vertical-align:-2px;}
   /* ---- suspect token: colored disc + per-case ring + portrait/letter ---- */
   .token{position:relative;width:82%;height:82%;border-radius:50%;
@@ -91,11 +93,15 @@
   /* conflict: red ring layered OUTSIDE the colour ring so it never clashes with it */
   .token.bad{outline:2.5px solid var(--bad);outline-offset:2px;}
 
-  /* tray uses the SAME token disc+ring so the picker matches the board */
-  .tray{display:flex;gap:11px;flex-wrap:wrap;justify-content:center;max-width:100%;padding-top:4px;}
-  .susp{position:relative;width:54px;height:54px;cursor:pointer;border-radius:50%;
+  /* tray uses the SAME token disc+ring so the picker matches the board; name above */
+  .tray{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:100%;padding-top:4px;}
+  .susp{display:flex;flex-direction:column;align-items:center;gap:4px;width:62px;cursor:pointer;
     transition:transform .1s;}
   .susp:hover{transform:translateY(-3px);}
+  .susp-name{font-size:11px;font-weight:700;color:var(--ink);text-align:center;line-height:1;
+    max-width:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .susp.sel .susp-name{color:var(--amber-soft);}
+  .susp .disc{position:relative;width:52px;height:52px;}
   .susp.sel .token{box-shadow:0 0 0 calc(var(--ring-w) + 1.5px) var(--ring,#fff),
     0 0 0 calc(var(--ring-w) + 5px) rgba(231,185,77,.7), 0 4px 10px rgba(0,0,0,.6);}
   .susp.done{filter:grayscale(.75) brightness(.6);}
@@ -120,23 +126,29 @@
     font-weight:700;font-size:10px;padding:3px 7px;letter-spacing:1px;border-radius:3px;}
   .casefile h2{font-size:12px;letter-spacing:3px;color:var(--ink-dim);text-transform:uppercase;
     margin:0 0 4px;font-family:"Courier New",monospace;}
-  .case-title{font-size:21px;color:var(--blood);margin:0 0 2px;font-variant:small-caps;letter-spacing:1px;}
-  .case-sub{color:var(--ink-dim);font-style:italic;font-size:13.5px;margin-bottom:6px;line-height:1.45;}
-  .sec{margin:15px 0 6px;font-family:"Courier New",monospace;font-size:10.5px;letter-spacing:2px;
+  .case-title{font-size:23px;color:var(--blood);margin:0 0 4px;font-variant:small-caps;letter-spacing:1px;}
+  .case-story{font-size:15px;line-height:1.6;color:var(--ink);margin:0 0 8px;
+    border-left:3px solid rgba(231,185,77,.5);padding:2px 0 2px 11px;}
+  .case-story::first-letter{font-size:1.35em;color:var(--amber-soft);font-weight:700;}
+  .case-sub{color:var(--ink-dim);font-style:italic;font-size:13px;margin-bottom:6px;line-height:1.45;}
+  .case-sub b{color:var(--amber-soft);font-style:normal;}
+  .sec{margin:16px 0 6px;font-family:"Courier New",monospace;font-size:11px;letter-spacing:2px;
     color:var(--amber);text-transform:uppercase;border-bottom:1px dashed var(--line);padding-bottom:4px;
     display:flex;justify-content:space-between;align-items:center;}
-  .sec .req{color:var(--blood);font-size:9px;letter-spacing:1px;}
-  .clues{list-style:none;margin:0;padding:0;font-size:14px;line-height:1.46;}
-  .clues li{padding:6px 8px 6px 26px;position:relative;color:var(--ink);border-radius:6px;cursor:default;}
-  .clues li::before{content:attr(data-n);position:absolute;left:6px;top:6px;color:var(--blood);
-    font-family:"Courier New",monospace;font-size:11px;font-weight:700;}
-  .clues li:hover{background:rgba(231,185,77,.07);}
+  .sec .req{color:var(--blood);font-size:9.5px;letter-spacing:1px;}
+  .clues{list-style:none;margin:0;padding:0;font-size:15.5px;line-height:1.55;}
+  .clues li{padding:7px 8px 7px 28px;position:relative;color:var(--ink);border-radius:6px;cursor:default;}
+  .clues li::before{content:attr(data-n);position:absolute;left:7px;top:7px;color:var(--blood);
+    font-family:"Courier New",monospace;font-size:12px;font-weight:700;}
+  .clues li.key{background:rgba(231,185,77,.06);}
+  .keymark{color:var(--amber);font-size:13px;margin-right:3px;}
+  .clues li:hover{background:rgba(231,185,77,.10);}
   .clues li.used{opacity:.5;text-decoration:line-through;text-decoration-color:rgba(231,185,77,.4);}
   .clues li b{color:var(--amber-soft);}
-  .clue-type{font-size:9px;color:var(--ink-dim);font-family:"Courier New",monospace;
+  .clue-type{font-size:10px;color:var(--ink-dim);font-family:"Courier New",monospace;
     text-transform:uppercase;letter-spacing:.5px;}
   .roster{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;}
-  .ros{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--ink-dim);}
+  .ros{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink-dim);}
   .ros .dot{width:14px;height:14px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.3);
     display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700;}
   .ros .nm{color:var(--ink);} .ros .mo{font-style:italic;font-size:11px;}
@@ -199,9 +211,10 @@
     <aside class="casefile">
       <h2>Case File</h2>
       <div class="case-title" id="caseTitle">—</div>
+      <div class="case-story" id="caseStory"></div>
       <div class="case-sub" id="caseSub"></div>
 
-      <div class="sec">Evidence <span class="req">★ required to solve</span></div>
+      <div class="sec">Evidence <span class="req">★ = key (required to solve)</span></div>
       <ul class="clues" id="clueList"></ul>
 
       <div class="sec">Persons of Interest</div>
@@ -359,10 +372,12 @@ function isValidFull(cfg,g){
 
 /* ---------- difficulty tiers ---------- */
 const TIERS = {
-  easy:    {key:"easy",    label:"Easy",    cfg:{N:6,bh:2,bw:3}, targetMin:3,  cap:8,  bias:"direct"},
-  medium:  {key:"medium",  label:"Medium",  cfg:{N:9,bh:3,bw:3}, targetMin:6,  cap:18, bias:"mixed"},
-  hard:    {key:"hard",    label:"Hard",    cfg:{N:9,bh:3,bw:3}, targetMin:16, cap:46, bias:"indirect"},
-  extreme: {key:"extreme", label:"Extreme", cfg:{N:9,bh:3,bw:3}, targetMin:34, cap:96, bias:"cryptic"},
+  // clueGoal = total displayed clues to aim for (required load-bearing set + true
+  // corroborating clues). Required-only count is far smaller; see pickExtras().
+  easy:    {key:"easy",    label:"Easy",    cfg:{N:6,bh:2,bw:3}, targetMin:3,  cap:8,  bias:"direct",   clueGoal:4},
+  medium:  {key:"medium",  label:"Medium",  cfg:{N:9,bh:3,bw:3}, targetMin:6,  cap:18, bias:"mixed",    clueGoal:6},
+  hard:    {key:"hard",    label:"Hard",    cfg:{N:9,bh:3,bw:3}, targetMin:16, cap:46, bias:"indirect", clueGoal:8},
+  extreme: {key:"extreme", label:"Extreme", cfg:{N:9,bh:3,bw:3}, targetMin:34, cap:96, bias:"cryptic",  clueGoal:11},
 };
 const TIER_CHAR = {easy:"E", medium:"M", hard:"H", extreme:"X"};
 const CHAR_TIER = {E:"easy", M:"medium", H:"hard", X:"extreme"};
@@ -516,6 +531,31 @@ function coverAndMinimize(pool, completions, solIdx, bias, rng){
   return chosen;
 }
 
+/* corroborating clues: extra facts that are ALL true of the solution (pulled from
+   the same all-true candidate pool), added on top of the required cover so a case
+   reads like a real investigation. They never change uniqueness (the required set
+   already forces it) and never mislead (every one holds for the solution). Selected
+   round-robin across clue types for texture, deduped against the required set. */
+function clueKey(c){ return c.type+":"+JSON.stringify(c.p); }
+function pickExtras(pool, required, goal, rng){
+  const want=Math.max(0, (goal||required.length)-required.length);
+  if(want<=0) return [];
+  const seen=new Set(required.map(clueKey)), byType={};
+  for(const c of pool){ const k=clueKey(c); if(seen.has(k)) continue; seen.add(k);
+    (byType[c.type]=byType[c.type]||[]).push(c); }
+  const types=shuffle(rng, Object.keys(byType));
+  for(const t of types) shuffle(rng, byType[t]);
+  const out=[];
+  while(out.length<want){
+    let progress=false;
+    for(const t of types){
+      if(byType[t] && byType[t].length){ out.push(byType[t].shift()); progress=true; if(out.length>=want) break; }
+    }
+    if(!progress) break;   // pool exhausted
+  }
+  return out;
+}
+
 /* ---------- case assembly ---------- */
 function parseSeed(input){
   // case code form: <tierChar><base36 seed>   e.g. "M3xk1z"
@@ -548,16 +588,21 @@ function generateCase(opts){
   const solIdx=completions.findIndex(g=>g.every((v,i)=>v===solution[i]));
 
   const pool=buildPool(cfg,solution,ambig,rng);
-  const clues=coverAndMinimize(pool,completions,solIdx,T.bias,rng);
+  const required=coverAndMinimize(pool,completions,solIdx,T.bias,rng);
 
-  // --- verification (the heart) ---
-  const withClues=completions.filter(g=>clues.every(c=>c.pred(g)));
+  // --- verification (the heart): the REQUIRED set alone must force the solution ---
+  const withClues=completions.filter(g=>required.every(c=>c.pred(g)));
   const uniqueWithClues = withClues.length===1 && withClues[0].every((v,i)=>v===solution[i]);
   const ambiguousWithout = completions.length>=2 && !capped;
   if(!uniqueWithClues || !ambiguousWithout){
     // extremely unlikely; retry with a perturbed seed for robustness
     return generateCase(Object.assign({},opts,{seed:(seed+0x9E3779B9)>>>0, difficulty:tier}));
   }
+
+  // add true corroborating clues for a richer case file; required stay load-bearing
+  const keySet=new Set(required);
+  const allClues=required.concat(pickExtras(pool, required, T.clueGoal, rng));
+  shuffle(rng, allClues);                          // natural display order
 
   // --- murder scene + provable killer ---
   // scene = the most ambiguous cell (most possible suspects under sudoku+givens);
@@ -573,15 +618,16 @@ function generateCase(opts){
   for(const v of sceneCandidates){
     if(v===killer) continue;
     const comp=completions.find(g=>g[murderCell]===v);
-    const clueIdx=clues.findIndex(c=>!c.pred(comp));
-    reasoning.push({ruledOut:v, clue:clueIdx});   // clue index into clues[]
+    const clueIdx=allClues.findIndex(c=>!c.pred(comp));   // any clue this scenario contradicts
+    reasoning.push({ruledOut:v, clue:clueIdx});
   }
 
   return {
     tier, seed, code:caseCode(tier,seed), cfg,
     solution, givens,
-    clues: clues.map(c=>({type:c.type, p:c.p})),  // serialisable
-    cluePreds: clues.map(c=>c.pred),              // for live UI validation
+    clues: allClues.map(c=>({type:c.type, p:c.p, key:keySet.has(c)})),  // key = load-bearing
+    cluePreds: allClues.map(c=>c.pred),           // for live UI validation
+    requiredCount: required.length,
     completionsWithout: completions.length,
     ambiguousCells: ambig,
     murderCell, killer, sceneCandidates, reasoning,
@@ -663,7 +709,7 @@ GLOBAL.CludokuEngine = {
 "use strict";
 
 const MANOR = {
-  id:"manor", name:"Blackwood Manor (Classic Whodunit)",
+  id:"manor", name:"Blackwood Manor (Classic Whodunit)", place:"Blackwood Manor",
   // each suspect carries a `role` slug -> assets/themes/manor/suspects/suspect-<role>.png
   suspects:[
     {role:"colonel",     L:"A", name:"The Colonel",     color:"#D4A017", motive:"a buried war secret"},
@@ -694,6 +740,36 @@ const MANOR = {
     {n:"the rolling pin", slug:"rollingpin"}, {n:"the garden shears", slug:"shears"},
   ],
   times:["just before midnight","at the stroke of nine","during the thunderstorm","at supper","as the clock struck two"],
+  // narrative library (swappable per theme pack). Slots are filled with the case's
+  // procedural facts: {place} {victim} {room} {time} {weapon} {n}. {atmosphere} is flavor.
+  story:{
+    atmosphere:["A thunderstorm","An uneasy hush","A bitter autumn chill","A creeping river fog",
+                "A heavy silence","A single guttering candle"],
+    setup:[
+      "{atmosphere} had settled over {place} when {victim} was found dead {time}.",
+      "The guests had gathered at {place} for the weekend — and {time}, {victim} was found dead.",
+      "{place} keeps its secrets well, but not tonight: {victim} lies dead, discovered {time}.",
+      "What began as a quiet evening at {place} ended with {victim} murdered, {time}.",
+    ],
+    discovery:[
+      "The body was found in {room}, {weapon} left close at hand.",
+      "{victim} had been struck down in {room} with {weapon}.",
+      "It happened in {room}, and {weapon} was the instrument.",
+      "The scene was {room}; the weapon, {weapon}; the hour, unmistakable.",
+    ],
+    suspects:[
+      "All {n} houseguests had reason to wish it done, and every one claims to have been elsewhere.",
+      "{n} suspects remain beneath this roof, each with a motive and a tidy alibi.",
+      "That leaves {n} suspects — old friends, bitter rivals, and at least one liar.",
+      "Every one of the {n} guests has an alibi. Only one of them is lying.",
+    ],
+    hook:[
+      "Only one alibi will crack. Seat every guest by the evidence to unmask the killer.",
+      "Read the evidence, place each suspect, and the murderer will have nowhere left to hide.",
+      "Work the room. When every guest is in their place, only the truth will be left standing.",
+      "Follow the clues, fill every room, and the one whose story fails is your culprit.",
+    ],
+  },
   // rooms indexed by box id (need >=9). slug -> room floor png; icon -> object png on the room tag
   rooms:[
     {name:"the Study", slug:"study", icon:"bookshelf", hue:35},
@@ -773,8 +849,20 @@ function renderClue(cfg,theme,clue){
 }
 const TYPE_LABEL={sighting:"sighting",exclusion:"exclusion",position:"position",relative:"relative",adjacency:"adjacency",count:"count"};
 
+/* build a short cozy-mystery intro from the theme's story library + case facts.
+   facts = {place, victim, room, time, weapon, n}. Deterministic given rng (seed). */
+function renderStory(theme, facts, rng){
+  const S=theme.story; if(!S) return "";
+  const pick=arr=>arr[Math.floor(rng()*arr.length)];
+  const atmosphere=pick(S.atmosphere||[""]);
+  const data=Object.assign({atmosphere}, facts);
+  const fill=s=>s.replace(/\{(\w+)\}/g,(m,k)=> data[k]!==undefined?data[k]:m);
+  return [S.setup, S.discovery, S.suspects, S.hook]
+    .filter(Boolean).map(slot=>fill(pick(slot))).join(" ");
+}
+
 GLOBAL.CLUDOKU_THEMES={manor:MANOR};
-GLOBAL.CludokuSkin={ renderClue, roomName, spotName, sName, vocab, TYPE_LABEL,
+GLOBAL.CludokuSkin={ renderClue, renderStory, roomName, spotName, sName, vocab, TYPE_LABEL,
   pick:(rng,arr)=>arr[Math.floor(rng()*arr.length)] };
 })(typeof window!=="undefined" ? window : globalThis);
 </script>
@@ -862,6 +950,12 @@ function dressStory(){
   let alibiRoom=sceneRoom; for(let t=0;t<8 && alibiRoom===sceneRoom;t++) alibiRoom=Skin.roomName(THEME, Math.floor(rng()*Math.min(cfg.N,THEME.rooms.length)));
   story={ victim:pick(THEME.victims), weapon:pick(THEME.weapons), time:pick(THEME.times),
     sceneRoom, alibiRoom, killer, caseNo:100+(C.seed%900) };
+  // cozy-mystery narrative intro woven from the procedural facts (own rng stream so
+  // adding/removing story text never shifts the rest of the dressing)
+  const srng=E.makeRNG((C.seed ^ E.hashStr("narrative"))>>>0);
+  story.narrative=Skin.renderStory(THEME, {
+    place:THEME.place||"the manor", victim:story.victim, room:story.sceneRoom,
+    time:story.time, weapon:story.weapon.n, n:cfg.N }, srng);
 }
 
 function startCase(opts){
@@ -918,24 +1012,30 @@ function renderTray(){
     const s=Skin.sName(THEME,v), el=document.createElement("div");
     el.className="susp"+(selSuspect===v?" sel":"")+(counts[v]<=0?" done":"");
     el.title=`${s.name} — press ${s.L}`;
-    el.appendChild(makeToken(v,"tray"));
+    const name=document.createElement("div"); name.className="susp-name";
+    name.textContent=s.name.replace(/^The\s+/i,"");        // "The Colonel" -> "Colonel"
+    const disc=document.createElement("div"); disc.className="disc";
+    disc.appendChild(makeToken(v,"tray"));
     const badge=document.createElement("span"); badge.className="count";
     badge.textContent = counts[v]>0?counts[v]:'✓';
-    el.appendChild(badge);
+    disc.appendChild(badge);
+    el.appendChild(name); el.appendChild(disc);
     el.addEventListener("click",()=>selectSuspect(v));
     trayEl.appendChild(el);
   }
 }
 function renderCase(){
   $("caseTitle").textContent=`The ${story.victim} Murder`;
-  $("caseSub").innerHTML=`Case №${story.caseNo}. ${story.victim} was found slain in ${story.sceneRoom}, `+
-    `${story.time}, with <img class="wicon" src="${tAsset('weapons','weapon-'+story.weapon.slug+'.png')}" alt="">${story.weapon.n}. `+
-    `Every guest has an alibi — every alibi but one will hold.`;
-  // evidence
+  $("caseStory").textContent=story.narrative;
+  $("caseSub").innerHTML=`Case №${story.caseNo} · <b>${E.TIERS[C.tier].label}</b> · ${THEME.place}`+
+    ` · weapon: <img class="wicon" src="${tAsset('weapons','weapon-'+story.weapon.slug+'.png')}" alt="">${story.weapon.n}.`;
+  // evidence (★ = key/load-bearing; the rest are true corroborating details)
   const list=$("clueList"); list.innerHTML="";
   C.clues.forEach((cl,idx)=>{
     const li=document.createElement("li"); li.dataset.n=(idx+1);
-    li.innerHTML=`${Skin.renderClue(cfg,THEME,cl)} <span class="clue-type">[${Skin.TYPE_LABEL[cl.type]||cl.type}]</span>`;
+    if(cl.key) li.classList.add("key");
+    const star=cl.key?`<span class="keymark" title="key evidence — required to solve">★</span>`:"";
+    li.innerHTML=`${star}${Skin.renderClue(cfg,THEME,cl)} <span class="clue-type">[${Skin.TYPE_LABEL[cl.type]||cl.type}]</span>`;
     li.addEventListener("click",()=>{ li.classList.toggle("used"); if(li.classList.contains("used"))cluesUsed.add(idx); else cluesUsed.delete(idx); });
     list.appendChild(li);
   });
