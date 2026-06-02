@@ -83,19 +83,18 @@
   .cell:has(.cand-grid) .room-tag{display:none;}
   .wicon{width:14px;height:14px;vertical-align:-2px;}
   /* on-board landmarks: room object (bottom-left), murder weapon (scene, top-right),
-     victim body (scene, bottom-right). Sizeable corner badges with a subtle dark backing
-     so they read at a glance, above the centred token but cornered so the suspect stays legible */
-  .cell-object{position:absolute;bottom:1px;left:1px;width:50%;height:50%;max-width:30px;max-height:30px;z-index:4;
-    padding:2px;border-radius:7px;background:rgba(11,13,18,.7);box-shadow:0 1px 3px rgba(0,0,0,.6);
-    object-fit:contain;pointer-events:none;}
-  .cell-weapon{position:absolute;top:1px;right:1px;width:52%;height:52%;max-width:32px;max-height:32px;z-index:6;
-    padding:2px;border-radius:7px;background:rgba(46,12,12,.74);box-shadow:0 1px 3px rgba(0,0,0,.75);
-    object-fit:contain;pointer-events:none;}
+     victim body (scene, bottom-right). The transparent PNGs sit directly on the room floor
+     (no backing box) — large and corner-anchored. The room object sits BEHIND the token so
+     its size can't obscure the suspect; the weapon stays above but cornered. */
+  .cell-object{position:absolute;bottom:1px;left:1px;width:66%;height:66%;max-width:44px;max-height:44px;z-index:1;
+    object-fit:contain;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));}
+  .cell-weapon{position:absolute;top:1px;right:1px;width:66%;height:66%;max-width:44px;max-height:44px;z-index:6;
+    object-fit:contain;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7));}
   .cell-victim{position:absolute;bottom:1px;right:1px;width:50%;height:50%;max-width:30px;max-height:30px;z-index:5;
     padding:1px;border-radius:50%;background:rgba(11,13,18,.72);box-shadow:0 1px 3px rgba(0,0,0,.75);
     object-fit:cover;object-position:center top;pointer-events:none;filter:grayscale(.25);}
   /* ---- suspect token: colored disc + per-case ring + portrait/letter ---- */
-  .token{position:relative;width:82%;height:82%;border-radius:50%;
+  .token{position:relative;width:82%;height:82%;border-radius:50%;z-index:2;  /* above the room object (z1), below scene weapon/victim */
     display:flex;align-items:center;justify-content:center;
     background:var(--disc, #888);                 /* fallback: suspect-color disc (set inline) */
     box-shadow:0 0 0 var(--ring-w) var(--ring,#fff), 0 2px 4px rgba(0,0,0,.55);
