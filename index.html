@@ -182,6 +182,27 @@
   .susp.sel{transform:translateY(-3px) scale(1.06);}
   .susp.sel .susp-name{color:var(--amber-soft);}
   .susp.sel .count{background:var(--amber);color:#1a1a22;border-color:var(--amber);}
+  /* Focus / Atmosphere mode (P4) — reduce texture competition during play */
+  body.focus .cell.empty{outline:1px solid rgba(231,185,77,.13);outline-offset:-3px;}
+  body.focus .cell:not(.given):hover{outline:2px solid var(--amber);outline-offset:-2px;cursor:pointer;}
+  body.focus .cell.sel{box-shadow:inset 0 0 0 3px var(--amber),0 0 12px rgba(231,185,77,.45);}
+  body.focus{--ring-w:3px;}
+  body.focus .token{width:88%;height:88%;}
+  body.focus .cell.bt{border-top-width:3px;border-top-color:#a89668;}
+  body.focus .cell.bl{border-left-width:3px;border-left-color:#a89668;}
+  body.focus .room-tag{background:rgba(8,9,13,.86);}
+  /* Case Assistant + hint highlights (P7) */
+  .assistant{display:flex;gap:10px;align-items:flex-start;background:#15171f;border:1px solid var(--line);
+    border-left:3px solid var(--amber);border-radius:8px;padding:9px 12px;font-size:13.5px;color:var(--ink);
+    max-width:calc(9*var(--cell));line-height:1.45;}
+  .assist-icon{width:22px;height:22px;flex:none;margin-top:1px;}
+  .assist-name{font-family:"Courier New",monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+    color:var(--amber);margin-bottom:2px;}
+  #assistantText b{color:var(--amber-soft);}
+  .cell.hint-room{box-shadow:inset 0 0 0 2px rgba(231,185,77,.5);}
+  .cell.hint-cell{box-shadow:inset 0 0 0 3px var(--amber),0 0 16px rgba(231,185,77,.7);
+    animation:hintpulse 1s ease-in-out infinite alternate;}
+  @keyframes hintpulse{to{box-shadow:inset 0 0 0 3px var(--amber),0 0 24px rgba(231,185,77,.95);}}
 
   .modal-bg{position:fixed;inset:0;background:rgba(4,5,8,.82);display:none;align-items:center;
     justify-content:center;z-index:50;padding:18px;overflow:auto;}
@@ -279,8 +300,13 @@
         <button class="btn" id="undoBtn"><img src="assets/ui/icon-undo.png" alt=""/>Undo</button>
         <button class="btn" id="redoBtn"><img src="assets/ui/icon-redo.png" alt=""/>Redo</button>
         <button class="btn" id="eraseBtn"><img src="assets/ui/icon-erase.png" alt=""/>Erase</button>
-        <button class="btn" id="hintBtn"><img src="assets/ui/icon-hint.png" alt=""/>Hint</button>
+        <button class="btn" id="hintBtn"><img src="assets/ui/icon-hint.png" alt=""/>Ask the Clerk</button>
         <button class="btn primary" id="checkBtn"><img src="assets/ui/icon-check.png" alt=""/>Check</button>
+        <button class="btn" id="atmoBtn" title="Toggle board atmosphere">Atmosphere: —</button>
+      </div>
+      <div class="assistant" id="assistant" hidden>
+        <img src="assets/ui/icon-notebook.png" alt="" class="assist-icon"/>
+        <div><div class="assist-name">Case Assistant</div><div id="assistantText"></div></div>
       </div>
     </div>
 
@@ -1034,13 +1060,14 @@ const boardEl=$("board"), trayEl=$("tray");
 
 let C=null, cfg=null, board=null, given=null, sel=-1, selSuspect=-1;
 let undoStack=[], redoStack=[], hintsUsed=0, solved=false, story=null, cluesUsed=new Set();
-let accuseCulprit=-1, attempts=0, clueStep=0;
+let accuseCulprit=-1, attempts=0, clueStep=0, hintLevel=0, hintTarget=-1;
 
 /* ---- persistence (localStorage; runs locally) ---- */
 const LS={
   get(k,d){ try{ const v=localStorage.getItem("casedoku."+k); return v?JSON.parse(v):d; }catch(e){ return d; } },
   set(k,v){ try{ localStorage.setItem("casedoku."+k, JSON.stringify(v)); }catch(e){} }
 };
+let settings=LS.get("settings",{atmosphere:"low"});   // Focus(low) by default
 /* ---- flavor labels ---- */
 const TIER_FLAVOR={easy:"Routine Case",medium:"Troubling Case",hard:"Grim Case",extreme:"Cold Case"};
 function cap(s){ return s? s.charAt(0).toUpperCase()+s.slice(1) : s; }
@@ -1119,7 +1146,8 @@ function startCase(opts){
   C=E.generateCase(opts); cfg=C.cfg;
   board=C.givens.slice(); given=C.givens.map(v=>v!==0);
   sel=-1; selSuspect=-1; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false; cluesUsed=new Set();
-  accuseCulprit=-1; attempts=0;
+  accuseCulprit=-1; attempts=0; hintLevel=0; hintTarget=-1;
+  const as=$("assistant"); if(as) as.hidden=true;
   RING=assignRings(cfg.N);                                    // distinct ring colour per active suspect
   document.documentElement.style.setProperty("--disc-cream",DISC_CREAM);
   dressStory();
@@ -1137,12 +1165,13 @@ function setVar(k,v){ document.documentElement.style.setProperty(k,v); }
 
 /* ---- board ---- */
 function tokenEl(val){ return makeToken(val); }
+function floorDim(){ return settings.atmosphere==="high" ? ".40" : ".66"; }  // Focus dims textures
 function renderBoard(){
   boardEl.innerHTML="";
-  const N=cfg.N;
+  const N=cfg.N, dim=floorDim();
   for(let r=0;r<N;r++)for(let c=0;c<N;c++){
     const i=r*N+c, cell=document.createElement("div");
-    cell.className="cell"+(given[i]?" given":"");
+    cell.className="cell"+(given[i]?" given":"")+(board[i]===0?" empty":"");
     if(r%cfg.bh===0 && r!==0) cell.classList.add("bt");
     if(c%cfg.bw===0 && c!==0) cell.classList.add("bl");
     if(i===C.murderCell) cell.classList.add("scene");
@@ -1150,7 +1179,7 @@ function renderBoard(){
     const sr=r%cfg.bh, sc=c%cfg.bw;                                  // sub-position within the room
     const fx=cfg.bw>1?(sc/(cfg.bw-1))*100:0, fy=cfg.bh>1?(sr/(cfg.bh-1))*100:0;
     cell.style.backgroundColor=`hsla(${room.hue},38%,50%,0.12)`;      // fallback tint if floor png is missing
-    cell.style.backgroundImage=`linear-gradient(rgba(13,15,20,.42),rgba(13,15,20,.42)),url("${tAsset('rooms','room-'+room.slug+'.png')}")`;
+    cell.style.backgroundImage=`linear-gradient(rgba(13,15,20,${dim}),rgba(13,15,20,${dim})),url("${tAsset('rooms','room-'+room.slug+'.png')}")`;
     cell.style.backgroundSize=`${cfg.bw*100}% ${cfg.bh*100}%`;        // one floor image tiled across the room
     cell.style.backgroundPosition=`${fx}% ${fy}%`;
     cell.dataset.i=i;
@@ -1223,26 +1252,60 @@ function onCell(i){ if(solved)return; if(given[i]){ sel=i; selSuspect=-1; refres
 function selectSuspect(v){ if(solved)return; selSuspect=(selSuspect===v?-1:v);
   if(selSuspect>0 && sel>=0 && !given[sel]) place(sel,selSuspect); renderTray(); refresh(); }
 function place(i,v){ if(given[i]||board[i]===v)return; undoStack.push({i,prev:board[i]}); redoStack=[];
-  board[i]=v; paint(i); refresh(); renderTray(); updateBtns(); checkWin(); }
+  board[i]=v; paint(i); clearHints(); refresh(); renderTray(); updateBtns(); checkWin(); }
 function erase(){ if(solved||sel<0||given[sel]||board[sel]===0)return; undoStack.push({i:sel,prev:board[sel]}); redoStack=[];
-  board[sel]=0; paint(sel); refresh(); renderTray(); updateBtns(); }
+  board[sel]=0; paint(sel); clearHints(); refresh(); renderTray(); updateBtns(); }
 function undo(){ if(!undoStack.length)return; const m=undoStack.pop(); redoStack.push({i:m.i,prev:board[m.i]});
   board[m.i]=m.prev; paint(m.i); refresh(); renderTray(); updateBtns(); }
 function redo(){ if(!redoStack.length)return; const m=redoStack.pop(); undoStack.push({i:m.i,prev:board[m.i]});
   board[m.i]=m.prev; paint(m.i); refresh(); renderTray(); updateBtns(); }
 function paint(i){ const cell=boardEl.children[i]; const t=cell.querySelector(".token"); if(t)t.remove();
+  cell.classList.toggle("empty", board[i]===0);
   if(board[i]!==0) cell.appendChild(tokenEl(board[i])); }
 
+/* ---- Case Assistant: escalating investigation help (P7) ---- */
+function assist(html){ const a=$("assistant"); if(!a) return; a.hidden=false; $("assistantText").innerHTML=html; }
+function clearHints(){ for(const cell of boardEl.children) cell.classList.remove("hint-room","hint-cell"); }
+function cellCandidates(i){
+  const N=cfg.N, r=Math.floor(i/N), c=i%N, used=new Set();
+  for(let k=0;k<N;k++){ if(board[r*N+k])used.add(board[r*N+k]); if(board[k*N+c])used.add(board[k*N+c]); }
+  const {r0,c0}=E.rcOfBox(cfg,E.boxOf(cfg,r,c));
+  for(let a=0;a<cfg.bh;a++)for(let b=0;b<cfg.bw;b++){ const v=board[(r0+a)*N+(c0+b)]; if(v)used.add(v); }
+  const out=[]; for(let v=1;v<=N;v++) if(!used.has(v)) out.push(v); return out;
+}
 function hint(){ if(solved)return;
-  let target=(sel>=0 && !given[sel] && board[sel]===0)?sel:-1;
-  if(target<0){ const e=[]; for(let i=0;i<cfg.N*cfg.N;i++) if(board[i]===0)e.push(i);
-    // prefer the murder scene or an ambiguous cell for a meaningful hint
-    const amb=e.filter(i=>C.ambiguousCells.includes(i)); target=(amb.length?amb:e)[0]; if(target===undefined)return; }
-  undoStack.push({i:target,prev:board[target]}); redoStack=[]; board[target]=C.solution[target]; paint(target);
-  hintsUsed++; sel=target; refresh(); renderTray(); updateBtns();
-  const s=Skin.sName(THEME,C.solution[target]);
-  setStatus(`Hint: the evidence places ${s.name} (${s.L}) there. (${hintsUsed} hint${hintsUsed>1?"s":""})`,"");
-  checkWin();
+  if(hintLevel===0 || hintTarget<0 || board[hintTarget]!==0){
+    let t=(sel>=0 && !given[sel] && board[sel]===0)?sel:-1;
+    if(t<0){
+      const empties=[]; for(let i=0;i<cfg.N*cfg.N;i++) if(board[i]===0) empties.push(i);
+      if(!empties.length) return;
+      if(board[C.murderCell]===0) t=C.murderCell;                 // the scene is the dramatic pick
+      else { empties.sort((a,b)=>cellCandidates(a).length-cellCandidates(b).length); t=empties[0]; }
+    }
+    hintTarget=t; hintLevel=0;
+  }
+  hintLevel++; hintsUsed++; clearHints();
+  const i=hintTarget, N=cfg.N;
+  const room=Skin.roomName(THEME, E.boxOf(cfg,Math.floor(i/N),i%N));
+  const correct=Skin.sName(THEME,C.solution[i]);
+  if(hintLevel===1){
+    const cands=cellCandidates(i).map(v=>Skin.sName(THEME,v).name);
+    assist(`I check the ledger… in <b>${room}</b>, the guests already seated and the room itself leave `+
+      (cands.length<=1?`only one possibility for this spot.`:`just ${cands.length}: ${cands.join(", ")}.`)+
+      (i===C.murderCell?` And this — this is the scene.`:""));
+  } else if(hintLevel===2){
+    const {r0,c0}=E.rcOfBox(cfg,E.boxOf(cfg,Math.floor(i/N),i%N));
+    for(let a=0;a<cfg.bh;a++)for(let b=0;b<cfg.bw;b++) boardEl.children[(r0+a)*N+(c0+b)].classList.add("hint-room");
+    assist(`Turn your attention to <b>${room}</b> (highlighted). Cross-reference its evidence with who is already placed.`);
+  } else if(hintLevel===3){
+    boardEl.children[i].classList.add("hint-cell"); sel=i; refresh();
+    assist(`This exact spot (highlighted) is the one to settle next. The evidence and elimination decide it.`);
+  } else {
+    undoStack.push({i,prev:board[i]}); redoStack=[]; board[i]=C.solution[i]; paint(i); sel=i;
+    refresh(); renderTray(); updateBtns();
+    assist(`Confirmed — <b>${correct.name}</b> belongs here. One more piece of the file in place.`);
+    hintLevel=0; hintTarget=-1; clearHints(); checkWin();
+  }
 }
 
 function check(){ if(solved)return;
@@ -1408,6 +1471,13 @@ $("archiveClose").onclick=()=>$("archiveModal").classList.remove("show");
 $("winArchive").onclick=openArchive;
 $("evPrev").onclick=()=>{ clueStep--; renderEvCurrent(); };
 $("evNext").onclick=()=>{ clueStep++; renderEvCurrent(); };
+function applyAtmosphere(){
+  const focus = settings.atmosphere!=="high";
+  document.body.classList.toggle("focus", focus);
+  $("atmoBtn").textContent = focus ? "Atmosphere: Focus" : "Atmosphere: High";
+}
+$("atmoBtn").onclick=()=>{ settings.atmosphere = settings.atmosphere==="high"?"low":"high";
+  LS.set("settings",settings); applyAtmosphere(); if(C) renderBoard(); };
 // first-time sudoku rule callout (once per browser)
 if(!LS.get("seenRule",false)){ const ft=$("firstTip"); if(ft) ft.hidden=false; }
 $("firstTipOk").onclick=()=>{ $("firstTip").hidden=true; LS.set("seenRule",true); };
@@ -1449,6 +1519,7 @@ function setupBrand(){
   probe(uiAsset('logo-subtitle.png'), ()=> probe(uiAsset('logo.png'), fail));
 }
 setupBrand();
+applyAtmosphere();        // sets body.focus + button label before first render
 
 startCase({difficulty:"medium", rand:Math.random()});
 })();
