@@ -232,6 +232,10 @@
     color:var(--ink);font-size:13.5px;max-width:9*var(--cell);box-shadow:0 4px 14px rgba(0,0,0,.5);}
   .first-tip[hidden]{display:none;}   /* let the hidden attribute actually hide it (beats display:flex) */
   .first-tip b{color:var(--amber-soft);}
+  /* mobile-only host for the Current Evidence stepper, sized to sit by the board */
+  .ev-mount{width:100%;max-width:calc(9 * var(--cell));}
+  .ev-mount[hidden]{display:none;}
+  .ev-mount .ev-block{width:100%;margin:0;}
   .susp.sel{transform:translateY(-3px) scale(1.06);}
   .susp.sel .susp-name{color:var(--amber-soft);}
   .susp.sel .count{background:var(--amber);color:#1a1a22;border-color:var(--amber);}
@@ -405,6 +409,8 @@
         <span>📓 Each suspect appears <b>exactly once</b> in every row, every column, and every room — then use the evidence to finish.</span>
         <button class="btn" id="firstTipOk">Got it</button>
       </div>
+      <!-- on mobile, the Current Evidence stepper (#evBlock) is relocated here once the tip is dismissed -->
+      <div class="ev-mount" id="evMount" hidden></div>
       <div class="board" id="board"></div>
       <div class="tray-label">Suspects <span class="tray-hint">— tap to select, then a cell · badge = number left to place</span></div>
       <div class="tray" id="tray"></div>
@@ -443,6 +449,8 @@
       </details>
 
       <!-- MIDDLE: one calm evidence card (slideshow) XOR the full list -->
+      <!-- desktop home of #evBlock; on mobile it is moved up to #evMount, then returned here -->
+      <div id="evHome" hidden></div>
       <details class="ev-block" id="evBlock" open>
         <summary>Current Evidence <span class="ev-count" id="evStep">— / —</span></summary>
         <div class="ev-card">
@@ -1916,7 +1924,26 @@ $("atmoBtn").onclick=()=>{ settings.atmosphere = settings.atmosphere==="high"?"l
   LS.set("settings",settings); applyAtmosphere(); if(C) renderBoard(); };
 // first-time sudoku rule callout (once per browser)
 if(!LS.get("seenRule",false)){ const ft=$("firstTip"); if(ft) ft.hidden=false; }
-$("firstTipOk").onclick=()=>{ $("firstTip").hidden=true; LS.set("seenRule",true); };
+$("firstTipOk").onclick=()=>{ $("firstTip").hidden=true; LS.set("seenRule",true); placeEvidence(); };
+// On narrow/stacked viewports, host the Current Evidence stepper up by the board once the
+// tip is gone, so the active clue is readable without scrolling to the case panel. The SAME
+// node is relocated (never duplicated); on desktop — or while the tip still shows — it stays
+// in the case file, so the desktop layout is unchanged. Stepper + mutual-exclusivity keep
+// working since they are bound by id, not by position.
+const evStackMQ = window.matchMedia("(max-width:1040px)");
+function placeEvidence(){
+  const ev=$("evBlock"), mount=$("evMount"), home=$("evHome"); if(!ev||!mount||!home) return;
+  if(evStackMQ.matches && $("firstTip").hidden){           // mobile + tip dismissed -> by the board
+    if(ev.parentNode!==mount) mount.appendChild(ev);
+    mount.hidden=false; ev.open=true; if($("allEv").open) $("allEv").open=false;
+  } else {                                                  // desktop, or tip still up -> case file
+    if(ev.previousElementSibling!==home || ev.parentNode!==home.parentNode) home.after(ev);
+    mount.hidden=true;
+  }
+}
+if(evStackMQ.addEventListener) evStackMQ.addEventListener("change",placeEvidence); else evStackMQ.addListener(placeEvidence);
+window.addEventListener("resize",placeEvidence);   // fallback: re-home on any width change (placeEvidence is idempotent)
+placeEvidence();
 $("codePill").onclick=()=>{ try{ navigator.clipboard.writeText(C.code); setStatus(`Case code ${C.code} copied.`,"good"); }catch(e){} };
 
 let pendingDiff="medium";
