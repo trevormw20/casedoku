@@ -168,6 +168,10 @@
     border:2px solid var(--blood);background:#10131a;filter:grayscale(.3) brightness(.92);
     box-shadow:0 2px 8px rgba(0,0,0,.5);}
   .victim-tag{font-family:"Courier New",monospace;font-size:8.5px;letter-spacing:1px;text-transform:uppercase;color:var(--blood);}
+  /* victim art absent (files not yet dropped): show a silhouette placeholder instead of a broken image */
+  .victim-portrait.img-missing,.cell-victim.img-missing{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23596273' d='M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 1.8c-4.4 0-8 2.7-8 6.2v.5h16v-.5c0-3.5-3.6-6.2-8-6.2Z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:center 60%;background-size:64%;}
   .case-title{font-size:21px;color:var(--blood);margin:0 0 4px;font-variant:small-caps;letter-spacing:1px;}
   .case-story{font-size:15px;line-height:1.6;color:var(--ink);margin:0 0 8px;
     border-left:3px solid rgba(231,185,77,.5);padding:2px 0 2px 11px;}
@@ -1083,6 +1087,62 @@ const MANOR = {
     {n:"the rolling pin", slug:"rollingpin"}, {n:"the garden shears", slug:"shears"},
   ],
   times:["just before midnight","at the stroke of nine","during the thunderstorm","at supper","as the clock struck two"],
+  // victim cast — a SEPARATE roster from the playable suspects (never placeable, never a
+  // candidate; only "the body" of a case). Eligible victims are those whose themes[]
+  // intersect victimThemes; selection is weighted by overlap. Art lives in /victims/.
+  victimThemes:["manor","noir","general"],
+  victims:[
+    {slug:"lord-ambrose-vane",name:"Lord Ambrose Vane",gender:"male",age:"elderly",class:"noble",vibe:"arrogant",themes:["manor","noir","general"]},
+    {slug:"dowager-clarissa-vane",name:"Dowager Clarissa Vane",gender:"female",age:"elderly",class:"noble",vibe:"stern",themes:["manor","general"]},
+    {slug:"reginald-thorne",name:"Reginald Thorne",gender:"male",age:"middle-aged",class:"wealthy",vibe:"powerful",themes:["noir","manor","general"]},
+    {slug:"vivian-thorne",name:"Vivian Thorne",gender:"female",age:"middle-aged",class:"wealthy",vibe:"refined",themes:["manor","noir","general"]},
+    {slug:"old-mr-pemberton",name:"Old Mr. Pemberton",gender:"male",age:"elderly",class:"merchant",vibe:"bitter",themes:["manor","general"]},
+    {slug:"agnes-holloway",name:"Agnes Holloway",gender:"female",age:"elderly",class:"servant",vibe:"warm",themes:["manor","general"]},
+    {slug:"butler-crispin",name:"Butler Crispin",gender:"male",age:"middle-aged",class:"servant",vibe:"secretive",themes:["manor","noir","general"]},
+    {slug:"nanny-edith-frost",name:"Nanny Edith Frost",gender:"female",age:"elderly",class:"servant",vibe:"fragile",themes:["manor","general"]},
+    {slug:"doctor-silas-marsh",name:"Doctor Silas Marsh",gender:"male",age:"middle-aged",class:"professional",vibe:"mysterious",themes:["noir","manor","general"]},
+    {slug:"nurse-beatrice-lowe",name:"Nurse Beatrice Lowe",gender:"female",age:"middle-aged",class:"professional",vibe:"nervous",themes:["noir","general"]},
+    {slug:"barrister-quill",name:"Barrister Quill",gender:"male",age:"elderly",class:"professional",vibe:"stern",themes:["noir","manor","general"]},
+    {slug:"madam-isolde-fenn",name:"Madam Isolde Fenn",gender:"female",age:"middle-aged",class:"wealthy",vibe:"mysterious",themes:["noir","general"]},
+    {slug:"professor-aldous-finch",name:"Professor Aldous Finch",gender:"male",age:"elderly",class:"scholar",vibe:"absent-minded",themes:["manor","general"]},
+    {slug:"archivist-cordelia-wren",name:"Archivist Cordelia Wren",gender:"female",age:"middle-aged",class:"scholar",vibe:"secretive",themes:["manor","noir","general"]},
+    {slug:"colonel-rupert-hayes",name:"Colonel Rupert Hayes",gender:"male",age:"elderly",class:"military",vibe:"powerful",themes:["manor","general"]},
+    {slug:"captain-mira-vance",name:"Captain Mira Vance",gender:"female",age:"middle-aged",class:"military",vibe:"stern",themes:["noir","general"]},
+    {slug:"painter-lucien-roy",name:"Painter Lucien Roy",gender:"male",age:"young",class:"artist",vibe:"mysterious",themes:["noir","general"]},
+    {slug:"chanteuse-delphine",name:"Chanteuse Delphine",gender:"female",age:"young",class:"artist",vibe:"warm",themes:["noir","general"]},
+    {slug:"jeweller-otto-brandt",name:"Jeweller Otto Brandt",gender:"male",age:"middle-aged",class:"merchant",vibe:"nervous",themes:["noir","general"]},
+    {slug:"florist-poppy-meade",name:"Florist Poppy Meade",gender:"female",age:"young",class:"working",vibe:"warm",themes:["general","seasonal"]},
+    {slug:"groundskeeper-mungo",name:"Groundskeeper Mungo",gender:"male",age:"elderly",class:"working",vibe:"gruff",themes:["manor","general"]},
+    {slug:"chambermaid-tilly",name:"Chambermaid Tilly",gender:"female",age:"young",class:"servant",vibe:"nervous",themes:["manor","general"]},
+    {slug:"vicar-edmund-pyke",name:"Vicar Edmund Pyke",gender:"male",age:"elderly",class:"clergy",vibe:"warm",themes:["manor","general"]},
+    {slug:"sister-mary-aldwin",name:"Sister Mary Aldwin",gender:"female",age:"middle-aged",class:"clergy",vibe:"fragile",themes:["medieval","general"]},
+    {slug:"the-drifter-cole",name:"The Drifter Cole",gender:"male",age:"middle-aged",class:"outsider",vibe:"mysterious",themes:["noir","general"]},
+    {slug:"fortune-teller-zara",name:"Fortune-Teller Zara",gender:"female",age:"middle-aged",class:"outsider",vibe:"mysterious",themes:["noir","general"]},
+    {slug:"financier-harlan-cross",name:"Financier Harlan Cross",gender:"male",age:"middle-aged",class:"wealthy",vibe:"arrogant",themes:["noir","general"]},
+    {slug:"heiress-rosalind-day",name:"Heiress Rosalind Day",gender:"female",age:"young",class:"noble",vibe:"refined",themes:["manor","general"]},
+    {slug:"young-master-felix",name:"Young Master Felix",gender:"male",age:"young",class:"noble",vibe:"arrogant",themes:["manor","general"]},
+    {slug:"governess-prudence",name:"Governess Prudence",gender:"female",age:"middle-aged",class:"professional",vibe:"stern",themes:["manor","general"]},
+    {slug:"king-aldric-the-grey",name:"King Aldric the Grey",gender:"male",age:"elderly",class:"noble",vibe:"powerful",themes:["medieval","fantasy"]},
+    {slug:"queen-mother-elspeth",name:"Queen Mother Elspeth",gender:"female",age:"elderly",class:"noble",vibe:"stern",themes:["medieval","fantasy"]},
+    {slug:"court-alchemist-bram",name:"Court Alchemist Bram",gender:"male",age:"middle-aged",class:"scholar",vibe:"secretive",themes:["fantasy","medieval"]},
+    {slug:"the-veiled-oracle",name:"The Veiled Oracle",gender:"female",age:"middle-aged",class:"clergy",vibe:"mysterious",themes:["fantasy"]},
+    {slug:"knight-sir-godfrey",name:"Knight Sir Godfrey",gender:"male",age:"middle-aged",class:"military",vibe:"powerful",themes:["medieval","fantasy"]},
+    {slug:"lady-rowena-of-ash",name:"Lady Rowena of Ash",gender:"female",age:"young",class:"noble",vibe:"refined",themes:["medieval","fantasy"]},
+    {slug:"guildmaster-orrin",name:"Guildmaster Orrin",gender:"male",age:"elderly",class:"merchant",vibe:"bitter",themes:["medieval","general"]},
+    {slug:"hedge-witch-morrow",name:"Hedge-Witch Morrow",gender:"female",age:"elderly",class:"outsider",vibe:"mysterious",themes:["fantasy","seasonal"]},
+    {slug:"senator-gaius-velm",name:"Senator Gaius Velm",gender:"male",age:"elderly",class:"noble",vibe:"arrogant",themes:["roman"]},
+    {slug:"vestal-claudia",name:"Vestal Claudia",gender:"female",age:"young",class:"clergy",vibe:"fragile",themes:["roman"]},
+    {slug:"general-lucius-faro",name:"General Lucius Faro",gender:"male",age:"middle-aged",class:"military",vibe:"powerful",themes:["roman"]},
+    {slug:"matron-octavia",name:"Matron Octavia",gender:"female",age:"middle-aged",class:"wealthy",vibe:"refined",themes:["roman"]},
+    {slug:"station-chief-orlov",name:"Station Chief Orlov",gender:"male",age:"middle-aged",class:"professional",vibe:"stern",themes:["space","futuristic"]},
+    {slug:"navigator-lyra-soon",name:"Navigator Lyra Soon",gender:"female",age:"young",class:"professional",vibe:"nervous",themes:["space","futuristic"]},
+    {slug:"magnate-dex-corvale",name:"Magnate Dex Corvale",gender:"male",age:"middle-aged",class:"wealthy",vibe:"arrogant",themes:["futuristic","noir"]},
+    {slug:"android-curator-vela",name:"Android Curator Vela",gender:"female",age:"middle-aged",class:"professional",vibe:"mysterious",themes:["futuristic","space"]},
+    {slug:"saint-nick-stand-in",name:"Saint Nick Stand-In",gender:"male",age:"elderly",class:"working",vibe:"warm",themes:["holiday","seasonal"]},
+    {slug:"caroler-margaret-yule",name:"Caroler Margaret Yule",gender:"female",age:"middle-aged",class:"working",vibe:"warm",themes:["holiday","seasonal"]},
+    {slug:"orchard-keeper-hazel",name:"Orchard-Keeper Hazel",gender:"female",age:"elderly",class:"working",vibe:"warm",themes:["seasonal","general"]},
+    {slug:"clockmaker-bartleby",name:"Clockmaker Bartleby",gender:"male",age:"elderly",class:"professional",vibe:"absent-minded",themes:["manor","noir","general"]},
+  ],
   // narrative library (swappable per theme pack). Slots are filled with the case's
   // procedural facts: {place} {victim} {room} {time} {weapon} {n}. {atmosphere} is flavor.
   story:{
@@ -1093,6 +1153,13 @@ const MANOR = {
       "The guests had gathered at {place} for the weekend — and {time}, {victim} was found dead.",
       "{place} keeps its secrets well, but not tonight: {victim} lies dead, discovered {time}.",
       "What began as a quiet evening at {place} ended with {victim} murdered, {time}.",
+    ],
+    // victim profile — woven from the victim's tags so the body matches the portrait
+    profile:[
+      "{victim} was {victimDesc}, a familiar figure about {place}.",
+      "Those who knew {victim} — {victimDesc} — are still reeling at the news.",
+      "{victim}, {victimDesc}, had lived a life full enough to leave both friends and enemies behind.",
+      "By every account {victim} was {victimDesc}.",
     ],
     discovery:[
       "The body was found in {room}, {weapon} left close at hand.",
@@ -1217,10 +1284,11 @@ const TYPE_LABEL={sighting:"sighting",exclusion:"exclusion",position:"position",
 function renderStory(theme, facts, rng){
   const S=theme.story; if(!S) return "";
   const pick=arr=>arr[Math.floor(rng()*arr.length)];
-  const atmosphere=pick(S.atmosphere||[""]);
-  const data=Object.assign({atmosphere}, facts);
+  // caller may pin the atmosphere (so the victim mood-nudge and narrative agree); else pick one
+  const atmosphere=facts.atmosphere!=null ? facts.atmosphere : pick(S.atmosphere||[""]);
+  const data=Object.assign({}, facts, {atmosphere});
   const fill=s=>s.replace(/\{(\w+)\}/g,(m,k)=> data[k]!==undefined?data[k]:m);
-  return [S.setup, S.discovery, S.suspects, S.hook]
+  return [S.setup, S.profile, S.discovery, S.suspects, S.hook]
     .filter(Boolean).map(slot=>fill(pick(slot))).join(" ");
 }
 
@@ -1248,6 +1316,15 @@ const uiAsset=file=>`assets/ui/${file}`;
    background-color automatically, so the board never breaks on a partial asset set. */
 document.addEventListener("error",e=>{ const t=e.target;
   if(t && t.tagName==="IMG"){ t.style.visibility="hidden"; } }, true);
+/* set an <img>'s src only once we know the file loads, so a missing asset never becomes a
+   broken image — it just leaves the .img-missing CSS placeholder showing. */
+function loadOptionalImg(img, src){
+  if(!img) return;
+  const probe=new Image();
+  probe.onload=()=>{ img.src=src; img.style.visibility="visible"; img.classList.remove("img-missing"); };
+  probe.onerror=()=>{ img.removeAttribute("src"); img.classList.add("img-missing"); };
+  probe.src=src;
+}
 const $=id=>document.getElementById(id);
 const boardEl=$("board"), trayEl=$("tray");
 
@@ -1318,28 +1395,68 @@ function makeToken(val, variant){
   return t;
 }
 
+/* ---- victim pool: a separate cast, never placeable (only "the body" of a case) ---- */
+const VICTIM_RECENT_KEY="recentVictims", VICTIM_NOREPEAT=8;
+// readable class nouns + atmosphere→vibe affinities for descriptor text and the weight nudge
+const VICTIM_CLASS_NOUN={noble:"aristocrat",wealthy:"socialite",merchant:"merchant",servant:"household servant",
+  professional:"professional",scholar:"scholar",military:"officer",artist:"artist",working:"tradesperson",
+  clergy:"cleric",outsider:"outsider"};
+const ATMO_VIBE={"A thunderstorm":"powerful","An uneasy hush":"secretive","A bitter autumn chill":"bitter",
+  "A creeping river fog":"mysterious","A heavy silence":"stern","A single guttering candle":"fragile"};
+const aOrAn=w=>/^[aeiou]/i.test(w)?"an":"a";
+function victimDescriptor(v){
+  const cls=VICTIM_CLASS_NOUN[v.class]||v.class, lead=`${v.vibe}, ${v.age}`;
+  return `${aOrAn(v.vibe)} ${lead} ${cls}`;        // e.g. "an arrogant, elderly aristocrat"
+}
+// eligible = victims whose themes[] intersect the theme's victimThemes; weight = overlap count
+function eligibleVictims(theme){
+  const set=new Set(theme.victimThemes||[ACTIVE_THEME]), out=[];
+  for(const v of (theme.victims||[])){ let m=0; for(const t of v.themes) if(set.has(t)) m++; if(m>0) out.push({v,matches:m}); }
+  return out;
+}
+// weighted tagged pick, deterministic from the case rng. excludes the last VICTIM_NOREPEAT
+// victims used in OTHER cases (different seed) — so re-loading the SAME seed stays deterministic.
+function pickVictim(theme, seed, rng, atmosphere){
+  const elig=eligibleVictims(theme); if(!elig.length) return null;
+  const recent=LS.get(VICTIM_RECENT_KEY,[]);
+  const excl=new Set(recent.filter(e=>e&&e.seed!==seed).map(e=>e.slug));
+  let pool=elig.filter(e=>!excl.has(e.v.slug)); if(!pool.length) pool=elig;   // exhausted -> allow repeats
+  const moodVibe=ATMO_VIBE[atmosphere];
+  const weighted=pool.map(e=>({v:e.v, w:e.matches + (moodVibe && e.v.vibe===moodVibe ? 1 : 0)}));
+  const total=weighted.reduce((s,x)=>s+x.w,0);
+  let r=rng()*total, chosen=weighted[weighted.length-1];
+  for(const x of weighted){ if((r-=x.w)<0){ chosen=x; break; } }
+  return chosen.v;
+}
+function recordVictim(slug, seed){
+  let recent=LS.get(VICTIM_RECENT_KEY,[]).filter(e=>e&&e.slug!==slug);
+  recent.push({slug, seed}); if(recent.length>VICTIM_NOREPEAT) recent=recent.slice(recent.length-VICTIM_NOREPEAT);
+  LS.set(VICTIM_RECENT_KEY, recent);
+}
+
 function dressStory(){
   const rng=E.makeRNG((C.seed ^ E.hashStr("story"))>>>0);
   const pick=arr=>arr[Math.floor(rng()*arr.length)];
   const killer=Skin.sName(THEME,C.killer);
-  // victim is some suspect-independent name; weapon, time, scene room
   const sceneRoom=Skin.roomName(THEME, E.boxOf(cfg, Math.floor(C.murderCell/cfg.N), C.murderCell%cfg.N));
   // killer's false alibi: claim a different room
   let alibiRoom=sceneRoom; for(let t=0;t<8 && alibiRoom===sceneRoom;t++) alibiRoom=Skin.roomName(THEME, Math.floor(rng()*Math.min(cfg.N,THEME.rooms.length)));
-  // victim = a cast member who is NOT one of the N placeable suspects (they're the body),
-  // so the victim-portrait art has a home and the story names that character.
-  const inactive=[]; for(let r=cfg.N;r<THEME.suspects.length;r++) inactive.push(r);
-  const vs=THEME.suspects[(inactive.length?inactive:[0]).slice()[Math.floor(rng()*Math.max(1,inactive.length))]] || THEME.suspects[THEME.suspects.length-1];
-  const victimName=vs.name.replace(/^The\s+/,"the ");   // "The Actress" -> "the Actress" (reads in titles/sentences)
-  story={ victim:victimName, victimDisplay:vs.name, victimRole:vs.role, weapon:pick(THEME.weapons), time:pick(THEME.times),
+  // pin the atmosphere first so it can nudge the victim mood AND the narrative agree
+  const atmosphere=pick((THEME.story&&THEME.story.atmosphere)||[""]);
+  // victim = a tagged member of the separate victim cast (the body) — never a placeable suspect
+  const seedKey=C.seed>>>0;
+  const vsel=pickVictim(THEME, seedKey, rng, atmosphere) || (THEME.victims&&THEME.victims[0]) || {slug:"",name:"the victim",age:"",class:"",vibe:""};
+  if(vsel.slug) recordVictim(vsel.slug, seedKey);
+  story={ victim:vsel.name, victimDisplay:vsel.name, victimSlug:vsel.slug, victimTags:vsel,
+    weapon:pick(THEME.weapons), time:pick(THEME.times), atmosphere,
     sceneRoom, alibiRoom, killer, caseNo:100+(C.seed%900) };
-  story.title=`The Murder of ${story.victim}`;     // e.g. "The Murder of the Actress"
+  story.title=`The Murder of ${vsel.name}`;
   // cozy-mystery narrative intro woven from the procedural facts (own rng stream so
   // adding/removing story text never shifts the rest of the dressing)
   const srng=E.makeRNG((C.seed ^ E.hashStr("narrative"))>>>0);
   story.narrative=Skin.renderStory(THEME, {
-    place:THEME.place||"the manor", victim:story.victim, room:story.sceneRoom,
-    time:story.time, weapon:story.weapon.n, n:cfg.N }, srng);
+    place:THEME.place||"the manor", victim:story.victim, victimDesc:vsel.slug?victimDescriptor(vsel):"",
+    room:story.sceneRoom, time:story.time, weapon:story.weapon.n, n:cfg.N, atmosphere }, srng);
 }
 
 function startCase(opts){
@@ -1405,8 +1522,9 @@ function renderBoard(){
     else if(candidates[i] && candidates[i].size) cell.appendChild(candGrid(i));
     // crime-scene (dashed) cell: the victim's body + the murder weapon
     if(i===C.murderCell && story){
-      const b=document.createElement("img"); b.className="cell-victim";
-      b.src=tAsset('suspects','suspect-'+story.victimRole+'-victim.png'); b.alt=""; b.title=`${story.victimDisplay||"the victim"} (deceased)`; cell.appendChild(b);
+      const b=document.createElement("img"); b.className="cell-victim img-missing";
+      b.alt=""; b.title=`${story.victimDisplay||"the victim"} (deceased)`; cell.appendChild(b);
+      if(story.victimSlug) loadOptionalImg(b, tAsset('victims','victim-'+story.victimSlug+'-dead.png'));
       const w=document.createElement("img"); w.className="cell-weapon";
       w.src=tAsset('weapons','weapon-'+story.weapon.slug+'.png'); w.alt=""; w.title=story.weapon.n; cell.appendChild(w);
     }
@@ -1437,7 +1555,9 @@ function renderTray(){
 }
 function renderCase(){
   $("caseTitle").textContent=story.title;
-  $("caseVictim").src=tAsset('suspects','suspect-'+story.victimRole+'-victim.png');
+  $("caseVictim").classList.add("img-missing");
+  if(story.victimSlug) loadOptionalImg($("caseVictim"), tAsset('victims','victim-'+story.victimSlug+'.png'));
+  else { $("caseVictim").removeAttribute("src"); }
   $("caseVictim").title=story.victimDisplay;
   $("caseStory").textContent=story.narrative;
   $("caseSub").innerHTML=`Case No. ${story.caseNo} · <b>${TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label}</b> · ${THEME.place}`+
