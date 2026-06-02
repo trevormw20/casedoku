@@ -31,6 +31,48 @@ for d in DIRS.values():
     os.makedirs(d, exist_ok=True)
 
 
+# ---- overwrite protection (NEVER clobber real, user-supplied art) ----------
+# This generator only ever FILLS IN MISSING placeholder files. Our placeholders
+# are all small (< ~16 KB); real generated art is hundreds of KB to MB. So if a
+# target already exists and is larger than this threshold, it is treated as real
+# art and skipped, untouched. Missing files and existing small placeholders are
+# the only things ever written.
+PLACEHOLDER_MAX_BYTES = 50_000
+_SKIPPED = []
+
+
+def _is_real_art(path):
+    try:
+        return os.path.exists(path) and os.path.getsize(path) > PLACEHOLDER_MAX_BYTES
+    except OSError:
+        return False
+
+
+# Guard EVERY PIL image save so no code path can overwrite real art.
+_orig_img_save = Image.Image.save
+
+
+def _guarded_img_save(self, fp, *args, **kwargs):
+    if isinstance(fp, (str, bytes, os.PathLike)):
+        p = os.fspath(fp)
+        if _is_real_art(p):
+            _SKIPPED.append(p)
+            return
+    return _orig_img_save(self, fp, *args, **kwargs)
+
+
+Image.Image.save = _guarded_img_save
+
+
+def write_text(path, text):
+    """Guarded text writer (SVG/logo): skips real art, fills placeholders/missing only."""
+    if _is_real_art(path):
+        _SKIPPED.append(path)
+        return
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(text)
+
+
 def font(size, bold=True):
     names = (["arialbd.ttf", "ariblk.ttf"] if bold else []) + ["arial.ttf", "segoeui.ttf"]
     for n in names:
@@ -286,8 +328,7 @@ ICONS = {
     "lock": '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
 }
 for name, body in ICONS.items():
-    with open(os.path.join(DIRS["ui"], f"icon-{name}.svg"), "w", encoding="utf-8") as fh:
-        fh.write(WRAP.format(s=STROKE, b=body))
+    write_text(os.path.join(DIRS["ui"], f"icon-{name}.svg"), WRAP.format(s=STROKE, b=body))
 
 # logo.svg (CASEDOKU + MANOR)
 LOGO = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 80">
@@ -306,8 +347,7 @@ LOGO = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 80">
   <text x="80" y="60" font-family="Georgia, serif" font-size="13" fill="#9aa0aa"
         letter-spacing="8">MANOR</text>
 </svg>'''
-with open(os.path.join(DIRS["ui"], "logo.svg"), "w", encoding="utf-8") as fh:
-    fh.write(LOGO)
+write_text(os.path.join(DIRS["ui"], "logo.svg"), LOGO)
 
 # ---- report ---------------------------------------------------------------
 total = 0
@@ -319,3 +359,7 @@ for dp, _, files in os.walk(ASSETS):
 print(f"Generated placeholder assets under assets/ (theme '{THEME}'): {total} files")
 for kind, d in DIRS.items():
     print(f"  {os.path.relpath(d, ROOT)}: {len(os.listdir(d))} files")
+if _SKIPPED:
+    print(f"\nProtected {len(_SKIPPED)} real-art file(s) — left untouched (never overwritten):")
+    for p in sorted(set(_SKIPPED)):
+        print(f"  KEPT  {os.path.relpath(p, ROOT)}  ({os.path.getsize(p)} bytes)")
