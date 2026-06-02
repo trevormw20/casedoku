@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Casedoku — Deduction</title>
 <link rel="icon" href="assets/ui/appicon-192.png" />
 <link rel="apple-touch-icon" href="assets/ui/appicon.png" />
@@ -13,7 +13,8 @@
     --amber:#e7b94d; --amber-soft:#f0d98c; --blood:#c1272d;
     --good:#4caf7d; --bad:#e1554c;
     --grid-thick:#776b4f;
-    --cell:62px;
+    --cell-max:62px; --ncols:9;     /* set per-case by JS; mobile shrinks --cell to fit the viewport */
+    --cell:var(--cell-max);
     --disc-cream:#efe6d0;   /* token disc fill behind transparent cutouts (theme can override) */
     --disc-given:#473f2c;   /* darker disc for given/locked suspects (vs player-placed cream) */
     --ring-w:2.4px;         /* token ring thickness */
@@ -46,7 +47,12 @@
 
   .layout{display:grid;grid-template-columns:auto 410px;gap:24px;
     max-width:1240px;margin:0 auto;align-items:start;}
-  @media (max-width:1040px){.layout{grid-template-columns:1fr;}}
+  @media (max-width:1040px){
+    .layout{grid-template-columns:1fr;}
+    body{padding-left:8px;padding-right:8px;}
+    /* board fits the viewport width once it stacks; min() caps it at the desktop size */
+    :root{--cell:min(var(--cell-max), calc((100vw - 40px) / var(--ncols)));}
+  }
 
   .board-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;}
   .board{display:grid;background:var(--grid-thick);gap:1px;padding:3px;
@@ -382,6 +388,52 @@
     padding:8px 10px;font-size:14px;letter-spacing:1px;width:160px;text-align:center;text-transform:uppercase;}
   footer{max-width:1240px;margin:26px auto 0;color:var(--ink-dim);font-size:12px;text-align:center;font-style:italic;}
   code{background:#10131a;padding:1px 5px;border-radius:4px;color:var(--amber-soft);font-size:12px;}
+
+  /* ============ phone portrait (<=600px) ============ */
+  @media (max-width:600px){
+    html,body{overflow-x:hidden;}                                  /* belt-and-suspenders: nothing spills sideways */
+    body{padding:10px max(8px,env(safe-area-inset-left))
+                calc(36px + env(safe-area-inset-bottom))
+                max(8px,env(safe-area-inset-right));}
+
+    /* --- compact header: small brand + pills, icon-only secondary buttons, Accuse keeps its label --- */
+    header.app{gap:8px;margin-bottom:10px;}
+    .brand{min-height:0;}
+    header.app img.logo{height:38px;}
+    .brand-text{font-size:17px;letter-spacing:1px;}
+    .brand-text small{font-size:8.5px;letter-spacing:3px;margin-top:2px;}
+    .top-controls{gap:6px;}
+    .pill{padding:6px 8px;font-size:11.5px;gap:4px;}
+    .top-controls .btn{padding:9px 10px;font-size:13px;min-height:40px;}
+    .top-controls .btn img{width:18px;height:18px;}
+    .top-controls .btn-tx{display:none;}                            /* secondary buttons -> icon/symbol only */
+    #accuseBtn{padding:9px 13px;}
+    #accuseBtn .btn-tx{display:inline;}                             /* ...but Accuse stays labelled + easy to reach */
+
+    /* --- tray + toolbar: tighter, keep ~44px tap targets --- */
+    .tray{gap:8px;}
+    .susp{width:54px;}
+    .susp .disc{width:48px;height:48px;}
+    .susp-name{font-size:10.5px;max-width:56px;}
+    .toolbar{gap:7px;}
+    .toolbar .btn{padding:10px 11px;font-size:13px;min-height:44px;}
+
+    /* --- case panel full width; keep the CONFIDENTIAL stamp from spilling --- */
+    .casefile{padding:14px;overflow:hidden;}
+    .casefile::before{right:8px;}
+
+    /* --- modals: fit the viewport, scroll internally, buttons reachable without zoom --- */
+    .modal-bg{padding:8px;align-items:flex-start;}
+    .modal{padding:16px;max-height:calc(100dvh - 16px);overflow-y:auto;}
+    .modal h2{font-size:20px;}
+    .reveal-wrap{width:120px;height:120px;}
+    .reveal-token{width:72px;height:72px;}
+    .news-headline{font-size:17px;}
+    .news-stamp{right:0;width:58px;}
+    .payoff-grid{grid-template-columns:1fr;}
+    .accuse-suspects{grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:6px;}
+    .accuse-suspect .token{width:42px!important;height:42px!important;}
+  }
 </style>
 </head>
 <body>
@@ -395,10 +447,10 @@
       <span class="pill" id="guessPill" title="Accusation attempts left (a wrong one costs +1:00)">Guesses: 3</span>
       <span class="pill" id="diffPill">—</span>
       <span class="pill" id="codePill" title="Copy share code" style="cursor:pointer">Case No. —</span>
-      <button class="btn primary" id="accuseBtn" title="Name the killer — you have 3 guesses (full board not required)">⚖ Accuse</button>
-      <button class="btn" id="howtoBtn" title="How to play">? How to Play</button>
-      <button class="btn" id="archiveBtn"><img src="assets/ui/icon-notebook.png" alt=""/>Archive</button>
-      <button class="btn" id="newBtn"><img src="assets/ui/icon-settings.png" alt=""/>New Case</button>
+      <button class="btn primary" id="accuseBtn" title="Name the killer — you have 3 guesses (full board not required)">⚖ <span class="btn-tx">Accuse</span></button>
+      <button class="btn" id="howtoBtn" title="How to play">?<span class="btn-tx"> How to Play</span></button>
+      <button class="btn" id="archiveBtn"><img src="assets/ui/icon-notebook.png" alt=""/><span class="btn-tx">Archive</span></button>
+      <button class="btn" id="newBtn"><img src="assets/ui/icon-settings.png" alt=""/><span class="btn-tx">New Case</span></button>
     </div>
   </header>
 
@@ -1478,7 +1530,7 @@ function startCase(opts){
   document.documentElement.style.setProperty("--disc-cream",DISC_CREAM);
   Skin.setCaseObjects(C.objectCells);                         // object landmarks for "next to the X" clues
   dressStory();
-  setVar("--cell", cfg.N<=6 ? "72px" : "62px");
+  setVar("--cell-max", cfg.N<=6 ? "72px" : "62px"); setVar("--ncols", cfg.N);  // CSS derives --cell (mobile fits to width)
   boardEl.style.gridTemplateColumns=`repeat(${cfg.N}, var(--cell))`;
   renderBoard(); renderTray(); renderCase();
   $("diffPill").innerHTML=`<img class="pill-badge" src="assets/ui/badge-${C.tier}.png" alt=""/>`+
