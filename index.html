@@ -158,20 +158,26 @@
   .hint-note{font-size:12px;color:var(--ink-dim);font-style:italic;margin-top:8px;
     border-top:1px dashed var(--line);padding-top:8px;}
   /* panel hierarchy (P3) */
-  .briefing{margin:4px 0 2px;} .briefing summary,.all-ev summary,.poi summary{
+  .briefing{margin:4px 0 2px;}
+  .briefing summary,.all-ev summary,.poi summary,.ev-block>summary{
     cursor:pointer;font-family:"Courier New",monospace;font-size:10.5px;letter-spacing:1.5px;
     text-transform:uppercase;color:var(--ink-dim);padding:4px 0;list-style:revert;}
   .briefing[open] .case-story{margin-top:6px;}
-  .ev-current{display:flex;align-items:stretch;gap:8px;margin:2px 0 6px;}
-  .ev-nav{flex:none;width:34px;border:1px solid var(--line);background:#171a22;color:var(--amber-soft);
-    border-radius:8px;cursor:pointer;font-size:15px;}
-  .ev-nav:hover{border-color:var(--amber);}
-  .ev-clue{flex:1;background:rgba(231,185,77,.08);border:1px solid rgba(231,185,77,.35);border-radius:8px;
-    padding:11px 13px;font-size:16px;line-height:1.45;color:var(--ink);display:flex;align-items:center;}
+  /* calm single-focus current-evidence card */
+  .ev-block{margin:6px 0 2px;}
+  .ev-block>summary{color:var(--amber);display:flex;justify-content:space-between;align-items:center;}
+  .ev-block .ev-count{color:var(--ink-dim);font-weight:400;letter-spacing:1px;}
+  .ev-card{display:flex;align-items:center;gap:12px;background:#171a22;border:1px solid var(--line);
+    border-radius:10px;padding:18px 14px;margin:7px 0 0;min-height:80px;box-shadow:0 2px 8px rgba(0,0,0,.3);}
+  .ev-clue{flex:1;margin:0;font-size:16px;line-height:1.55;color:var(--ink);text-align:center;}
   .ev-clue b{color:var(--amber-soft);}
-  .ev-progress{font-size:12.5px;color:var(--ink-dim);line-height:1.45;margin-bottom:4px;}
-  .ev-progress b{color:var(--ink);} .scene-word{color:var(--blood);font-weight:700;}
-  .all-ev{margin:4px 0;} .poi{margin:8px 0 2px;}
+  .ev-clue .keymark{margin-right:4px;opacity:.85;}
+  .ev-nav{flex:none;width:30px;height:30px;border:1px solid var(--line);background:#10131a;color:var(--amber-soft);
+    border-radius:50%;cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;transition:.12s;}
+  .ev-nav:hover{border-color:var(--amber);background:#1b1f2a;}
+  .ev-note{font-size:12px;color:var(--ink-dim);line-height:1.45;margin:8px 0 2px;font-style:italic;}
+  .scene-word{color:var(--blood);font-weight:700;font-style:normal;}
+  .all-ev{margin:2px 0;} .poi{margin:8px 0 2px;}
   /* tray label + first-time tip + stronger selection (P6) */
   .tray-label{font-family:"Courier New",monospace;font-size:11px;letter-spacing:1px;color:var(--amber);
     text-transform:uppercase;text-align:center;margin-top:2px;}
@@ -330,18 +336,20 @@
         <div class="case-story" id="caseStory"></div>
       </details>
 
-      <!-- MIDDLE: tactical current-evidence stepper -->
-      <div class="sec">Current Evidence <span class="req" id="evStep">—</span></div>
-      <div class="ev-current">
-        <button class="ev-nav" id="evPrev" title="Previous clue">◀</button>
-        <div class="ev-clue" id="evClue">—</div>
-        <button class="ev-nav" id="evNext" title="Next clue">▶</button>
-      </div>
-      <div class="ev-progress" id="evProgress"></div>
-      <details class="all-ev">
-        <summary>All evidence <span class="req">★ = key (required)</span></summary>
+      <!-- MIDDLE: one calm evidence card (slideshow) XOR the full list -->
+      <details class="ev-block" id="evBlock" open>
+        <summary>Current Evidence <span class="ev-count" id="evStep">— / —</span></summary>
+        <div class="ev-card">
+          <button class="ev-nav" id="evPrev" title="Previous clue" aria-label="Previous clue">‹</button>
+          <p class="ev-clue" id="evClue">—</p>
+          <button class="ev-nav" id="evNext" title="Next clue" aria-label="Next clue">›</button>
+        </div>
+      </details>
+      <details class="all-ev" id="allEv">
+        <summary>All evidence <span class="req">★ = key</span></summary>
         <ul class="clues" id="clueList"></ul>
       </details>
+      <p class="ev-note" id="evProgress"></p>
 
       <!-- BOTTOM: roster, collapsed by default -->
       <details class="poi" id="poiDetails">
@@ -1239,8 +1247,8 @@ function renderCase(){
   });
   // current-evidence stepper + tactical progress readout
   clueStep=0; renderEvCurrent();
-  $("evProgress").innerHTML=`Sudoku logic alone allows <b>${C.completionsWithout}</b> arrangements — the evidence narrows them to one. `+
-    `The culprit is hidden in the <span class="scene-word">dashed scene</span>.`;
+  $("evProgress").innerHTML=`<b>${C.completionsWithout}</b> arrangements fit the sudoku alone — the evidence finds the one. `+
+    `The culprit waits in the <span class="scene-word">dashed scene</span>.`;
   // roster
   const ros=$("roster"); ros.innerHTML="";
   for(let v=1;v<=cfg.N;v++){ const s=Skin.sName(THEME,v); const d=document.createElement("div"); d.className="ros";
@@ -1252,8 +1260,8 @@ function renderEvCurrent(){
   const n=C.clues.length; if(!n){ $("evClue").textContent="—"; $("evStep").textContent=""; return; }
   clueStep=((clueStep%n)+n)%n;
   const cl=C.clues[clueStep];
-  const star=cl.key?`<span class="keymark" title="key evidence">★</span>`:"";
-  $("evClue").innerHTML=`${star}${Skin.renderClue(cfg,THEME,cl)} <span class="clue-type">[${Skin.TYPE_LABEL[cl.type]||cl.type}]</span>`;
+  const star=cl.key?`<span class="keymark" title="key evidence — required to solve">★</span>`:"";
+  $("evClue").innerHTML=`${star}${Skin.renderClue(cfg,THEME,cl)}`;   // clean: clue text only
   $("evStep").textContent=`${clueStep+1} / ${n}`;
 }
 
@@ -1482,6 +1490,9 @@ $("archiveClose").onclick=()=>$("archiveModal").classList.remove("show");
 $("winArchive").onclick=openArchive;
 $("evPrev").onclick=()=>{ clueStep--; renderEvCurrent(); };
 $("evNext").onclick=()=>{ clueStep++; renderEvCurrent(); };
+// current-evidence card and the full list are mutually exclusive (only one open)
+$("evBlock").addEventListener("toggle",()=>{ if($("evBlock").open && $("allEv").open) $("allEv").open=false; });
+$("allEv").addEventListener("toggle",()=>{ if($("allEv").open && $("evBlock").open) $("evBlock").open=false; });
 function applyAtmosphere(){
   const focus = settings.atmosphere!=="high";
   document.body.classList.toggle("focus", focus);
