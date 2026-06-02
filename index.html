@@ -167,8 +167,52 @@
   .modal .x{position:absolute;top:10px;right:10px;cursor:pointer;background:none;border:none;padding:6px;}
   .modal .x img{width:20px;height:20px;}
   .modal h2{margin:.2em 0;color:var(--amber-soft);font-variant:small-caps;letter-spacing:2px;}
-  .reveal-token{width:84px;height:84px;margin:8px auto;display:flex;align-items:center;justify-content:center;}
+  .reveal-wrap{width:140px;height:140px;margin:6px auto;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle, rgba(231,185,77,.22), rgba(0,0,0,0) 68%);
+    background-image:url("assets/ui/frame-spotlight.png");background-size:contain;background-repeat:no-repeat;background-position:center;}
+  .reveal-token{width:84px;height:84px;display:flex;align-items:center;justify-content:center;}
   .killer-name{font-size:27px;color:var(--blood);font-variant:small-caps;letter-spacing:1px;text-align:center;}
+  /* accusation modal */
+  .accuse-intro{color:var(--ink-dim);font-style:italic;text-align:center;font-size:14px;margin:.2em 0 10px;}
+  .accuse-q{font-family:"Courier New",monospace;font-size:11px;letter-spacing:1.5px;color:var(--amber);
+    text-transform:uppercase;margin:14px 0 6px;}
+  .accuse-suspects{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px;}
+  .accuse-suspect{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;
+    background:#171a22;border:1px solid var(--line);border-radius:9px;padding:7px 3px 5px;transition:.12s;}
+  .accuse-suspect .token{width:40px;height:40px;font-size:18px;}
+  .accuse-suspect .as-name{font-size:10.5px;color:var(--ink);font-weight:700;}
+  .accuse-suspect:hover{border-color:var(--amber);}
+  .accuse-suspect.on{border-color:var(--amber);background:#2c2718;box-shadow:0 0 0 1px var(--amber);}
+  .accuse-select{width:100%;background:#10131a;border:1px solid var(--line);border-radius:7px;color:var(--ink);
+    padding:9px 10px;font-size:14px;font-family:inherit;}
+  .accuse-feedback{min-height:18px;font-size:13.5px;font-style:italic;color:var(--bad);text-align:center;margin-top:10px;}
+  .accuse-feedback.good{color:var(--good);}
+  /* payoff */
+  .newspaper{position:relative;background:#efe6d0;color:#1a1a22;border:1px solid #b8a878;border-radius:6px;
+    padding:12px 14px 14px;margin:2px 0 6px;box-shadow:0 4px 14px rgba(0,0,0,.5);text-align:center;}
+  .news-masthead{font-family:Georgia,serif;font-weight:bold;font-size:12px;letter-spacing:3px;text-transform:uppercase;
+    border-bottom:2px solid #1a1a22;padding-bottom:4px;margin-bottom:6px;}
+  .news-headline{font-family:Georgia,serif;font-weight:bold;font-size:20px;line-height:1.15;text-transform:uppercase;letter-spacing:.5px;}
+  .news-stamp{position:absolute;right:-10px;top:-14px;width:78px;transform:rotate(9deg);pointer-events:none;
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));}
+  .payoff-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;text-align:left;}
+  .po-cell{background:#171a22;border:1px solid var(--line);border-radius:8px;padding:8px 10px;}
+  .po-label{display:block;font-family:"Courier New",monospace;font-size:9.5px;letter-spacing:1px;color:var(--amber);text-transform:uppercase;margin-bottom:3px;}
+  .po-val{font-size:13px;color:var(--ink);} .po-val .wicon{width:18px;height:18px;}
+  .accuse-score{text-align:center;font-weight:700;color:var(--amber-soft);margin:6px 0;font-size:14px;}
+  .reasoning-details{text-align:left;margin-top:6px;}
+  .reasoning-details summary{cursor:pointer;color:var(--ink-dim);font-size:13px;font-family:"Courier New",monospace;
+    letter-spacing:1px;text-transform:uppercase;padding:4px 0;}
+  .payoff-actions{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap;}
+  /* archive */
+  .trophies{display:flex;gap:10px;flex-wrap:wrap;}
+  .trophy{width:54px;height:54px;border-radius:9px;background:#171a22;border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;padding:5px;}
+  .trophy img{max-width:100%;max-height:100%;}
+  .archive-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto;}
+  .arch-row{background:#171a22;border:1px solid var(--line);border-radius:8px;padding:8px 11px;}
+  .arch-row b{color:var(--amber-soft);} .arch-meta{display:block;font-size:12px;color:var(--ink-dim);margin-top:2px;}
+  .muted{color:var(--ink-dim);font-style:italic;font-size:13px;}
   .chain{list-style:none;padding:0;margin:14px 0;text-align:left;}
   .chain li{padding:8px 10px 8px 14px;border-left:2px solid var(--amber);background:rgba(231,185,77,.06);
     margin:6px 0;border-radius:0 6px 6px 0;font-size:13.5px;line-height:1.45;}
@@ -190,7 +234,8 @@
     </div>
     <div class="top-controls">
       <span class="pill" id="diffPill">—</span>
-      <span class="pill" id="codePill" title="Click to copy case code" style="cursor:pointer">Case —</span>
+      <span class="pill" id="codePill" title="Copy share code" style="cursor:pointer">Case No. —</span>
+      <button class="btn" id="archiveBtn"><img src="assets/ui/icon-notebook.png" alt=""/>Archive</button>
       <button class="btn" id="newBtn"><img src="assets/ui/icon-settings.png" alt=""/>New Case</button>
     </div>
   </header>
@@ -253,19 +298,61 @@
     </div>
   </div>
 
-  <!-- Reveal modal -->
+  <!-- Final Deduction — the player makes the accusation -->
+  <div class="modal-bg" id="accuseModal">
+    <div class="modal">
+      <button class="x" id="accuseClose"><img src="assets/ui/icon-close.png" alt="close"/></button>
+      <h2 style="text-align:center">Final Deduction</h2>
+      <p class="accuse-intro">The house is in order and every guest is placed. Detective — make your accusation.</p>
+      <div class="accuse-q">1 · Who is the culprit?</div>
+      <div class="accuse-suspects" id="accuseSuspects"></div>
+      <div class="accuse-q">2 · What proves it?</div>
+      <select id="accuseEvidence" class="accuse-select"></select>
+      <div class="accuse-q">3 · What was the motive?</div>
+      <select id="accuseMotive" class="accuse-select"></select>
+      <div class="accuse-feedback" id="accuseFeedback"></div>
+      <button class="btn primary" id="accuseSubmit" style="margin-top:8px;width:100%">J'accuse — name the killer</button>
+    </div>
+  </div>
+
+  <!-- Case Complete payoff -->
   <div class="modal-bg" id="winModal">
     <div class="modal center">
       <button class="x" id="winClose"><img src="assets/ui/icon-close.png" alt="close"/></button>
-      <h2>Case Closed</h2>
-      <div class="reveal-token" id="revealToken">?</div>
-      <p style="margin:.2em 0">The killer was</p>
+      <div class="newspaper">
+        <img class="news-stamp" src="assets/ui/stamp-caseclosed.png" alt="" />
+        <div class="news-masthead">The Blackwood Herald</div>
+        <div class="news-headline" id="newsHeadline">—</div>
+      </div>
+      <div class="reveal-wrap"><div class="reveal-token" id="revealToken"></div></div>
       <div class="killer-name" id="killerName">—</div>
-      <p id="killerMotive" style="color:var(--ink-dim);font-style:italic;margin:6px 0 0"></p>
-      <div class="sec" style="margin-top:18px">The Chain of Reasoning</div>
-      <ul class="chain" id="chain"></ul>
-      <p id="winStory" style="line-height:1.55"></p>
-      <button class="btn primary" id="winNew" style="margin-top:6px">Open the Next Case</button>
+      <p id="killerMotive" style="color:var(--ink-dim);font-style:italic;margin:4px 0 8px"></p>
+      <div class="payoff-grid">
+        <div class="po-cell"><span class="po-label">Key evidence</span><span class="po-val" id="poEvidence">—</span></div>
+        <div class="po-cell"><span class="po-label">Trophy unlocked</span><span class="po-val" id="poTrophy">—</span></div>
+      </div>
+      <div id="accuseScore" class="accuse-score"></div>
+      <details class="reasoning-details">
+        <summary>The chain of reasoning</summary>
+        <ul class="chain" id="chain"></ul>
+        <p id="winStory" style="line-height:1.5"></p>
+      </details>
+      <div class="payoff-actions">
+        <button class="btn" id="winArchive"><img src="assets/ui/icon-notebook.png" alt=""/>Evidence Archive</button>
+        <button class="btn primary" id="winNew">Open the Next Case</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Evidence Archive -->
+  <div class="modal-bg" id="archiveModal">
+    <div class="modal">
+      <button class="x" id="archiveClose"><img src="assets/ui/icon-close.png" alt="close"/></button>
+      <h2 style="text-align:center">Evidence Archive</h2>
+      <div class="sec">Trophies <span class="req" id="trophyCount"></span></div>
+      <div class="trophies" id="trophyShelf"></div>
+      <div class="sec">Solved Cases <span class="req" id="archiveCount"></span></div>
+      <div class="archive-list" id="archiveList"></div>
     </div>
   </div>
 
@@ -769,6 +856,15 @@ const MANOR = {
       "Work the room. When every guest is in their place, only the truth will be left standing.",
       "Follow the clues, fill every room, and the one whose story fails is your culprit.",
     ],
+    // newspaper headlines for the payoff screen. {KILLER} {VICTIM} {PLACE} are upper-cased.
+    headlines:[
+      "{KILLER} GUILTY IN {PLACE} SLAYING",
+      "ARREST AT {PLACE}: {KILLER} UNMASKED",
+      "{PLACE} MYSTERY SOLVED — {KILLER} TO STAND TRIAL",
+      "{KILLER} EXPOSED IN {VICTIM} CASE",
+      "JUSTICE AT {PLACE}: {KILLER} NAMED CULPRIT",
+      "THE NET CLOSES: {KILLER} HELD FOR {VICTIM} MURDER",
+    ],
   },
   // rooms indexed by box id (need >=9). slug -> room floor png; icon -> object png on the room tag
   rooms:[
@@ -890,6 +986,18 @@ const boardEl=$("board"), trayEl=$("tray");
 
 let C=null, cfg=null, board=null, given=null, sel=-1, selSuspect=-1;
 let undoStack=[], redoStack=[], hintsUsed=0, solved=false, story=null, cluesUsed=new Set();
+let accuseCulprit=-1, attempts=0;
+
+/* ---- persistence (localStorage; runs locally) ---- */
+const LS={
+  get(k,d){ try{ const v=localStorage.getItem("casedoku."+k); return v?JSON.parse(v):d; }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem("casedoku."+k, JSON.stringify(v)); }catch(e){} }
+};
+/* ---- flavor labels ---- */
+const TIER_FLAVOR={easy:"Routine Case",medium:"Troubling Case",hard:"Grim Case",extreme:"Cold Case"};
+function cap(s){ return s? s.charAt(0).toUpperCase()+s.slice(1) : s; }
+function stripTags(h){ return String(h).replace(/<[^>]*>/g,""); }
+function nowStr(){ try{ return new Date().toLocaleDateString(); }catch(e){ return ""; } }
 
 function shade(hex,amt){ const n=parseInt(hex.slice(1),16);
   let r=Math.max(0,Math.min(255,(n>>16)+amt)), g=Math.max(0,Math.min(255,((n>>8)&255)+amt)), b=Math.max(0,Math.min(255,(n&255)+amt));
@@ -950,6 +1058,7 @@ function dressStory(){
   let alibiRoom=sceneRoom; for(let t=0;t<8 && alibiRoom===sceneRoom;t++) alibiRoom=Skin.roomName(THEME, Math.floor(rng()*Math.min(cfg.N,THEME.rooms.length)));
   story={ victim:pick(THEME.victims), weapon:pick(THEME.weapons), time:pick(THEME.times),
     sceneRoom, alibiRoom, killer, caseNo:100+(C.seed%900) };
+  story.title=`The Murder of ${story.victim}`;     // clean: works for "the Dowager Countess", "Lord Blackwood", …
   // cozy-mystery narrative intro woven from the procedural facts (own rng stream so
   // adding/removing story text never shifts the rest of the dressing)
   const srng=E.makeRNG((C.seed ^ E.hashStr("narrative"))>>>0);
@@ -962,18 +1071,19 @@ function startCase(opts){
   C=E.generateCase(opts); cfg=C.cfg;
   board=C.givens.slice(); given=C.givens.map(v=>v!==0);
   sel=-1; selSuspect=-1; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false; cluesUsed=new Set();
+  accuseCulprit=-1; attempts=0;
   RING=assignRings(cfg.N);                                    // distinct ring colour per active suspect
   document.documentElement.style.setProperty("--disc-cream",DISC_CREAM);
   dressStory();
   setVar("--cell", cfg.N<=6 ? "72px" : "62px");
   boardEl.style.gridTemplateColumns=`repeat(${cfg.N}, var(--cell))`;
   renderBoard(); renderTray(); renderCase();
-  $("diffPill").innerHTML=`<b>${E.TIERS[C.tier].label}</b> · ${cfg.N}×${cfg.N}`;
-  $("codePill").textContent=`Case ${C.code}`;
+  $("diffPill").innerHTML=`<b>${TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label}</b> · ${cfg.N}×${cfg.N}`;
+  $("codePill").textContent=`Case No. ${story.caseNo}`;
   $("loadBearingNote").innerHTML=
     `Sudoku logic alone leaves <b>${C.completionsWithout}</b> possible arrangements of this house — `+
-    `only the ${C.clues.length} pieces of evidence above narrow it to one. The scene (dashed) hides the killer.`;
-  setStatus(`Case ${C.code} opened — ${board.filter(v=>!v).length} positions to place.`,"");
+    `only the evidence narrows it to one. The scene (dashed) hides the killer.`;
+  setStatus(`Case No. ${story.caseNo} opened — ${board.filter(v=>!v).length} positions to place.`,"");
 }
 function setVar(k,v){ document.documentElement.style.setProperty(k,v); }
 
@@ -1025,9 +1135,9 @@ function renderTray(){
   }
 }
 function renderCase(){
-  $("caseTitle").textContent=`The ${story.victim} Murder`;
+  $("caseTitle").textContent=story.title;
   $("caseStory").textContent=story.narrative;
-  $("caseSub").innerHTML=`Case №${story.caseNo} · <b>${E.TIERS[C.tier].label}</b> · ${THEME.place}`+
+  $("caseSub").innerHTML=`Case No. ${story.caseNo} · <b>${TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label}</b> · ${THEME.place}`+
     ` · weapon: <img class="wicon" src="${tAsset('weapons','weapon-'+story.weapon.slug+'.png')}" alt="">${story.weapon.n}.`;
   // evidence (★ = key/load-bearing; the rest are true corroborating details)
   const list=$("clueList"); list.innerHTML="";
@@ -1076,6 +1186,7 @@ function hint(){ if(solved)return;
 }
 
 function check(){ if(solved)return;
+  if(gridComplete()){ openAccusation(); return; }   // complete & correct -> straight to the accusation
   let wrong=0, empty=0;
   for(let i=0;i<cfg.N*cfg.N;i++){ const cell=boardEl.children[i]; const tok=cell.querySelector(".token"); if(tok)tok.classList.remove("bad");
     if(board[i]===0){empty++;continue;} if(board[i]!==C.solution[i]){ wrong++; if(tok)tok.classList.add("bad"); } }
@@ -1103,13 +1214,78 @@ function refresh(){ const bad=conflicts(); const matchVal=selSuspect>0?selSuspec
     if(matchVal>0 && board[i]===matchVal)cell.classList.add("match");
     const t=cell.querySelector(".token"); if(t)t.classList.toggle("bad",bad.has(i)); } }
 
-/* ---- win / reveal ---- */
-function checkWin(){ for(let i=0;i<cfg.N*cfg.N;i++) if(board[i]!==C.solution[i]) return; reveal(); }
-function reveal(){ solved=true; const k=Skin.sName(THEME,C.killer);
+/* ---- grid complete -> player makes the accusation -> payoff ---- */
+function gridComplete(){ for(let i=0;i<cfg.N*cfg.N;i++) if(board[i]!==C.solution[i]) return false; return true; }
+function checkWin(){ if(solved) return; if(gridComplete() && !$("accuseModal").classList.contains("show")) openAccusation(); }
+
+function openAccusation(){
+  // (1) culprit — clickable suspect tokens
+  const sp=$("accuseSuspects"); sp.innerHTML=""; accuseCulprit=-1;
+  for(let v=1;v<=cfg.N;v++){
+    const s=Skin.sName(THEME,v), b=document.createElement("button");
+    b.className="accuse-suspect"; b.dataset.v=v;
+    b.appendChild(makeToken(v,"tray"));
+    const nm=document.createElement("span"); nm.className="as-name"; nm.textContent=s.name.replace(/^The\s+/i,"");
+    b.appendChild(nm);
+    b.onclick=()=>{ accuseCulprit=v; [...sp.children].forEach(c=>c.classList.toggle("on", +c.dataset.v===v)); };
+    sp.appendChild(b);
+  }
+  // (2) evidence — the displayed clues
+  const ev=$("accuseEvidence"); ev.innerHTML='<option value="-1">— choose the decisive clue —</option>';
+  C.clues.forEach((cl,idx)=>{ const o=document.createElement("option"); o.value=idx;
+    o.textContent=`#${idx+1}: ${stripTags(Skin.renderClue(cfg,THEME,cl))}`; ev.appendChild(o); });
+  // (3) motive — each suspect's motive (correct = killer's), order seeded so it isn't positional
+  const mo=$("accuseMotive"); mo.innerHTML='<option value="-1">— choose the motive —</option>';
+  const order=[]; for(let v=1;v<=cfg.N;v++) order.push(v);
+  const rng=E.makeRNG((C.seed^E.hashStr("accuse"))>>>0);
+  for(let i=order.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; }
+  order.forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=cap(Skin.sName(THEME,v).motive); mo.appendChild(o); });
+  setAccuseFeedback("",""); $("accuseModal").classList.add("show");
+}
+function setAccuseFeedback(msg,kind){ const f=$("accuseFeedback"); f.textContent=msg; f.className="accuse-feedback"+(kind?" "+kind:""); }
+function submitAccusation(){
+  if(accuseCulprit<1){ setAccuseFeedback("Name a culprit first.",""); return; }
+  if(accuseCulprit!==C.killer){
+    attempts++;
+    setAccuseFeedback("That isn't who the evidence points to. Re-examine the dashed scene — whoever stands there is the killer.","");
+    return;
+  }
+  const evPick=+$("accuseEvidence").value, moPick=+$("accuseMotive").value;
+  const proving=new Set(C.reasoning.map(r=>r.clue));
+  const grade={ evidenceRight: proving.has(evPick), motiveRight: moPick===C.killer, evPick };
+  $("accuseModal").classList.remove("show");
+  payoff(grade);
+}
+
+function payoff(grade){
+  solved=true; const k=Skin.sName(THEME,C.killer);
   const rt=$("revealToken"); rt.innerHTML=""; rt.appendChild(makeToken(C.killer,"big"));
   $("killerName").textContent=k.name;
   $("killerMotive").textContent=`Motive: ${k.motive}.`;
-  const chain=$("chain"); chain.innerHTML="";
+  $("newsHeadline").textContent=makeHeadline(k.name);
+  // key evidence: the player's pick if it was a proving clue, else the first proving clue
+  const proveIdx=(grade.evidenceRight && grade.evPick>=0)?grade.evPick:(C.reasoning.length?C.reasoning[0].clue:-1);
+  $("poEvidence").innerHTML=proveIdx>=0?Skin.renderClue(cfg,THEME,C.clues[proveIdx]):"the arrangement of the house";
+  const troName=cap(story.weapon.n.replace(/^(the|a|an)\s+/i,""));
+  $("poTrophy").innerHTML=`<img class="wicon" src="${tAsset('weapons','weapon-'+story.weapon.slug+'.png')}" alt="">${troName}`;
+  const perfect=grade.evidenceRight&&grade.motiveRight;
+  $("accuseScore").textContent=(perfect?"Flawless deduction — ":"Culprit caught — ")+
+    `Culprit ✓  ·  Evidence ${grade.evidenceRight?"✓":"✗"}  ·  Motive ${grade.motiveRight?"✓":"✗"}`;
+  buildChain();
+  recordSolved(makeHeadline(k.name), perfect);
+  setStatus(`Case closed — ${k.name} arrested${hintsUsed?` (with ${hintsUsed} hint${hintsUsed>1?"s":""})`:""}.`,"good");
+  $("winModal").classList.add("show");
+}
+function makeHeadline(killerName){
+  const S=THEME.story; if(!S||!S.headlines) return "CASE CLOSED";
+  const rng=E.makeRNG((C.seed^E.hashStr("headline"))>>>0);
+  const t=S.headlines[Math.floor(rng()*S.headlines.length)];
+  const up=s=>String(s).replace(/^the\s+/i,"").toUpperCase();
+  return t.replace(/\{KILLER\}/g,up(killerName)).replace(/\{VICTIM\}/g,up(story.victim))
+          .replace(/\{PLACE\}/g,(THEME.place||"the manor").toUpperCase());
+}
+function buildChain(){
+  const k=Skin.sName(THEME,C.killer), chain=$("chain"); chain.innerHTML="";
   const scene=spotText(C.murderCell);
   const head=document.createElement("li");
   head.innerHTML=`The body lay at <b>${scene.spot} of ${scene.room}</b>. Sudoku logic alone allowed `+
@@ -1126,12 +1302,36 @@ function reveal(){ solved=true; const k=Skin.sName(THEME,C.killer);
   chain.appendChild(tail);
   $("winStory").innerHTML=`${k.name} had sworn they spent the evening in ${story.alibiRoom} — `+
     `but the evidence places them at the scene in ${story.sceneRoom}, `+
-    `<img class="wicon" src="${tAsset('weapons','weapon-'+story.weapon.slug+'.png')}" alt="">${story.weapon.n} in hand. Case closed`+
-    (hintsUsed?` (with ${hintsUsed} hint${hintsUsed>1?"s":""}).`:".");
-  setStatus(`Solved! The killer was ${k.name}.`,"good");
-  $("winModal").classList.add("show");
+    `<img class="wicon" src="${tAsset('weapons','weapon-'+story.weapon.slug+'.png')}" alt="">${story.weapon.n} in hand.`;
 }
-function spotText(cell){ const x=Skin.spotName(cfg,THEME,cell); return x; }
+function spotText(cell){ return Skin.spotName(cfg,THEME,cell); }
+
+/* ---- evidence archive + trophies (persisted) ---- */
+function recordSolved(headline, perfect){
+  const archive=LS.get("archive",[]);
+  if(!archive.some(a=>a.code===C.code)){
+    archive.unshift({ code:C.code, no:story.caseNo, tier:C.tier, title:story.title,
+      culprit:Skin.sName(THEME,C.killer).name, weapon:story.weapon.slug, headline, perfect:!!perfect, date:nowStr() });
+    LS.set("archive", archive.slice(0,200));
+  }
+  const trophies=LS.get("trophies",[]);
+  if(!trophies.includes(story.weapon.slug)){ trophies.push(story.weapon.slug); LS.set("trophies", trophies); }
+}
+function openArchive(){
+  const archive=LS.get("archive",[]), trophies=LS.get("trophies",[]);
+  const shelf=$("trophyShelf"); shelf.innerHTML="";
+  $("trophyCount").textContent=trophies.length?`${trophies.length}`:"";
+  if(!trophies.length) shelf.innerHTML='<span class="muted">No trophies yet — solve a case to claim its weapon as evidence.</span>';
+  trophies.forEach(slug=>{ const d=document.createElement("div"); d.className="trophy"; d.title=slug;
+    d.innerHTML=`<img src="${tAsset('weapons','weapon-'+slug+'.png')}" alt="${slug}">`; shelf.appendChild(d); });
+  $("archiveCount").textContent=archive.length?`${archive.length} closed`:"";
+  const list=$("archiveList"); list.innerHTML="";
+  if(!archive.length) list.innerHTML='<div class="muted">No solved cases yet. Close a case to start your archive.</div>';
+  archive.forEach(a=>{ const row=document.createElement("div"); row.className="arch-row";
+    row.innerHTML=`<b>${a.title}</b><span class="arch-meta">Culprit: ${a.culprit} · ${TIER_FLAVOR[a.tier]||a.tier} · No. ${a.no} · ${a.date}${a.perfect?" · ★ flawless":""}</span>`;
+    list.appendChild(row); });
+  $("archiveModal").classList.add("show");
+}
 
 /* ---- buttons / keys ---- */
 function setStatus(m,k){ const s=$("status"); s.textContent=m; s.className="status"+(k?" "+k:""); }
@@ -1141,6 +1341,11 @@ $("newBtn").onclick=()=>$("newModal").classList.add("show");
 $("newClose").onclick=$("newBack").onclick=()=>$("newModal").classList.remove("show");
 $("winClose").onclick=()=>$("winModal").classList.remove("show");
 $("winNew").onclick=()=>{ $("winModal").classList.remove("show"); startCase({difficulty:C.tier, rand:Math.random()}); };
+$("accuseClose").onclick=()=>{ $("accuseModal").classList.remove("show"); setStatus("Ready to accuse — press Check when you're sure.",""); };
+$("accuseSubmit").onclick=submitAccusation;
+$("archiveBtn").onclick=openArchive;
+$("archiveClose").onclick=()=>$("archiveModal").classList.remove("show");
+$("winArchive").onclick=openArchive;
 $("codePill").onclick=()=>{ try{ navigator.clipboard.writeText(C.code); setStatus(`Case code ${C.code} copied.`,"good"); }catch(e){} };
 
 let pendingDiff="medium";
