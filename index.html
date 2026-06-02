@@ -656,19 +656,9 @@ function buildPool(cfg, solution, ambigCells, rng){
     }
   }
 
-  // COUNT facts over column-band / row-band "wings"
-  const regions=[];
-  for(let bc=0;bc<cfg.bh;bc++){ const cells=[]; for(let r=0;r<N;r++)for(let c=bc*cfg.bw;c<bc*cfg.bw+cfg.bw;c++) cells.push(r*N+c);
-    regions.push({kind:"colband", band:bc, cells}); }
-  for(let br=0;br<cfg.bw;br++){ const cells=[]; for(let r=br*cfg.bh;r<br*cfg.bh+cfg.bh;r++)for(let c=0;c<N;c++) cells.push(r*N+c);
-    regions.push({kind:"rowband", band:br, cells}); }
-  for(const reg of regions){
-    for(let t=0;t<3;t++){
-      const vals=sample(rng,[...Array(N).keys()].map(x=>x+1), 2+rint(rng,2));
-      let k=0; for(const ci of reg.cells) if(vals.includes(solution[ci])) k++;
-      add("count",{cells:reg.cells, vals, k, region:reg.kind, band:reg.band});
-    }
-  }
+  // (No COUNT clues: a column/row "wing" is a union of complete lines, so each suspect
+  // always appears a fixed number of times there — the count is trivially true and
+  // non-informative, and reads oddly. Only informative, cleanly-phrasable types are used.)
   return pool;
 }
 function allPairs(arr){ const out=[]; for(let i=0;i<arr.length;i++)for(let j=i+1;j<arr.length;j++) out.push([arr[i],arr[j]]); return out; }
@@ -981,26 +971,28 @@ const MANOR = {
 };
 
 // structural vocabulary by board shape (bh x bw box). Falls back gracefully.
+// Only references things visible on the board: grid sub-positions, rows, columns,
+// 3x3-region bands, and relative positions. No doors/walls/windows/hearths.
 const VOCAB = {
   "3x3":{
-    spots:["the north-west corner","the north window","the north-east corner",
-           "the west wall","the centre of the room","the east wall",
-           "the south-west corner","the hearth","the south-east corner"],
-    rowBands:["the north wall","the middle of the room","the south wall"],
-    colBands:["the western side","the central line","the eastern side"],
+    spots:["the top-left","the top-middle","the top-right",
+           "the middle-left","the centre","the middle-right",
+           "the bottom-left","the bottom-middle","the bottom-right"],
+    rowBands:["the top row","the middle row","the bottom row"],
+    colBands:["the left column","the centre column","the right column"],
     colWings:["the west wing","the central rooms","the east wing"],
     rowWings:["the upper floor","the main floor","the lower floor"],
   },
   "2x3":{
-    spots:["by the left of the door","by the door","by the right of the door",
-           "the far-left corner","the back wall","the far-right corner"],
-    rowBands:["the front of the room","the back of the room"],
-    colBands:["the left","the middle","the right"],
+    spots:["the top-left","the top-middle","the top-right",
+           "the bottom-left","the bottom-middle","the bottom-right"],
+    rowBands:["the top row","the bottom row"],
+    colBands:["the left column","the centre column","the right column"],
     colWings:["the west wing","the east wing"],
     rowWings:["the top floor","the middle floor","the lower floor"],
   },
 };
-const DIRWORD=(dr,dc)=> dr===-1?"directly north of": dr===1?"directly south of": dc===-1?"directly west of":"directly east of";
+const DIRWORD=(dr,dc)=> dr===-1?"directly above": dr===1?"directly below": dc===-1?"directly to the left of":"directly to the right of";
 
 function vocab(cfg){ return VOCAB[cfg.bh+"x"+cfg.bw] || VOCAB["3x3"]; }
 function sName(theme,v){ return theme.suspects[v-1]; }
@@ -1015,23 +1007,23 @@ function spotName(cfg,theme,cell){
 /* render a structured clue to English */
 function renderClue(cfg,theme,clue){
   const V=vocab(cfg), p=clue.p, S=v=>sName(theme,v).name;
+  const list=arr=>arr.length<=1?arr[0]:arr.slice(0,-1).join(", ")+" and "+arr[arr.length-1];
   switch(clue.type){
     case "sighting":{ const x=spotName(cfg,theme,p.cell);
-      return `A witness places <b>${S(p.val)}</b> at ${x.spot} of ${x.room}.`; }
+      return `A witness places <b>${S(p.val)}</b> in ${x.spot} of ${x.room}.`; }
     case "exclusion":{ const x=spotName(cfg,theme,p.cell);
-      return `Whoever stood at ${x.spot} of ${x.room}, it was <b>not</b> ${S(p.val)}.`; }
+      return `Whoever stood in ${x.spot} of ${x.room}, it was <b>not</b> ${S(p.val)}.`; }
     case "position":{ const room=roomName(theme,p.box);
       const band=(p.axis==="row"?V.rowBands:V.colBands)[p.band]||"that side";
       return `In ${room}, <b>${S(p.val)}</b> kept to ${band}.`; }
     case "relative":{ const room=roomName(theme,p.box);
-      return `In ${room}, <b>${S(p.val)}</b> was ${DIRWORD(p.dr,p.dc)} <b>${S(p.val2)}</b>.`; }
+      return `In ${room}, <b>${S(p.val)}</b> stood ${DIRWORD(p.dr,p.dc)} <b>${S(p.val2)}</b>.`; }
     case "adjacency":{ const room=roomName(theme,p.box);
       return p.adjacent ? `In ${room}, <b>${S(p.val)}</b> and <b>${S(p.val2)}</b> stood side by side.`
                         : `In ${room}, <b>${S(p.val)}</b> and <b>${S(p.val2)}</b> were never side by side.`; }
     case "count":{ const wings=(p.region==="colband"?V.colWings:V.rowWings);
       const where=wings[p.band]||"that part of the house";
-      const who=p.vals.map(S).join(", ");
-      return `Exactly <b>${p.k}</b> of {${who}} were seen in ${where}.`; }
+      return `Of ${list(p.vals.map(S))}, exactly <b>${p.k}</b> ${p.k===1?"was":"were"} seen in ${where}.`; }
   }
   return "An indecipherable note.";
 }
