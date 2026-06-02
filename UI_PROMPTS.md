@@ -33,3 +33,9 @@ Generate a matching set of simple UI icons in cozy cartoon noir: a single warm-b
 
 ## App icon / favicon — appicon.png (512×512) + appicon-192.png (192×192)
 Generate an app icon in cozy cartoon noir: a bold simple emblem combining a magnifying glass over a small 3×3 grid (the sudoku-detective mashup), warm gold and cream on an ink-navy rounded-square background, thick outline, flat shading, very legible at small sizes, no text. (favicon can be derived from this.)
+
+## Newspaper headline background — newspaper.png (assets/ui/, ~1200×800)
+Generate a vintage newspaper page background in cozy cartoon noir style: aged cream newsprint with subtle paper grain and a slightly torn/worn edge, a blank masthead banner across the top and empty column areas below with faint non-readable placeholder text lines, warm muted palette, bold simple framing. Leave a clear empty band near the top for a headline to be overlaid by the game. No readable text, no real headline. 1200×800 landscape.
+
+## Case Assistant portrait — assistant.png (assets/ui/, 512×512, transparent)
+Using assets/reference/style-reference.png as the style reference — match its art style, bold rounded black outlines, flat two-tone cel shading, friendly rounded proportions, head-and-shoulders crop. Generate a NEW character: a noir police clerk / detective's assistant holding a small notebook and pencil, wearing a 1940s shirt-and-tie with a green eyeshade visor, warm muted palette, helpful attentive expression, front-facing bust, plain white background for cutout, no text, 1:1 square.

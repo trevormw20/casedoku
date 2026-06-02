@@ -38,8 +38,9 @@
   .brand-text small{font-size:11px;letter-spacing:6px;color:var(--ink-dim);font-weight:normal;margin-top:4px;}
   .top-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
   .pill{padding:8px 11px;border-radius:8px;border:1px solid var(--line);background:#1b1f2a;
-    color:var(--ink);font-size:13px;}
+    color:var(--ink);font-size:13px;display:inline-flex;align-items:center;gap:6px;}
   .pill b{color:var(--amber-soft);}
+  .pill-badge{width:20px;height:20px;flex:none;}   /* difficulty emblem; hidden by global handler if missing */
   select,button,input{font-family:inherit;}
 
   .layout{display:grid;grid-template-columns:auto 410px;gap:24px;
@@ -196,6 +197,8 @@
     border-left:3px solid var(--amber);border-radius:8px;padding:9px 12px;font-size:13.5px;color:var(--ink);
     max-width:calc(9*var(--cell));line-height:1.45;}
   .assist-icon{width:22px;height:22px;flex:none;margin-top:1px;}
+  .assist-portrait{width:42px;height:42px;flex:none;border-radius:8px;object-fit:cover;
+    border:1px solid var(--line);background:#10131a;}   /* shows only once assistant.png exists */
   .assist-name{font-family:"Courier New",monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
     color:var(--amber);margin-bottom:2px;}
   #assistantText b{color:var(--amber-soft);}
@@ -234,8 +237,10 @@
     padding:9px 10px;font-size:14px;font-family:inherit;}
   .accuse-feedback{min-height:18px;font-size:13.5px;font-style:italic;color:var(--bad);text-align:center;margin-top:10px;}
   .accuse-feedback.good{color:var(--good);}
-  /* payoff */
-  .newspaper{position:relative;background:#efe6d0;color:#1a1a22;border:1px solid #b8a878;border-radius:6px;
+  /* payoff. background-image is a graceful hook: if assets/ui/newspaper.png is
+     absent the image simply doesn't paint and the cream box (background-color) shows. */
+  .newspaper{position:relative;background-color:#efe6d0;color:#1a1a22;border:1px solid #b8a878;border-radius:6px;
+    background-image:url("assets/ui/newspaper.png");background-size:cover;background-position:center;
     padding:12px 14px 14px;margin:2px 0 6px;box-shadow:0 4px 14px rgba(0,0,0,.5);text-align:center;}
   .news-masthead{font-family:Georgia,serif;font-weight:bold;font-size:12px;letter-spacing:3px;text-transform:uppercase;
     border-bottom:2px solid #1a1a22;padding-bottom:4px;margin-bottom:6px;}
@@ -266,6 +271,10 @@
   .chain li b{color:var(--amber-soft);} .chain li .x{color:var(--bad);}
   .diff-row{display:flex;gap:8px;justify-content:center;margin:14px 0;flex-wrap:wrap;}
   .diff-row .btn.on{border-color:var(--amber);background:linear-gradient(180deg,#7a5e1f,#5a4314);color:#fff;}
+  .diff-opt{flex-direction:column;gap:5px;padding:10px 12px;min-width:96px;}
+  .diff-opt .diff-badge{width:44px;height:44px;}   /* badge png; hidden by global handler if missing */
+  .diff-opt span{display:flex;flex-direction:column;line-height:1.15;font-weight:700;}
+  .diff-opt small{font-weight:400;font-size:11px;color:var(--ink-dim);letter-spacing:1px;}
   .field{display:flex;gap:8px;align-items:center;justify-content:center;margin:10px 0;flex-wrap:wrap;}
   .field input{background:#10131a;border:1px solid var(--line);border-radius:7px;color:var(--ink);
     padding:8px 10px;font-size:14px;letter-spacing:1px;width:160px;text-align:center;text-transform:uppercase;}
@@ -305,7 +314,8 @@
         <button class="btn" id="atmoBtn" title="Toggle board atmosphere">Atmosphere: —</button>
       </div>
       <div class="assistant" id="assistant" hidden>
-        <img src="assets/ui/icon-notebook.png" alt="" class="assist-icon"/>
+        <img class="assist-portrait" id="assistPortrait" alt="" hidden/>
+        <img src="assets/ui/icon-notebook.png" alt="" class="assist-icon" id="assistNote"/>
         <div><div class="assist-name">Case Assistant</div><div id="assistantText"></div></div>
       </div>
     </div>
@@ -353,10 +363,10 @@
       <h2>Open a New Case</h2>
       <p style="color:var(--ink-dim);font-style:italic;margin:.2em 0 0">Choose the difficulty of the investigation.</p>
       <div class="diff-row" id="diffRow">
-        <button class="btn" data-diff="easy">Easy · 6×6</button>
-        <button class="btn" data-diff="medium">Medium</button>
-        <button class="btn" data-diff="hard">Hard</button>
-        <button class="btn" data-diff="extreme">Extreme</button>
+        <button class="btn diff-opt" data-diff="easy"><img class="diff-badge" src="assets/ui/badge-easy.png" alt=""/><span>Routine Case<small>6×6</small></span></button>
+        <button class="btn diff-opt" data-diff="medium"><img class="diff-badge" src="assets/ui/badge-medium.png" alt=""/><span>Troubling Case<small>9×9</small></span></button>
+        <button class="btn diff-opt" data-diff="hard"><img class="diff-badge" src="assets/ui/badge-hard.png" alt=""/><span>Grim Case<small>9×9</small></span></button>
+        <button class="btn diff-opt" data-diff="extreme"><img class="diff-badge" src="assets/ui/badge-extreme.png" alt=""/><span>Cold Case<small>9×9</small></span></button>
       </div>
       <div class="field">
         <input id="seedInput" placeholder="case code" maxlength="12"/>
@@ -1154,7 +1164,8 @@ function startCase(opts){
   setVar("--cell", cfg.N<=6 ? "72px" : "62px");
   boardEl.style.gridTemplateColumns=`repeat(${cfg.N}, var(--cell))`;
   renderBoard(); renderTray(); renderCase();
-  $("diffPill").innerHTML=`<b>${TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label}</b> · ${cfg.N}×${cfg.N}`;
+  $("diffPill").innerHTML=`<img class="pill-badge" src="assets/ui/badge-${C.tier}.png" alt=""/>`+
+    `<b>${TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label}</b> · ${cfg.N}×${cfg.N}`;
   $("codePill").textContent=`Case No. ${story.caseNo}`;
   $("loadBearingNote").innerHTML=
     `Sudoku logic alone leaves <b>${C.completionsWithout}</b> possible arrangements of this house — `+
@@ -1518,7 +1529,16 @@ function setupBrand(){
   const probe=(src,next)=>{ const t=new Image(); t.onload=()=>show(src); t.onerror=next; t.src=src; };
   probe(uiAsset('logo-subtitle.png'), ()=> probe(uiAsset('logo.png'), fail));
 }
+/* assistant portrait: show assets/ui/assistant.png if present, else keep the notebook icon */
+function setupAssistant(){
+  const p=$("assistPortrait"), n=$("assistNote"); if(!p) return;
+  const t=new Image();
+  t.onload=()=>{ p.src=uiAsset("assistant.png"); p.hidden=false; if(n) n.hidden=true; };
+  t.onerror=()=>{ p.hidden=true; };   // file absent -> notebook icon remains
+  t.src=uiAsset("assistant.png");
+}
 setupBrand();
+setupAssistant();
 applyAtmosphere();        // sets body.focus + button label before first render
 
 startCase({difficulty:"medium", rand:Math.random()});
