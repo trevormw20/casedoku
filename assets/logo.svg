@@ -10,7 +10,7 @@
     <circle cx="44" cy="48" r="14"/><path d="M54 58l12 12"/>
   </g>
   <text x="78" y="40" font-family="Georgia, serif" font-size="30" fill="#f0d98c"
-        font-weight="bold" letter-spacing="2">CLUDOKU</text>
-  <text x="80" y="60" font-family="Georgia, serif" font-size="12" fill="#9aa0aa"
-        letter-spacing="6">A MURDER IN NINE ROOMS</text>
+        font-weight="bold" letter-spacing="2">CASEDOKU</text>
+  <text x="80" y="60" font-family="Georgia, serif" font-size="13" fill="#9aa0aa"
+        letter-spacing="8">MANOR</text>
 </svg>
