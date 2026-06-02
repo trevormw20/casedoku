@@ -80,12 +80,18 @@
     border:1px solid rgba(231,185,77,.45);box-shadow:0 1px 4px rgba(0,0,0,.55);}
   .room-tag img{width:12px;height:12px;opacity:.95;}
   .wicon{width:14px;height:14px;vertical-align:-2px;}
-  /* on-board object landmark (bottom-left corner) + murder weapon on the scene cell (top-right);
-     small + cornered + above the centred token so they never collide with the suspect */
-  .cell-object{position:absolute;bottom:1px;left:1px;width:36%;max-width:17px;max-height:17px;z-index:4;
-    opacity:.9;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7));}
-  .cell-weapon{position:absolute;top:1px;right:1px;width:44%;max-width:21px;max-height:21px;z-index:5;
-    pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.85));}
+  /* on-board landmarks: room object (bottom-left), murder weapon (scene, top-right),
+     victim body (scene, bottom-right). Sizeable corner badges with a subtle dark backing
+     so they read at a glance, above the centred token but cornered so the suspect stays legible */
+  .cell-object{position:absolute;bottom:1px;left:1px;width:50%;height:50%;max-width:30px;max-height:30px;z-index:4;
+    padding:2px;border-radius:7px;background:rgba(11,13,18,.7);box-shadow:0 1px 3px rgba(0,0,0,.6);
+    object-fit:contain;pointer-events:none;}
+  .cell-weapon{position:absolute;top:1px;right:1px;width:52%;height:52%;max-width:32px;max-height:32px;z-index:6;
+    padding:2px;border-radius:7px;background:rgba(46,12,12,.74);box-shadow:0 1px 3px rgba(0,0,0,.75);
+    object-fit:contain;pointer-events:none;}
+  .cell-victim{position:absolute;bottom:1px;right:1px;width:50%;height:50%;max-width:30px;max-height:30px;z-index:5;
+    padding:1px;border-radius:50%;background:rgba(11,13,18,.72);box-shadow:0 1px 3px rgba(0,0,0,.75);
+    object-fit:cover;object-position:center top;pointer-events:none;filter:grayscale(.25);}
   /* ---- suspect token: colored disc + per-case ring + portrait/letter ---- */
   .token{position:relative;width:82%;height:82%;border-radius:50%;
     display:flex;align-items:center;justify-content:center;
@@ -153,7 +159,14 @@
     font-weight:700;font-size:10px;padding:3px 7px;letter-spacing:1px;border-radius:3px;}
   .casefile h2{font-size:12px;letter-spacing:3px;color:var(--ink-dim);text-transform:uppercase;
     margin:0 0 4px;font-family:"Courier New",monospace;}
-  .case-title{font-size:23px;color:var(--blood);margin:0 0 4px;font-variant:small-caps;letter-spacing:1px;}
+  .case-head{display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;}
+  .case-head-text{flex:1;min-width:0;}
+  .victim-card{flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;width:66px;}
+  .victim-portrait{width:64px;height:64px;border-radius:8px;object-fit:cover;object-position:center top;
+    border:2px solid var(--blood);background:#10131a;filter:grayscale(.3) brightness(.92);
+    box-shadow:0 2px 8px rgba(0,0,0,.5);}
+  .victim-tag{font-family:"Courier New",monospace;font-size:8.5px;letter-spacing:1px;text-transform:uppercase;color:var(--blood);}
+  .case-title{font-size:21px;color:var(--blood);margin:0 0 4px;font-variant:small-caps;letter-spacing:1px;}
   .case-story{font-size:15px;line-height:1.6;color:var(--ink);margin:0 0 8px;
     border-left:3px solid rgba(231,185,77,.5);padding:2px 0 2px 11px;}
   .case-story::first-letter{font-size:1.35em;color:var(--amber-soft);font-weight:700;}
@@ -264,10 +277,19 @@
   .modal .x{position:absolute;top:10px;right:10px;cursor:pointer;background:none;border:none;padding:6px;}
   .modal .x img{width:20px;height:20px;}
   .modal h2{margin:.2em 0;color:var(--amber-soft);font-variant:small-caps;letter-spacing:2px;}
-  .reveal-wrap{width:140px;height:140px;margin:6px auto;display:flex;align-items:center;justify-content:center;
-    background:radial-gradient(circle, rgba(231,185,77,.22), rgba(0,0,0,0) 68%);
+  .reveal-wrap{position:relative;width:140px;height:140px;margin:6px auto;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle, rgba(231,185,77,.18), rgba(0,0,0,0) 68%);
     background-image:url("assets/ui/frame-spotlight.png");background-size:contain;background-repeat:no-repeat;background-position:center;}
-  .reveal-token{width:84px;height:84px;display:flex;align-items:center;justify-content:center;}
+  .reveal-token{position:relative;z-index:1;width:84px;height:84px;display:flex;align-items:center;justify-content:center;}
+  /* prison bars IN FRONT of the culprit (shown only on a win). CSS bars are the fallback;
+     a real assets/ui/frame-bars.png is layered on via setupBars() when present. */
+  .reveal-bars{position:absolute;inset:0;z-index:3;pointer-events:none;display:none;border-radius:8px;
+    background:
+      linear-gradient(#0f1116,#0f1116) top/100% 6px no-repeat,
+      linear-gradient(#0f1116,#0f1116) bottom/100% 6px no-repeat,
+      repeating-linear-gradient(90deg,#0f1116 0 7px, transparent 7px 22px);
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.6));}
+  .reveal-wrap.jailed .reveal-bars{display:block;}
   .killer-name{font-size:27px;color:var(--blood);font-variant:small-caps;letter-spacing:1px;text-align:center;}
   /* accusation modal */
   .accuse-intro{color:var(--ink-dim);font-style:italic;text-align:center;font-size:14px;margin:.2em 0 6px;}
@@ -397,10 +419,18 @@
     </div>
 
     <aside class="casefile">
-      <!-- TOP: case flavor -->
+      <!-- TOP: case flavor + victim portrait -->
       <h2>Case File</h2>
-      <div class="case-title" id="caseTitle">—</div>
-      <div class="case-sub" id="caseSub"></div>
+      <div class="case-head">
+        <div class="victim-card">
+          <img class="victim-portrait" id="caseVictim" alt="victim" />
+          <span class="victim-tag">The Victim</span>
+        </div>
+        <div class="case-head-text">
+          <div class="case-title" id="caseTitle">—</div>
+          <div class="case-sub" id="caseSub"></div>
+        </div>
+      </div>
       <details class="briefing" id="briefing" open>
         <summary>Case briefing</summary>
         <div class="case-story" id="caseStory"></div>
@@ -504,7 +534,7 @@
         <div class="news-masthead">The Blackwood Herald</div>
         <div class="news-headline" id="newsHeadline">—</div>
       </div>
-      <div class="reveal-wrap"><div class="reveal-token" id="revealToken"></div></div>
+      <div class="reveal-wrap" id="revealWrap"><div class="reveal-token" id="revealToken"></div><div class="reveal-bars" id="revealBars"></div></div>
       <div class="killer-name" id="killerName">—</div>
       <p id="killerMotive" style="color:var(--ink-dim);font-style:italic;margin:4px 0 8px"></p>
       <div class="payoff-grid">
@@ -1294,9 +1324,14 @@ function dressStory(){
   const sceneRoom=Skin.roomName(THEME, E.boxOf(cfg, Math.floor(C.murderCell/cfg.N), C.murderCell%cfg.N));
   // killer's false alibi: claim a different room
   let alibiRoom=sceneRoom; for(let t=0;t<8 && alibiRoom===sceneRoom;t++) alibiRoom=Skin.roomName(THEME, Math.floor(rng()*Math.min(cfg.N,THEME.rooms.length)));
-  story={ victim:pick(THEME.victims), weapon:pick(THEME.weapons), time:pick(THEME.times),
+  // victim = a cast member who is NOT one of the N placeable suspects (they're the body),
+  // so the victim-portrait art has a home and the story names that character.
+  const inactive=[]; for(let r=cfg.N;r<THEME.suspects.length;r++) inactive.push(r);
+  const vs=THEME.suspects[(inactive.length?inactive:[0]).slice()[Math.floor(rng()*Math.max(1,inactive.length))]] || THEME.suspects[THEME.suspects.length-1];
+  const victimName=vs.name.replace(/^The\s+/,"the ");   // "The Actress" -> "the Actress" (reads in titles/sentences)
+  story={ victim:victimName, victimDisplay:vs.name, victimRole:vs.role, weapon:pick(THEME.weapons), time:pick(THEME.times),
     sceneRoom, alibiRoom, killer, caseNo:100+(C.seed%900) };
-  story.title=`The Murder of ${story.victim}`;     // clean: works for "the Dowager Countess", "Lord Blackwood", …
+  story.title=`The Murder of ${story.victim}`;     // e.g. "The Murder of the Actress"
   // cozy-mystery narrative intro woven from the procedural facts (own rng stream so
   // adding/removing story text never shifts the rest of the dressing)
   const srng=E.makeRNG((C.seed ^ E.hashStr("narrative"))>>>0);
@@ -1366,9 +1401,13 @@ function renderBoard(){
       o.src=tAsset('objects','object-'+room.icon+'.png'); o.alt=""; cell.appendChild(o); }
     if(board[i]!==0) cell.appendChild(tokenEl(board[i]));
     else if(candidates[i] && candidates[i].size) cell.appendChild(candGrid(i));
-    // murder weapon on the crime-scene (dashed) cell, above everything
-    if(i===C.murderCell && story){ const w=document.createElement("img"); w.className="cell-weapon";
-      w.src=tAsset('weapons','weapon-'+story.weapon.slug+'.png'); w.alt=""; w.title=story.weapon.n; cell.appendChild(w); }
+    // crime-scene (dashed) cell: the victim's body + the murder weapon
+    if(i===C.murderCell && story){
+      const b=document.createElement("img"); b.className="cell-victim";
+      b.src=tAsset('suspects','suspect-'+story.victimRole+'-victim.png'); b.alt=""; b.title=`${story.victimDisplay||"the victim"} (deceased)`; cell.appendChild(b);
+      const w=document.createElement("img"); w.className="cell-weapon";
+      w.src=tAsset('weapons','weapon-'+story.weapon.slug+'.png'); w.alt=""; w.title=story.weapon.n; cell.appendChild(w);
+    }
     cell.addEventListener("click",()=>onCell(i));
     boardEl.appendChild(cell);
   }
@@ -1396,6 +1435,8 @@ function renderTray(){
 }
 function renderCase(){
   $("caseTitle").textContent=story.title;
+  $("caseVictim").src=tAsset('suspects','suspect-'+story.victimRole+'-victim.png');
+  $("caseVictim").title=story.victimDisplay;
   $("caseStory").textContent=story.narrative;
   $("caseSub").innerHTML=`Case No. ${story.caseNo} · <b>${TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label}</b> · ${THEME.place}`+
     ` · weapon: <img class="wicon" src="${tAsset('weapons','weapon-'+story.weapon.slug+'.png')}" alt="">${story.weapon.n}.`;
@@ -1620,6 +1661,7 @@ function payoff(grade, won){
   solved=true; freezeTimer();
   const k=Skin.sName(THEME,C.killer), modal=$("winModal").querySelector(".modal");
   modal.classList.toggle("failed", !won);
+  $("revealWrap").classList.toggle("jailed", !!won);   // bars only when the killer is caught
   // reveal the true culprit either way, so the player learns
   const rt=$("revealToken"); rt.innerHTML=""; rt.appendChild(makeToken(C.killer,"big"));
   $("killerName").textContent=k.name;
@@ -1799,8 +1841,16 @@ function setupAssistant(){
   t.onerror=()=>{ p.hidden=true; };   // file absent -> notebook icon remains
   t.src=uiAsset("assistant.png");
 }
+/* behind-bars reveal: if assets/ui/frame-bars.png exists, overlay it; else CSS bars (the fallback) */
+function setupBars(){
+  const el=$("revealBars"); if(!el) return;
+  const t=new Image();
+  t.onload=()=>{ el.style.background=`url("${uiAsset("frame-bars.png")}") center/contain no-repeat`; };
+  t.src=uiAsset("frame-bars.png");   // on error, the CSS bars (in the stylesheet) remain
+}
 setupBrand();
 setupAssistant();
+setupBars();
 applyAtmosphere();        // sets body.focus + button label before first render
 
 startCase({difficulty:"medium", rand:Math.random()});
