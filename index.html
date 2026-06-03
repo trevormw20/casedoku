@@ -451,6 +451,44 @@
     .accuse-suspects{grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:6px;}
     .accuse-suspect .token{width:42px!important;height:42px!important;}
   }
+
+  /* ===================== JUICE LAYER: motion + feedback =====================
+     GPU-friendly (transform/opacity; one small box-shadow aside). Every animation is gated
+     by body.no-motion (Motion toggle OFF) and by prefers-reduced-motion (always honored). */
+  @keyframes jPop{0%{transform:scale(.6)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
+  .token.j-pop{animation:jPop .19s cubic-bezier(.34,1.56,.64,1);}
+  @keyframes jRing{0%{transform:scale(.72);opacity:.75}100%{transform:scale(1.2);opacity:0}}
+  .j-ring{position:absolute;inset:-2px;border:2px solid var(--amber-soft);border-radius:8px;
+    pointer-events:none;z-index:6;opacity:0;animation:jRing .4s ease-out;}
+  @keyframes jShake{0%,100%{transform:translate3d(0,0,0)}15%{transform:translate3d(-4px,0,0)}30%{transform:translate3d(4px,0,0)}45%{transform:translate3d(-3px,0,0)}60%{transform:translate3d(3px,0,0)}80%{transform:translate3d(-1px,0,0)}}
+  .j-shake{animation:jShake .32s ease !important;}
+  @keyframes jFlash{0%{opacity:0}22%{opacity:.5}100%{opacity:0}}
+  .j-flash{position:absolute;inset:0;pointer-events:none;background:var(--blood);opacity:0;z-index:8;border-radius:inherit;animation:jFlash .4s ease;}
+  .j-flash.screen{position:fixed;z-index:80;}
+  @keyframes jBulb{0%{opacity:0}9%{opacity:.85}100%{opacity:0}}
+  .j-bulb{position:fixed;inset:0;background:#fff;pointer-events:none;z-index:85;opacity:0;animation:jBulb .5s ease-out;}
+  @keyframes jFloat{0%{opacity:0;transform:translate(-50%,4px) scale(.9)}18%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-48px) scale(1)}}
+  .j-float{position:fixed;z-index:90;color:var(--bad);font-weight:800;font-size:15px;
+    font-family:"Courier New",monospace;pointer-events:none;text-shadow:0 1px 3px rgba(0,0,0,.8);animation:jFloat 1.1s ease-out;}
+  @keyframes jBars{0%{transform:translateY(-115%)}68%{transform:translateY(3%)}84%{transform:translateY(-4%)}100%{transform:translateY(0)}}
+  .reveal-wrap.j-slam .reveal-bars{animation:jBars .42s cubic-bezier(.3,.7,.35,1);}
+  @keyframes jThunk{0%{transform:scale(2.6) rotate(-14deg);opacity:0}50%{opacity:1}72%{transform:scale(.88) rotate(11deg)}100%{transform:scale(1) rotate(9deg)}}
+  .news-stamp.j-thunk{animation:jThunk .42s cubic-bezier(.3,1.25,.5,1);}
+  @keyframes jPuff{0%{transform:scale(.3);opacity:.55}100%{transform:scale(1.9);opacity:0}}
+  .j-puff{width:60px;height:60px;border-radius:50%;pointer-events:none;z-index:86;opacity:0;
+    background:radial-gradient(circle,rgba(222,212,182,.75),transparent 68%);animation:jPuff .5s ease-out;}
+  @keyframes jSpin{0%{transform:rotate(-540deg) scale(.16);opacity:0}72%{opacity:1}100%{transform:rotate(0) scale(1);opacity:1}}
+  .newspaper.j-spin{animation:jSpin .55s cubic-bezier(.2,.7,.3,1);}
+  @keyframes jConfetti{0%{transform:translate3d(0,0,0) rotate(0);opacity:1}100%{transform:translate3d(var(--cx),var(--cy),0) rotate(var(--cr));opacity:0}}
+  .j-confetti{position:fixed;width:8px;height:8px;z-index:88;pointer-events:none;animation:jConfetti var(--cd) ease-out;}
+  @keyframes jModalIn{0%{transform:scale(.93) translateY(8px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
+  .modal-bg.show .modal{animation:jModalIn .2s ease-out;}
+  @keyframes jBgIn{0%{opacity:0}100%{opacity:1}}
+  .modal-bg.show{animation:jBgIn .18s ease-out;}
+  .btn:active{transform:translateY(1px) scale(.97);}   /* subtle press feedback */
+  /* Motion OFF or reduced-motion -> disable every animation (snap straight to final state) */
+  body.no-motion *, body.no-motion *::before, body.no-motion *::after{animation:none !important;}
+  @media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation:none !important;} }
 </style>
 </head>
 <body>
@@ -490,6 +528,8 @@
         <button class="btn" id="hintBtn"><img src="assets/ui/icon-hint.png" alt=""/>Ask the Clerk</button>
         <button class="btn" id="checkBtn"><img src="assets/ui/icon-check.png" alt=""/>Check</button>
         <button class="btn" id="atmoBtn" title="Toggle board atmosphere">Atmosphere: —</button>
+        <button class="btn" id="motionBtn" title="Toggle animations">✨ Motion: On</button>
+        <button class="btn" id="soundBtn" title="Toggle sound effects">♪ Sound: Off</button>
       </div>
       <div class="assistant" id="assistant" hidden>
         <img class="assist-portrait" id="assistPortrait" alt="" hidden/>
@@ -1416,6 +1456,8 @@ const LS={
   set(k,v){ try{ localStorage.setItem("casedoku."+k, JSON.stringify(v)); }catch(e){} }
 };
 let settings=LS.get("settings",{atmosphere:"low"});   // Focus(low) by default
+if(settings.motion===undefined) settings.motion=true;   // animations ON by default
+if(settings.sound===undefined) settings.sound=false;    // sound effects OFF by default
 /* ---- flavor labels ---- */
 const TIER_FLAVOR={easy:"Routine Case",medium:"Troubling Case",hard:"Grim Case",extreme:"Cold Case"};
 function cap(s){ return s? s.charAt(0).toUpperCase()+s.slice(1) : s; }
@@ -2070,6 +2112,89 @@ function setupBars(){
   t.onload=()=>{ el.style.background=`url("${uiAsset("frame-bars.png")}") center/contain no-repeat`; };
   t.src=uiAsset("frame-bars.png");   // on error, the CSS bars (in the stylesheet) remain
 }
+/* ===================== JUICE: motion + sound (first juice pass) =====================
+   Motion ON by default, Sound OFF by default (both persisted). prefers-reduced-motion is
+   ALWAYS honored (motionOK() returns false), independent of the Motion toggle. Effects only
+   animate transform/opacity and never block input (all overlays are pointer-events:none). */
+const reduceMQ = window.matchMedia("(prefers-reduced-motion: reduce)");
+function motionOK(){ return !!settings.motion && !reduceMQ.matches; }
+function applyMotion(){ document.body.classList.toggle("no-motion", !settings.motion); }
+const _revealTimers=[];
+function clearRevealTimers(){ while(_revealTimers.length) clearTimeout(_revealTimers.pop()); }
+function _autorem(el){ el.addEventListener("animationend",()=>el.remove(),{once:true}); return el; }
+function restartAnim(el,cls){ if(!el)return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+
+function fxPop(cell){ if(!motionOK()||!cell)return; const t=cell.querySelector(".token"); if(t) restartAnim(t,"j-pop"); }
+function fxPulse(cell){ if(!motionOK()||!cell)return; const r=_autorem(document.createElement("div")); r.className="j-ring"; cell.appendChild(r); }
+function fxShake(el){ if(!motionOK()||!el)return; restartAnim(el,"j-shake"); el.addEventListener("animationend",()=>el.classList.remove("j-shake"),{once:true}); }
+function fxFlash(el){ if(!motionOK())return; const f=_autorem(document.createElement("div")); f.className="j-flash"+(el?"":" screen"); (el||document.body).appendChild(f); }
+function fxBulb(){ if(!motionOK())return; const b=_autorem(document.createElement("div")); b.className="j-bulb"; document.body.appendChild(b); }
+function fxFloat(text){ if(!motionOK())return; const pill=$("timerPill"); if(!pill)return; const r=pill.getBoundingClientRect();
+  const f=_autorem(document.createElement("div")); f.className="j-float"; f.textContent=text;
+  f.style.left=(r.left+r.width/2)+"px"; f.style.top=r.top+"px"; document.body.appendChild(f); }
+function fxPuff(anchor){ if(!motionOK()||!anchor)return; const r=anchor.getBoundingClientRect();
+  const p=_autorem(document.createElement("div")); p.className="j-puff"; p.style.position="fixed";
+  p.style.left=(r.left+r.width/2-30)+"px"; p.style.top=(r.top+r.height/2-30)+"px"; document.body.appendChild(p); }
+function fxConfetti(){ if(!motionOK())return; const cols=["#e7b94d","#c1272d","#4caf7d","#f0d98c","#e8dcc0"];
+  const cx=window.innerWidth/2, cy=window.innerHeight*0.30, n=26;
+  for(let i=0;i<n;i++){ const p=_autorem(document.createElement("div")); p.className="j-confetti";
+    p.style.background=cols[i%cols.length]; if(i%2) p.style.borderRadius="50%";
+    p.style.left=cx+"px"; p.style.top=cy+"px";
+    const a=Math.random()*6.283, d=70+Math.random()*170;
+    p.style.setProperty("--cx",(Math.cos(a)*d).toFixed(0)+"px");
+    p.style.setProperty("--cy",(Math.sin(a)*d+240).toFixed(0)+"px");
+    p.style.setProperty("--cr",(Math.random()*720-360).toFixed(0)+"deg");
+    p.style.setProperty("--cd",(0.9+Math.random()*0.7).toFixed(2)+"s");
+    document.body.appendChild(p); } }
+
+/* ---- lightweight synthesized SFX (no audio files); silent unless Sound is ON ---- */
+let _actx=null;   // null = not created, false = unavailable
+function audioCtx(){ if(_actx===false) return null;
+  if(!_actx){ try{ _actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ _actx=false; return null; } }
+  if(_actx.state==="suspended"){ try{ _actx.resume(); }catch(e){} } return _actx; }
+function _tone(freq,dur,type,gain,delay){ const a=audioCtx(); if(!a)return; const t0=a.currentTime+(delay||0);
+  const o=a.createOscillator(), g=a.createGain(); o.type=type||"sine"; o.frequency.setValueAtTime(freq,t0);
+  g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(gain||0.16,t0+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+dur); o.connect(g).connect(a.destination); o.start(t0); o.stop(t0+dur+0.03); }
+function _noise(dur,gain){ const a=audioCtx(); if(!a)return; const len=Math.max(1,(a.sampleRate*dur)|0);
+  const buf=a.createBuffer(1,len,a.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*(1-i/len);
+  const s=a.createBufferSource(); s.buffer=buf; const g=a.createGain(); g.gain.value=gain||0.12;
+  s.connect(g).connect(a.destination); s.start(); }
+function sfx(name){ if(!settings.sound) return; if(!audioCtx()) return;
+  if(name==="place") _tone(620,0.09,"triangle",0.12);
+  else if(name==="thunk"){ _tone(120,0.2,"sine",0.22); _noise(0.08,0.1); }
+  else if(name==="buzz"){ _tone(150,0.22,"sawtooth",0.14); _tone(146,0.22,"sawtooth",0.1); }
+  else if(name==="win"){ [523.25,659.25,783.99].forEach((f,i)=>_tone(f,0.22,"sine",0.14,i*0.11)); } }
+
+/* the big solved-case reveal: flashbulb -> bars slam -> stamp thunk + dust -> confetti (3/3).
+   Final state is the CSS resting state, so skip / Motion-off just shows the end immediately. */
+function playReveal(won, perfect){
+  const wrap=$("revealWrap"), stamp=document.querySelector("#winModal .news-stamp"), paper=document.querySelector("#winModal .newspaper");
+  clearRevealTimers();
+  if(wrap)wrap.classList.remove("j-slam"); if(stamp)stamp.classList.remove("j-thunk"); if(paper)paper.classList.remove("j-spin");
+  if(!motionOK()) return;                          // reduced motion / Motion off -> static final state
+  sfx(won?"win":"buzz");
+  if(paper) restartAnim(paper,"j-spin");
+  fxBulb();
+  if(won && wrap) _revealTimers.push(setTimeout(()=>wrap.classList.add("j-slam"),150));
+  _revealTimers.push(setTimeout(()=>{ if(stamp){ restartAnim(stamp,"j-thunk"); fxPuff(stamp); } sfx("thunk"); },440));
+  if(won && perfect) _revealTimers.push(setTimeout(fxConfetti,640));
+}
+function skipReveal(){ clearRevealTimers();
+  const wrap=$("revealWrap"), stamp=document.querySelector("#winModal .news-stamp"), paper=document.querySelector("#winModal .newspaper");
+  if(wrap)wrap.classList.remove("j-slam"); if(stamp)stamp.classList.remove("j-thunk"); if(paper)paper.classList.remove("j-spin");
+  document.querySelectorAll(".j-confetti,.j-bulb,.j-puff").forEach(e=>e.remove()); }
+
+function applyJuiceButtons(){ const m=$("motionBtn"), s=$("soundBtn");
+  if(m){ m.textContent="✨ Motion: "+(settings.motion?"On":"Off"); m.classList.toggle("on",!!settings.motion); }
+  if(s){ s.textContent="♪ Sound: "+(settings.sound?"On":"Off"); s.classList.toggle("on",!!settings.sound); } }
+if($("motionBtn")) $("motionBtn").onclick=()=>{ settings.motion=!settings.motion; LS.set("settings",settings); applyMotion(); applyJuiceButtons(); };
+if($("soundBtn")) $("soundBtn").onclick=()=>{ settings.sound=!settings.sound; LS.set("settings",settings); applyJuiceButtons(); if(settings.sound){ audioCtx(); sfx("place"); } };
+["pointerdown","keydown"].forEach(ev=>window.addEventListener(ev,()=>{ if(settings.sound) audioCtx(); },{passive:true}));  // unlock audio on first gesture
+if($("winModal")) $("winModal").addEventListener("pointerdown",skipReveal);   // tap to skip the reveal to its final state
+applyMotion(); applyJuiceButtons();
+
 setupBrand();
 setupAssistant();
 setupBars();
