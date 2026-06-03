@@ -13,6 +13,7 @@
     --amber:#e7b94d; --amber-soft:#f0d98c; --blood:#c1272d;
     --good:#4caf7d; --bad:#e1554c;
     --grid-thick:#776b4f;
+    --wall:6px;             /* thickness of the region-dividing "house walls" (cell borders) */
     --cell-max:62px; --ncols:9;     /* set per-case by JS; mobile shrinks --cell to fit the viewport */
     --cell:var(--cell-max);
     --disc-cream:#efe6d0;   /* token disc fill behind transparent cutouts (theme can override) */
@@ -65,8 +66,8 @@
   .cell{position:relative;display:flex;align-items:center;justify-content:center;
     background:var(--panel);cursor:pointer;width:var(--cell);height:var(--cell);
     font-size:calc(var(--cell)*.34);transition:background .12s;}
-  .cell.bt{border-top:2px solid var(--grid-thick);}
-  .cell.bl{border-left:2px solid var(--grid-thick);}
+  .cell.bt{border-top:var(--wall) solid var(--grid-thick);}
+  .cell.bl{border-left:var(--wall) solid var(--grid-thick);}
   .cell.given{cursor:default;}
   /* highlight overlays via ::before so they read over the floor art (token stays on top) */
   .cell::before{content:"";position:absolute;inset:0;pointer-events:none;background-repeat:no-repeat;}
@@ -85,14 +86,17 @@
   .cell.sel{box-shadow:inset 0 0 0 3px var(--amber), 0 0 13px rgba(231,185,77,.7) !important;z-index:3;}
   .cell.scene::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(193,39,45,.7);
     border-radius:5px;pointer-events:none;}
-  .room-tag{position:absolute;top:3px;left:3px;z-index:3;font-size:10px;font-weight:700;letter-spacing:.5px;
+  /* room name sits like a plaque CENTERED on the room's top wall: anchored in the region's
+     top-left cell but translated to the horizontal centre of the 3-cell region and onto the
+     middle of the thick top-wall band. The thick wall pushes the cell content down, so the
+     label clears the tokens/notes — it can stay visible even when a cell has notes. */
+  .room-tag{position:absolute;top:calc(var(--wall) * -0.5);left:calc(var(--cell) * 1.5 + 1px - var(--wall));
+    transform:translate(-50%,-50%);z-index:5;font-size:9px;font-weight:700;letter-spacing:.5px;
     color:var(--amber-soft);text-transform:uppercase;pointer-events:none;white-space:nowrap;
-    font-family:"Courier New",monospace;display:inline-flex;align-items:center;gap:4px;
-    background:rgba(11,13,18,.78);padding:2px 7px;border-radius:7px;
-    border:1px solid rgba(231,185,77,.45);box-shadow:0 1px 4px rgba(0,0,0,.55);}
-  .room-tag img{width:12px;height:12px;opacity:.95;}
-  /* room label is an orientation aid on empty cells — never let it cover pencil-mark notes */
-  .cell:has(.cand-grid) .room-tag{display:none;}
+    font-family:"Courier New",monospace;display:inline-flex;align-items:center;gap:3px;
+    background:rgba(11,13,18,.88);padding:1px 6px;border-radius:6px;
+    border:1px solid rgba(231,185,77,.5);box-shadow:0 1px 4px rgba(0,0,0,.6);}
+  .room-tag img{width:11px;height:11px;opacity:.95;}
   .wicon{width:14px;height:14px;vertical-align:-2px;}
   /* on-board landmarks: room object (bottom-left), murder weapon (scene, top-right),
      victim body (scene, bottom-right). The transparent PNGs sit directly on the room floor
@@ -256,8 +260,8 @@
   body.focus .cell.sel{box-shadow:inset 0 0 0 3px var(--amber),0 0 12px rgba(231,185,77,.45);}
   body.focus{--ring-w:3px;}
   body.focus .token{width:88%;height:88%;}
-  body.focus .cell.bt{border-top-width:3px;border-top-color:#a89668;}
-  body.focus .cell.bl{border-left-width:3px;border-left-color:#a89668;}
+  body.focus .cell.bt{border-top-width:var(--wall);border-top-color:#a89668;}
+  body.focus .cell.bl{border-left-width:var(--wall);border-left-color:#a89668;}
   body.focus .room-tag{background:rgba(8,9,13,.86);}
   /* Case Assistant + hint highlights (P7) */
   .assistant{display:flex;gap:10px;align-items:flex-start;background:#15171f;border:1px solid var(--line);
@@ -1568,8 +1572,8 @@ function renderBoard(){
   for(let r=0;r<N;r++)for(let c=0;c<N;c++){
     const i=r*N+c, cell=document.createElement("div");
     cell.className="cell"+(given[i]?" given":"")+(board[i]===0?" empty":"");
-    if(r%cfg.bh===0 && r!==0) cell.classList.add("bt");
-    if(c%cfg.bw===0 && c!==0) cell.classList.add("bl");
+    if(r%cfg.bh===0) cell.classList.add("bt");   // region top wall (incl. board top) — also pushes content down so the wall label clears it
+    if(c%cfg.bw===0) cell.classList.add("bl");   // region left wall (incl. board left)
     if(i===C.murderCell) cell.classList.add("scene");
     const box=E.boxOf(cfg,r,c), room=THEME.rooms[box%THEME.rooms.length];
     const sr=r%cfg.bh, sc=c%cfg.bw;                                  // sub-position within the room
