@@ -1716,10 +1716,10 @@ function renderEvCurrent(){
 }
 
 /* ---- interactions (cell-first: tap a cell to select, then tap a suspect to place) ---- */
-function onCell(i){ if(solved)return; sel=i; refresh(); renderTray(); }   // select only — never auto-places
+function onCell(i){ if(solved)return; sel=i; refresh(); renderTray(); fxPulse(boardEl.children[i]); }   // select only — never auto-places
 function selectSuspect(v){ if(solved)return;
   if(sel<0){ setStatus("Tap a cell on the board first — then tap a suspect to place them there.",""); return; }
-  if(given[sel]){ setStatus("That cell is fixed by the evidence — pick an open cell.",""); return; }
+  if(given[sel]){ fxShake(boardEl.children[sel]); sfx("buzz"); setStatus("That cell is fixed by the evidence — pick an open cell.",""); return; }
   if(notesMode) toggleNote(sel,v); else place(sel,v);
 }
 /* ---- undo/redo capture board value AND candidate set for every cell an action touches ---- */
@@ -1740,7 +1740,10 @@ function place(i,v){ if(given[i]||board[i]===v)return;
   for(let j=0;j<cfg.N*cfg.N;j++) if(j!==i && candidates[j] && candidates[j].has(v) && isPeer(j,i)) cells.push(j);
   applyAction(cells, ()=>{ board[i]=v; candidates[i].clear();
     for(const j of cells) if(j!==i) candidates[j].delete(v); });   // tidy: clear this suspect's notes from peers
-  clearHints(); refresh(); renderTray(); updateBtns(); checkWin(); }
+  clearHints(); refresh(); renderTray(); updateBtns();
+  if(conflicts().has(i)){ fxShake(boardEl.children[i]); fxFlash(boardEl.children[i]); sfx("buzz"); }  // duplicate -> shake + red flash
+  else sfx("place");
+  checkWin(); }
 function erase(){ if(solved||sel<0||given[sel])return;
   if(board[sel]===0 && (!candidates[sel]||!candidates[sel].size)) return;
   applyAction([sel], ()=>{ board[sel]=0; candidates[sel].clear(); });
@@ -1762,7 +1765,7 @@ function paint(i){ const cell=boardEl.children[i];
   const t=cell.querySelector(".token"); if(t)t.remove();
   const g=cell.querySelector(".cand-grid"); if(g)g.remove();
   cell.classList.toggle("empty", board[i]===0);
-  if(board[i]!==0) cell.appendChild(tokenEl(board[i]));
+  if(board[i]!==0){ cell.appendChild(tokenEl(board[i])); fxPop(cell); }   // pop the token in on (re)placement
   else if(candidates[i] && candidates[i].size) cell.appendChild(candGrid(i)); }
 
 /* ---- Case Assistant: escalating investigation help (P7) ---- */
