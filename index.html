@@ -78,16 +78,16 @@
   /* highlight overlays via ::before so they read over the floor art (token stays on top) */
   .cell::before{content:"";position:absolute;inset:0;pointer-events:none;background-repeat:no-repeat;}
   .cell.room-hl::before{background:rgba(231,185,77,.12);}
-  /* row/column selection = a trail of muted-red FOOTSTEPS along the cross: horizontal prints
-     walk along the row, upright prints walk down the column. Each repeating tile holds a
-     left + right foot offset across the path so it reads as walking. Inline SVG data-URIs
-     keep it self-contained. A cell is only ever peer-row OR peer-col (never the selected cell). */
+  /* row/column selection = a trail of muted-red SHOE prints along the cross: horizontal prints
+     walk along the row, upright prints walk down the column (a left + right shoe offset across
+     the path so it reads as walking). The shoe shape is chosen by the selected cell's occupant
+     — broader for a male suspect, narrower for female, neutral when the cell is empty — and fed
+     in via --shoe-h / --shoe-v (set in refresh()). Defaults below cover before first select. */
+  .board{--shoe-h:none; --shoe-v:none;}
   .cell.peer-row::before{background-color:rgba(120,28,30,.12);
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 22' fill='%237a2a2c' fill-opacity='.62'%3E%3Cellipse cx='9' cy='7' rx='5.5' ry='4'/%3E%3Cellipse cx='3.5' cy='7' rx='2.8' ry='3'/%3E%3Ccircle cx='14.5' cy='4.5' r='1'/%3E%3Ccircle cx='15.2' cy='7' r='1.1'/%3E%3Ccircle cx='14.5' cy='9.5' r='1'/%3E%3Cellipse cx='29' cy='15' rx='5.5' ry='4'/%3E%3Cellipse cx='23.5' cy='15' rx='2.8' ry='3'/%3E%3Ccircle cx='34.5' cy='12.5' r='1'/%3E%3Ccircle cx='35.2' cy='15' r='1.1'/%3E%3Ccircle cx='34.5' cy='17.5' r='1'/%3E%3C/svg%3E");
-    background-repeat:repeat-x;background-position:left center;background-size:40px 22px;}
+    background-image:var(--shoe-h);background-repeat:repeat-x;background-position:left center;background-size:40px 22px;}
   .cell.peer-col::before{background-color:rgba(120,28,30,.12);
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 40' fill='%237a2a2c' fill-opacity='.62'%3E%3Cellipse cx='7' cy='9' rx='4' ry='5.5'/%3E%3Cellipse cx='7' cy='16.5' rx='2.8' ry='3'/%3E%3Ccircle cx='4.5' cy='3.5' r='1'/%3E%3Ccircle cx='7' cy='2.8' r='1.1'/%3E%3Ccircle cx='9.5' cy='3.5' r='1'/%3E%3Cellipse cx='15' cy='27' rx='4' ry='5.5'/%3E%3Cellipse cx='15' cy='34.5' rx='2.8' ry='3'/%3E%3Ccircle cx='12.5' cy='21' r='1'/%3E%3Ccircle cx='15' cy='20.3' r='1.1'/%3E%3Ccircle cx='17.5' cy='21' r='1'/%3E%3C/svg%3E");
-    background-repeat:repeat-y;background-position:center top;background-size:22px 40px;}
+    background-image:var(--shoe-v);background-repeat:repeat-y;background-position:center top;background-size:22px 40px;}
   .cell.sel::before{background:rgba(231,185,77,.20);}
   .cell.sel{box-shadow:inset 0 0 0 3px var(--amber), 0 0 13px rgba(231,185,77,.7) !important;z-index:3;}
   .cell.scene::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(193,39,45,.7);
@@ -266,6 +266,13 @@
   body.focus .cell.sel{box-shadow:inset 0 0 0 3px var(--amber),0 0 12px rgba(231,185,77,.45);}
   body.focus{--ring-w:3px;}
   body.focus .token{width:88%;height:88%;}
+  /* Board tokens are a fixed SQUARE sized to fit the smallest cell content box. Cells on a
+     region's top row / left column have thick (8px) walls eating into their content box, so a
+     %-sized token would render as an OVAL there. A fixed square (== width & height) keeps every
+     token a perfect circle. Specificity (.board .cell .token) beats body.focus .token. */
+  .board .cell .token{flex:none;
+    width:min(calc(.86 * var(--cell)), calc(var(--cell) - var(--wall) - 2px));
+    height:min(calc(.86 * var(--cell)), calc(var(--cell) - var(--wall) - 2px));}
   body.focus .cell.bt{border-top-width:var(--wall);border-top-color:#a89668;}
   body.focus .cell.bl{border-left-width:var(--wall);border-left-color:#a89668;}
   body.focus .room-tag{background:rgba(8,9,13,.86);}
@@ -486,6 +493,9 @@
   @keyframes jBgIn{0%{opacity:0}100%{opacity:1}}
   .modal-bg.show{animation:jBgIn .18s ease-out;}
   .btn:active{transform:translateY(1px) scale(.97);}   /* subtle press feedback */
+  .code-hint{font-size:12.5px;color:var(--ink-dim);margin:2px 0 2px;min-height:16px;text-align:center;}
+  .code-hint b{color:var(--amber-soft);font-family:"Courier New",monospace;letter-spacing:1px;cursor:pointer;}
+  .code-hint.err{color:var(--bad);font-style:italic;}
   /* Motion OFF or reduced-motion -> disable every animation (snap straight to final state) */
   body.no-motion *, body.no-motion *::before, body.no-motion *::after{animation:none !important;}
   @media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation:none !important;} }
@@ -524,6 +534,7 @@
         <button class="btn" id="undoBtn"><img src="assets/ui/icon-undo.png" alt=""/>Undo</button>
         <button class="btn" id="redoBtn"><img src="assets/ui/icon-redo.png" alt=""/>Redo</button>
         <button class="btn" id="eraseBtn"><img src="assets/ui/icon-erase.png" alt=""/>Erase</button>
+        <button class="btn" id="clearBtn" title="Reset the whole puzzle back to its starting givens">🧹 Clear</button>
         <button class="btn" id="notesBtn" title="Pencil-mark candidates (press N)">✎ Notes</button>
         <button class="btn" id="hintBtn"><img src="assets/ui/icon-hint.png" alt=""/>Ask the Clerk</button>
         <button class="btn" id="checkBtn"><img src="assets/ui/icon-check.png" alt=""/>Check</button>
@@ -600,9 +611,10 @@
         <button class="btn diff-opt" data-diff="extreme"><img class="diff-badge" src="assets/ui/badge-extreme.png" alt=""/><span>Cold Case<small>9×9</small></span></button>
       </div>
       <div class="field">
-        <input id="seedInput" placeholder="case code" maxlength="12"/>
+        <input id="seedInput" placeholder="paste a case code, e.g. M1ttuyjz" maxlength="12"/>
         <button class="btn" id="loadCodeBtn"><img src="assets/ui/icon-check.png" alt=""/>Load code</button>
       </div>
+      <div class="code-hint" id="codeHint"></div>
       <div class="field" style="margin-top:4px">
         <button class="btn" id="dailyBtn">Daily Case</button>
         <button class="btn" id="randomBtn"><img src="assets/ui/icon-redo.png" alt=""/>Random case</button>
@@ -1175,22 +1187,22 @@ const MANOR = {
   id:"manor", name:"Blackwood Manor (Classic Whodunit)", place:"Blackwood Manor",
   // each suspect carries a `role` slug -> assets/themes/manor/suspects/suspect-<role>.png
   suspects:[
-    {role:"colonel",     L:"A", name:"The Colonel",     color:"#D4A017", motive:"a buried war secret"},
-    {role:"widow",       L:"B", name:"The Widow",       color:"#7D3C98", motive:"a contested inheritance"},
-    {role:"butler",      L:"C", name:"The Butler",      color:"#5D6D7E", motive:"years of unpaid loyalty"},
-    {role:"chef",        L:"D", name:"The Chef",        color:"#C0392B", motive:"a stolen recipe"},
-    {role:"professor",   L:"E", name:"The Professor",   color:"#1E8449", motive:"a discredited theory"},
-    {role:"heiress",     L:"F", name:"The Heiress",     color:"#C2407A", motive:"a cut from the will"},
-    {role:"gardener",    L:"G", name:"The Gardener",    color:"#D86A1E", motive:"a dismissed grievance"},
-    {role:"captain",     L:"H", name:"The Captain",     color:"#2471A3", motive:"a mutinous grudge"},
-    {role:"doctor",      L:"I", name:"The Doctor",      color:"#17A2A2", motive:"a malpractice cover-up"},
-    {role:"actress",     L:"J", name:"The Actress",     color:"#B03060", motive:"a ruined reputation"},
-    {role:"inspector",   L:"K", name:"The Inspector",   color:"#3A4250", motive:"a case gone wrong"},
-    {role:"maid",        L:"L", name:"The Maid",        color:"#4FA3D1", motive:"a withheld wage"},
-    {role:"heir",        L:"M", name:"The Heir",        color:"#7A8B3C", motive:"an impatient fortune"},
-    {role:"magician",    L:"N", name:"The Magician",    color:"#3D348B", motive:"an exposed trick"},
-    {role:"antiquarian", L:"O", name:"The Antiquarian", color:"#9C6B30", motive:"a priceless forgery"},
-    {role:"nurse",       L:"P", name:"The Nurse",       color:"#D98C9A", motive:"a fatal prescription"},
+    {role:"colonel",     L:"A", name:"The Colonel",     color:"#D4A017", gender:"male",   motive:"a buried war secret"},
+    {role:"widow",       L:"B", name:"The Widow",       color:"#7D3C98", gender:"female", motive:"a contested inheritance"},
+    {role:"butler",      L:"C", name:"The Butler",      color:"#5D6D7E", gender:"male",   motive:"years of unpaid loyalty"},
+    {role:"chef",        L:"D", name:"The Chef",        color:"#C0392B", gender:"male",   motive:"a stolen recipe"},
+    {role:"professor",   L:"E", name:"The Professor",   color:"#1E8449", gender:"male",   motive:"a discredited theory"},
+    {role:"heiress",     L:"F", name:"The Heiress",     color:"#C2407A", gender:"female", motive:"a cut from the will"},
+    {role:"gardener",    L:"G", name:"The Gardener",    color:"#D86A1E", gender:"male",   motive:"a dismissed grievance"},
+    {role:"captain",     L:"H", name:"The Captain",     color:"#2471A3", gender:"male",   motive:"a mutinous grudge"},
+    {role:"doctor",      L:"I", name:"The Doctor",      color:"#17A2A2", gender:"male",   motive:"a malpractice cover-up"},
+    {role:"actress",     L:"J", name:"The Actress",     color:"#B03060", gender:"female", motive:"a ruined reputation"},
+    {role:"inspector",   L:"K", name:"The Inspector",   color:"#3A4250", gender:"male",   motive:"a case gone wrong"},
+    {role:"maid",        L:"L", name:"The Maid",        color:"#4FA3D1", gender:"female", motive:"a withheld wage"},
+    {role:"heir",        L:"M", name:"The Heir",        color:"#7A8B3C", gender:"male",   motive:"an impatient fortune"},
+    {role:"magician",    L:"N", name:"The Magician",    color:"#3D348B", gender:"male",   motive:"an exposed trick"},
+    {role:"antiquarian", L:"O", name:"The Antiquarian", color:"#9C6B30", gender:"male",   motive:"a priceless forgery"},
+    {role:"nurse",       L:"P", name:"The Nurse",       color:"#D98C9A", gender:"female", motive:"a fatal prescription"},
   ],
   victims:["Lord Blackwood","the Dowager Countess","Sir Hugh Pennington","the family solicitor","old Mr. Ashford"],
   // each weapon carries a `slug` -> assets/themes/manor/weapons/weapon-<slug>.png
@@ -1748,6 +1760,17 @@ function erase(){ if(solved||sel<0||given[sel])return;
   if(board[sel]===0 && (!candidates[sel]||!candidates[sel].size)) return;
   applyAction([sel], ()=>{ board[sel]=0; candidates[sel].clear(); });
   clearHints(); refresh(); renderTray(); updateBtns(); }
+/* Clear: reset the CURRENT puzzle to its starting givens (same case/seed). Confirmed so it
+   isn't triggered by accident, and undoable (one snapshot of every cell). */
+function clearPuzzle(){ if(solved)return;
+  const dirty = board.some((v,i)=>!given[i] && v!==0) || candidates.some(s=>s&&s.size);
+  if(!dirty){ setStatus("The board is already at its starting givens.",""); return; }
+  if(!confirm("Clear the puzzle? This removes every suspect you've placed and all your notes, returning to the starting givens. (You can Undo this.)")) return;
+  const all=[]; for(let i=0;i<cfg.N*cfg.N;i++) all.push(i);
+  applyAction(all, ()=>{ for(let i=0;i<all.length;i++){ if(!given[i]) board[i]=0; candidates[i]=new Set(); } });
+  sel=-1; clearHints(); refresh(); renderTray(); updateBtns();
+  setStatus("Board cleared back to the starting givens.","");
+  sfx("place"); }
 function undo(){ if(!undoStack.length)return; const e=undoStack.pop(); restoreSnap(e.before); redoStack.push(e);
   clearHints(); refresh(); renderTray(); updateBtns(); }
 function redo(){ if(!redoStack.length)return; const e=redoStack.pop(); restoreSnap(e.after); undoStack.push(e);
@@ -1835,8 +1858,25 @@ function conflicts(){ const N=cfg.N, bad=new Set();
   return bad; }
 function isPeer(a,b){ const N=cfg.N; const ra=Math.floor(a/N),ca=a%N,rb=Math.floor(b/N),cb=b%N;
   return ra===rb||ca===cb||E.boxOf(cfg,ra,ca)===E.boxOf(cfg,rb,cb); }
+/* selection shoe-print trail: muted-red shoe SOLES; broader for a male suspect, narrower for
+   female, neutral when the selected cell is empty. Two soles per repeating tile read as walking. */
+function _shoeURI(orient, hw){
+  const f="fill='%237a2a2c' fill-opacity='.6'";
+  if(orient==="v")  // vertical tile 22x40, soles walk up the column (left sole upper, right sole lower)
+    return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 40' "+f+"%3E"+
+      "%3Crect x='"+(7-hw)+"' y='3' width='"+(2*hw)+"' height='15' rx='"+hw+"'/%3E"+
+      "%3Crect x='"+(15-hw)+"' y='22' width='"+(2*hw)+"' height='15' rx='"+hw+"'/%3E%3C/svg%3E";
+  return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 22' "+f+"%3E"+  // horizontal tile 40x22, soles walk along the row
+      "%3Crect x='3' y='"+(7-hw)+"' width='15' height='"+(2*hw)+"' rx='"+hw+"'/%3E"+
+      "%3Crect x='22' y='"+(15-hw)+"' width='15' height='"+(2*hw)+"' rx='"+hw+"'/%3E%3C/svg%3E";
+}
+const SHOE_HW={male:5, female:3, neutral:4};   // sole half-width: broad / narrow / default
+const SHOE={}; for(const _g in SHOE_HW){ SHOE[_g]={ h:'url("'+_shoeURI('h',SHOE_HW[_g])+'")', v:'url("'+_shoeURI('v',SHOE_HW[_g])+'")' }; }
+function setShoeTrail(){ let g="neutral";
+  if(sel>=0 && board[sel]>0){ const su=THEME.suspects[board[sel]-1]; if(su&&su.gender) g=(su.gender==="female"?"female":"male"); }
+  boardEl.style.setProperty("--shoe-h", SHOE[g].h); boardEl.style.setProperty("--shoe-v", SHOE[g].v); }
 function refresh(){ const bad=conflicts(); const N=cfg.N;
-  const selVal=sel>=0?board[sel]:0;
+  const selVal=sel>=0?board[sel]:0; setShoeTrail();
   const sr=sel>=0?Math.floor(sel/N):-1, sc=sel>=0?sel%N:-1, sb=sel>=0?E.boxOf(cfg,sr,sc):-1;
   for(let i=0;i<N*N;i++){ const cell=boardEl.children[i];
     cell.classList.remove("sel","peer-row","peer-col","match","room-hl");
@@ -2012,7 +2052,12 @@ function openArchive(){
 function setStatus(m,k){ const s=$("status"); s.textContent=m; s.className="status"+(k?" "+k:""); }
 function updateBtns(){ $("undoBtn").disabled=!undoStack.length; $("redoBtn").disabled=!redoStack.length; }
 $("undoBtn").onclick=undo; $("redoBtn").onclick=redo; $("eraseBtn").onclick=erase; $("hintBtn").onclick=hint; $("checkBtn").onclick=check;
-$("newBtn").onclick=()=>$("newModal").classList.add("show");
+$("clearBtn").onclick=clearPuzzle;
+function showCaseCodeHint(){ const h=$("codeHint"); if(!h||!C) return;
+  h.className="code-hint";
+  h.innerHTML=`This case's code: <b id="copyCode" title="Tap to copy">${C.code}</b> — share it or paste it to replay this exact case.`;
+  const cc=$("copyCode"); if(cc) cc.onclick=()=>{ try{ navigator.clipboard.writeText(C.code); cc.textContent=C.code+" ✓"; }catch(e){} }; }
+$("newBtn").onclick=()=>{ $("newModal").classList.add("show"); $("seedInput").value=""; showCaseCodeHint(); };
 $("newClose").onclick=$("newBack").onclick=()=>$("newModal").classList.remove("show");
 $("winClose").onclick=()=>$("winModal").classList.remove("show");
 $("winNew").onclick=()=>{ $("winModal").classList.remove("show"); startCase({difficulty:C.tier, rand:Math.random()}); };
@@ -2076,8 +2121,18 @@ document.querySelectorAll("#diffRow [data-diff]").forEach(b=>b.onclick=()=>{
 $("randomBtn").onclick=()=>{ $("newModal").classList.remove("show"); startCase({difficulty:pendingDiff, rand:Math.random()}); };
 $("dailyBtn").onclick=()=>{ const d=new Date(); const key="daily-"+d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();
   $("newModal").classList.remove("show"); startCase({difficulty:pendingDiff, seed:key}); };
-$("loadCodeBtn").onclick=()=>{ const v=$("seedInput").value.trim(); if(!v)return;
-  $("newModal").classList.remove("show"); startCase({seed:v}); };
+function loadCaseCode(){
+  const v=$("seedInput").value.trim(), h=$("codeHint");
+  if(!v){ if(h){ h.className="code-hint err"; h.textContent="Enter a case code first."; } return; }
+  // a valid code is <tierChar><base36>, exactly what caseCode() / the codePill produce
+  if(!/^[EMHX][0-9A-Z]+$/i.test(v)){
+    if(h){ h.className="code-hint err"; h.textContent=`“${v}” isn't a valid case code. Codes look like M1ttuyjz (tap the code above to copy this one).`; }
+    return;
+  }
+  $("newModal").classList.remove("show"); startCase({seed:v});
+  setStatus(`Loaded case ${C.code}.`, "good");
+}
+$("loadCodeBtn").onclick=loadCaseCode;
 $("seedInput").addEventListener("keydown",e=>{ if(e.key==="Enter")$("loadCodeBtn").click(); });
 
 document.addEventListener("keydown",e=>{
