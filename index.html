@@ -32,7 +32,7 @@
   body::before{content:"";position:fixed;inset:0;z-index:-1;
     background-image:linear-gradient(rgba(8,9,13,.80),rgba(8,9,13,.93)),url("assets/ui/bg-desktop.jpg");
     background-size:cover;background-position:center;}
-  @media (max-width:700px){body::before{background-image:linear-gradient(rgba(8,9,13,.82),rgba(8,9,13,.94)),url("assets/ui/bg-mobile.jpeg");}}
+  @media (max-width:700px){body::before{background-image:linear-gradient(rgba(8,9,13,.82),rgba(8,9,13,.94)),url("assets/ui/bg-mobile.jpg");}}
 
   header.app{display:flex;align-items:center;justify-content:space-between;gap:14px;
     flex-wrap:wrap;max-width:1240px;margin:0 auto 16px;}
@@ -572,6 +572,7 @@
         <button class="btn" id="atmoBtn" title="Toggle board atmosphere">Atmosphere: —</button>
         <button class="btn" id="motionBtn" title="Toggle animations">✨ Motion: On</button>
         <button class="btn" id="soundBtn" title="Toggle sound effects">♪ Sound: Off</button>
+        <button class="btn" id="musicBtn" title="Toggle background music">🎵 Music: On</button>
       </div>
       <div class="assistant" id="assistant" hidden>
         <img class="assist-portrait" id="assistPortrait" alt="" hidden/>
@@ -1506,6 +1507,7 @@ const LS={
 let settings=LS.get("settings",{atmosphere:"low"});   // Focus(low) by default
 if(settings.motion===undefined) settings.motion=true;   // animations ON by default
 if(settings.sound===undefined) settings.sound=false;    // sound effects OFF by default
+if(settings.music===undefined) settings.music=true;     // background music ON by default
 /* ---- flavor labels ---- */
 const TIER_FLAVOR={easy:"Routine Case",medium:"Troubling Case",hard:"Grim Case",extreme:"Cold Case"};
 function cap(s){ return s? s.charAt(0).toUpperCase()+s.slice(1) : s; }
@@ -2297,14 +2299,22 @@ function skipReveal(){ clearRevealTimers();
   if(wrap)wrap.classList.remove("j-slam"); if(stamp)stamp.classList.remove("j-thunk"); if(paper)paper.classList.remove("j-spin");
   document.querySelectorAll(".j-confetti,.j-bulb,.j-puff").forEach(e=>e.remove()); }
 
-function applyJuiceButtons(){ const m=$("motionBtn"), s=$("soundBtn");
+function applyJuiceButtons(){ const m=$("motionBtn"), s=$("soundBtn"), mu=$("musicBtn");
   if(m){ m.textContent="✨ Motion: "+(settings.motion?"On":"Off"); m.classList.toggle("on",!!settings.motion); }
-  if(s){ s.textContent="♪ Sound: "+(settings.sound?"On":"Off"); s.classList.toggle("on",!!settings.sound); } }
+  if(s){ s.textContent="♪ Sound: "+(settings.sound?"On":"Off"); s.classList.toggle("on",!!settings.sound); }
+  if(mu){ mu.textContent="🎵 Music: "+(settings.music?"On":"Off"); mu.classList.toggle("on",!!settings.music); } }
 if($("motionBtn")) $("motionBtn").onclick=()=>{ settings.motion=!settings.motion; LS.set("settings",settings); applyMotion(); applyJuiceButtons(); };
 if($("soundBtn")) $("soundBtn").onclick=()=>{ settings.sound=!settings.sound; LS.set("settings",settings); applyJuiceButtons(); if(settings.sound){ audioCtx(); sfx("place"); } };
-["pointerdown","keydown"].forEach(ev=>window.addEventListener(ev,()=>{ if(settings.sound) audioCtx(); },{passive:true}));  // unlock audio on first gesture
+/* ---- looping background music: own toggle, default ON, separate from the SFX "Sound" toggle ---- */
+let bgMusic=null;
+function ensureBgMusic(){ if(!bgMusic){ bgMusic=new Audio("assets/music/Final%20Accusation.mp3"); bgMusic.loop=true; bgMusic.volume=0.4; bgMusic.preload="auto"; } return bgMusic; }
+function applyMusic(){ const a=ensureBgMusic(); if(settings.music){ const p=a.play(); if(p&&p.catch) p.catch(()=>{}); } else { a.pause(); } }  // attempt; first-gesture handler retries if blocked
+function startMusicIfOn(){ if(settings.music){ const a=ensureBgMusic(); if(a.paused){ const p=a.play(); if(p&&p.catch) p.catch(()=>{}); } } }
+if($("musicBtn")) $("musicBtn").onclick=()=>{ settings.music=!settings.music; LS.set("settings",settings); applyJuiceButtons(); applyMusic(); };
+// first user gesture: unlock SFX audio AND start the music if autoplay was blocked (while Music is ON)
+["pointerdown","keydown","touchstart"].forEach(ev=>window.addEventListener(ev,()=>{ if(settings.sound) audioCtx(); startMusicIfOn(); },{passive:true}));
 if($("winModal")) $("winModal").addEventListener("pointerdown",skipReveal);   // tap to skip the reveal to its final state
-applyMotion(); applyJuiceButtons();
+applyMotion(); applyJuiceButtons(); applyMusic();   // try to start music immediately (retried on first gesture if blocked)
 
 setupBrand();
 setupAssistant();
