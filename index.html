@@ -288,6 +288,25 @@
   .accuse-weapon:hover{border-color:var(--amber);}
   .accuse-weapon.on{border-color:var(--amber);background:#2c2718;box-shadow:0 0 0 1px var(--amber);}
   .accuse-q-hint{font-weight:400;font-size:11px;color:var(--ink-dim);font-style:italic;}
+  /* scene-object call-out (lives in the Weapons group / tab) */
+  .scene-obj-info{font-size:13px;color:var(--ink);line-height:1.5;background:rgba(193,39,45,.08);
+    border-left:3px solid var(--blood);border-radius:0 7px 7px 0;padding:8px 11px;margin-bottom:8px;}
+  .scene-obj-info .wicon{width:20px;height:20px;vertical-align:-5px;margin:0 3px;}
+  .soi-label{display:block;font-family:"Courier New",monospace;font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--blood);margin-bottom:2px;}
+  .cf-group{margin:0 0 6px;}
+  /* ===== mobile case-file: button + full-screen tabbed overlay (both hidden on desktop) ===== */
+  .case-file-btn{display:none;}
+  .status-mount:empty{display:none;}
+  .case-overlay{position:fixed;inset:0;z-index:60;background:linear-gradient(180deg,#171a22,#0f1116);display:flex;flex-direction:column;}
+  .case-overlay[hidden]{display:none;}
+  .co-bar{display:flex;align-items:flex-end;gap:8px;padding:max(8px,env(safe-area-inset-top)) 8px 0;border-bottom:1px solid var(--line);}
+  .co-tabs{display:flex;gap:2px;flex:1;}
+  .co-tab{flex:1;min-width:0;background:none;border:none;border-bottom:3px solid transparent;color:var(--ink-dim);
+    font-family:inherit;font-size:15px;font-weight:700;padding:14px 4px;cursor:pointer;white-space:nowrap;min-height:48px;}
+  .co-tab.on{color:var(--amber-soft);border-bottom-color:var(--amber);}
+  .co-close{flex:none;width:46px;height:46px;border-radius:11px;border:1px solid var(--line);background:#1b1f2a;color:var(--ink);font-size:22px;line-height:1;cursor:pointer;margin-bottom:6px;}
+  .co-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 16px calc(28px + env(safe-area-inset-bottom));}
+  body.co-open{overflow:hidden;}
   /* tray label + first-time tip + stronger selection (P6) */
   .tray-label{font-family:"Courier New",monospace;font-size:11px;letter-spacing:1px;color:var(--amber);
     text-transform:uppercase;text-align:center;margin-top:2px;}
@@ -456,71 +475,93 @@
   footer{max-width:1240px;margin:26px auto 0;color:var(--ink-dim);font-size:12px;text-align:center;font-style:italic;}
   code{background:#10131a;padding:1px 5px;border-radius:4px;color:var(--amber-soft);font-size:12px;}
 
-  /* ============ phone portrait (<=600px) ============
-     The BOARD sizing is intentionally left alone; everything AROUND it scales UP to standard
-     mobile sizes — ~16px base text, nothing below ~13px, and >=44px touch targets. */
-  @media (max-width:600px){
+  /* ============ MOBILE: game-first + tabbed case-file overlay (<=700px) ============
+     The whole screen is the GAME (compact header, hero board, current-evidence card, tray,
+     toolbar). The side case-file panel is hidden; its sections open in the #caseOverlay tabs.
+     Type scale: body >=16px, nothing readable under 14px, >=44px touch targets, less boxing. */
+  @media (max-width:700px){
     body{font-size:16px;
          padding:8px max(4px,env(safe-area-inset-left))
-                calc(32px + env(safe-area-inset-bottom))
+                calc(28px + env(safe-area-inset-bottom))
                 max(4px,env(safe-area-inset-right));}
-    /* board spans almost the full width (~4px margin each side) — unchanged */
-    :root{--cell:calc((100vw - 30px) / var(--ncols));}
+    :root{--cell:calc((100vw - 30px) / var(--ncols));}   /* board fills width — unchanged */
+    .casefile{display:none;}                              /* side panel hidden; case file is the overlay */
 
-    /* header: legible brand + pills; secondary buttons icon-only, Accuse keeps its label */
-    header.app{gap:9px;margin-bottom:12px;}
+    /* compact header: logo + pills; secondary buttons icon-only, Accuse keeps its label */
+    header.app{gap:10px;margin-bottom:12px;}
     .brand{min-height:0;}
     header.app img.logo{height:46px;}
-    .brand-text{font-size:22px;letter-spacing:1px;}
-    .brand-text small{font-size:10px;letter-spacing:3px;margin-top:2px;}
-    .top-controls{gap:7px;}
-    .pill{padding:9px 11px;font-size:14px;gap:5px;}
+    .top-controls{gap:8px;}
+    .pill{padding:10px 12px;font-size:14px;gap:5px;}
     .pill-badge{width:22px;height:22px;}
-    .top-controls .btn{padding:11px 13px;font-size:15px;min-height:46px;}
+    .top-controls .btn{padding:12px 14px;font-size:15px;min-height:48px;}
     .top-controls .btn img{width:20px;height:20px;}
-    .top-controls .btn-tx{display:none;}                            /* secondary buttons -> icon/symbol only */
-    #accuseBtn{padding:11px 16px;font-size:15.5px;}
-    #accuseBtn .btn-tx{display:inline;}                             /* ...but Accuse stays labelled + easy to reach */
+    .top-controls .btn-tx{display:none;}
+    #accuseBtn{padding:12px 18px;font-size:16px;}
+    #accuseBtn .btn-tx{display:inline;}
 
-    /* tray + toolbar: larger items, >=44px touch targets, readable labels */
-    .tray-label{font-size:13px;}
-    .tray-hint{font-size:12.5px;}
+    /* tray + toolbar + near-board evidence */
+    .tray-label{font-size:15px;}
+    .tray-hint{font-size:13px;}
     .tray{gap:10px;}
     .susp{width:60px;}
     .susp .disc{width:52px;height:52px;}
-    .susp-name{font-size:13px;max-width:62px;}
-    .susp .count{min-width:20px;height:20px;font-size:12px;}
-    .toolbar{gap:9px;}
-    .toolbar .btn{padding:12px 14px;font-size:15px;min-height:48px;}
-    .btn{font-size:15px;}                                            /* general buttons (modals, New Case, etc.) */
+    .susp-name{font-size:14px;max-width:62px;}
+    .susp .count{min-width:22px;height:22px;font-size:13px;}
+    .toolbar{gap:10px;}
+    .toolbar .btn{padding:13px 15px;font-size:15px;min-height:48px;}
+    .btn{font-size:15px;}
+    .ev-block>summary{font-size:15px;}
+    .ev-clue{font-size:18px;line-height:1.5;}
+    .keymark{font-size:14px;}
+    .status{font-size:15px;margin-top:8px;text-align:center;}
 
-    /* case file + evidence: comfortable reading sizes */
-    .casefile{padding:16px;overflow:hidden;}
-    .casefile::before{right:8px;}
-    .casefile h2{font-size:13px;}
-    .case-title{font-size:23px;}
-    .case-story{font-size:16px;line-height:1.62;}
-    .case-sub{font-size:14px;}
-    .briefing summary,.all-ev summary,.poi summary,.ev-block>summary{font-size:13px;}
-    .ev-clue{font-size:17px;line-height:1.55;}
-    .ev-note,.star-legend,.hint-note{font-size:13px;}
-    .status{font-size:14px;}
-    .ros{font-size:13px;}
-    .clues li{font-size:14px;}
-    .accuse-select,.field input{font-size:16px;}
+    /* prominent Case File launcher under the toolbar */
+    .case-file-btn{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
+      width:100%;margin:6px 0 0;padding:16px;min-height:56px;border-radius:12px;cursor:pointer;
+      background:linear-gradient(180deg,#7a5e1f,#5a4314);border:1px solid var(--amber);color:#fff;
+      font-family:inherit;font-size:18px;font-weight:700;letter-spacing:.5px;box-shadow:0 4px 14px rgba(0,0,0,.45);}
+    .case-file-btn .cf-sub{font-weight:400;font-size:12.5px;color:rgba(255,255,255,.72);letter-spacing:1px;}
 
-    /* modals: fit the viewport, scroll internally, readable + reachable */
+    /* overlay tab labels (section headers) */
+    .co-tab{font-size:16px;}
+
+    /* overlay content — readable type scale, decluttered (sections show open, no nested boxes) */
+    .co-panel .case-title{font-size:24px;line-height:1.2;}
+    .co-panel .case-story{font-size:16px;line-height:1.65;}
+    .co-panel .case-sub{font-size:15px;line-height:1.55;}
+    .co-panel .clues{display:flex;flex-direction:column;gap:4px;}
+    .co-panel .clues li{font-size:16px;line-height:1.55;padding:10px 4px;}
+    .co-panel .ev-tag{font-size:12px;padding:2px 7px;}
+    .co-panel .star-legend,.co-panel .ev-note,.co-panel .hint-note,.co-panel .scene-obj-info{font-size:15px;line-height:1.55;}
+    .co-panel .ros{font-size:16px;}
+    .co-panel .wcand{font-size:16px;padding:12px 14px;min-height:52px;}
+    .co-panel .wcand .wicon{width:30px;height:30px;}
+    .co-panel .pw-label{font-size:14px;}
+    .co-panel .pw-hint{font-size:13px;}
+    .co-panel .briefing>summary{font-size:14px;}
+    .co-panel .victim-portrait{width:78px;height:78px;}
+    .co-panel .case-head{gap:14px;margin-bottom:10px;}
+    .co-panel .possible-weapons-sec{border-top:none;padding-top:0;}
+    /* the all-evidence list and roster read as always-open sections inside their own tab */
+    .co-panel .all-ev>summary,.co-panel .poi>summary{display:none;}
+    .co-panel details{border:none;}
+    .co-panel .roster{grid-template-columns:1fr;gap:10px;}
+
+    /* modals: fit, scroll internally, reachable */
     .modal-bg{padding:8px;align-items:flex-start;}
     .modal{padding:18px;max-height:calc(100dvh - 16px);overflow-y:auto;}
     .modal h2{font-size:22px;}
-    .howto-lead,.howto-steps li,.howto-foot{font-size:15px;}
+    .howto-lead,.howto-steps li,.howto-foot{font-size:16px;}
     .reveal-wrap{width:128px;height:128px;}
     .reveal-token{width:76px;height:76px;}
-    .news-headline{font-size:19px;}
+    .news-headline{font-size:20px;}
     .news-stamp{right:0;width:62px;}
     .payoff-grid{grid-template-columns:1fr;}
+    .accuse-q{font-size:14.5px;}
+    .accuse-select,.field input{font-size:16px;min-height:46px;}
     .accuse-suspects{grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:8px;}
-    .accuse-suspect .as-name{font-size:12px;}
+    .accuse-suspect .as-name{font-size:13px;}
     .accuse-suspect .token{width:46px!important;height:46px!important;}
   }
 
@@ -608,6 +649,9 @@
         <button class="btn" id="soundBtn" title="Toggle sound effects">♪ Sound: Off</button>
         <button class="btn" id="musicBtn" title="Toggle background music">🎵 Music: On</button>
       </div>
+      <!-- mobile-only: opens the tabbed case-file overlay (the side panel is hidden on phones) -->
+      <button class="case-file-btn" id="caseFileBtn">📁 Case File <span class="cf-sub">Evidence · Weapons · People · Case</span></button>
+      <div class="status-mount" id="statusMount"></div>
       <div class="assistant" id="assistant" hidden>
         <img class="assist-portrait" id="assistPortrait" alt="" hidden/>
         <img src="assets/ui/icon-notebook.png" alt="" class="assist-icon" id="assistNote"/>
@@ -615,26 +659,31 @@
       </div>
     </div>
 
+    <!-- Desktop: side panel. Mobile: the cf-group blocks are reparented into the #caseOverlay tabs
+         (one source of truth — moved, never duplicated). Anchors mark each group's desktop home. -->
     <aside class="casefile">
-      <!-- TOP: case flavor + victim portrait -->
-      <h2>Case File</h2>
-      <div class="case-head">
-        <div class="victim-card">
-          <img class="victim-portrait" id="caseVictim" alt="victim" />
-          <span class="victim-tag">The Victim</span>
-        </div>
-        <div class="case-head-text">
-          <div class="case-title" id="caseTitle">—</div>
-          <div class="case-sub" id="caseSub"></div>
-        </div>
-      </div>
-      <details class="briefing" id="briefing" open>
-        <summary>Case briefing</summary>
-        <div class="case-story" id="caseStory"></div>
-      </details>
+      <h2 class="casefile-title">Case File</h2>
 
-      <!-- MIDDLE: one calm evidence card (slideshow) XOR the full list -->
-      <!-- desktop home of #evBlock; on mobile it is moved up to #evMount, then returned here -->
+      <div id="homeCase"></div>
+      <div class="cf-group" id="grpCase">
+        <div class="case-head">
+          <div class="victim-card">
+            <img class="victim-portrait" id="caseVictim" alt="victim" />
+            <span class="victim-tag">The Victim</span>
+          </div>
+          <div class="case-head-text">
+            <div class="case-title" id="caseTitle">—</div>
+            <div class="case-sub" id="caseSub"></div>
+          </div>
+        </div>
+        <details class="briefing" id="briefing" open>
+          <summary>Case briefing</summary>
+          <div class="case-story" id="caseStory"></div>
+        </details>
+        <div class="hint-note" id="loadBearingNote"></div>
+      </div>
+
+      <!-- current-evidence stepper: desktop here; on mobile it relocates near the board (#evMount) -->
       <div id="evHome" hidden></div>
       <details class="ev-block" id="evBlock" open>
         <summary>Current Evidence <span class="ev-count" id="evStep">— / —</span></summary>
@@ -644,26 +693,57 @@
           <button class="ev-nav" id="evNext" title="Next clue" aria-label="Next clue">›</button>
         </div>
       </details>
-      <details class="all-ev" id="allEv">
-        <summary>All evidence <span class="req">★ = key</span></summary>
-        <ul class="clues" id="clueList"></ul>
-      </details>
-      <div class="possible-weapons-sec">
-        <div class="pw-label">Possible Weapons <span class="pw-hint">— tap to mark: possible → doubtful → cleared</span></div>
-        <div class="possible-weapons" id="possibleWeapons"></div>
+
+      <div id="homeEvidence"></div>
+      <div class="cf-group" id="grpEvidence">
+        <details class="all-ev" id="allEv">
+          <summary>All evidence <span class="req">★ = key</span></summary>
+          <ul class="clues" id="clueList"></ul>
+        </details>
+        <p class="star-legend"><span class="keymark">★</span> <b>Key evidence</b> — required to crack the case. The rest corroborate. <b>Every clue is true.</b></p>
+        <p class="ev-note" id="evProgress"></p>
       </div>
-      <p class="star-legend"><span class="keymark">★</span> <b>Key evidence</b> — required to crack the case. The rest corroborate. <b>Every clue is true.</b></p>
-      <p class="ev-note" id="evProgress"></p>
 
-      <!-- BOTTOM: roster, collapsed by default -->
-      <details class="poi" id="poiDetails">
-        <summary>Persons of Interest</summary>
-        <div class="roster" id="roster"></div>
-      </details>
+      <div id="homeWeapons"></div>
+      <div class="cf-group" id="grpWeapons">
+        <div class="scene-obj-info" id="sceneObjInfo"></div>
+        <div class="possible-weapons-sec">
+          <div class="pw-label">Possible Weapons <span class="pw-hint">— tap to mark: possible → doubtful → cleared</span></div>
+          <div class="possible-weapons" id="possibleWeapons"></div>
+        </div>
+      </div>
 
-      <div class="hint-note" id="loadBearingNote"></div>
+      <div id="homePeople"></div>
+      <div class="cf-group" id="grpPeople">
+        <details class="poi" id="poiDetails" open>
+          <summary>Persons of Interest</summary>
+          <div class="roster" id="roster"></div>
+        </details>
+      </div>
+
+      <div id="statusHome"></div>
       <div class="status" id="status"></div>
     </aside>
+  </div>
+
+  <!-- MOBILE case-file overlay: full-screen, tabbed. The cf-group blocks above are moved into
+       these panels on mobile and returned to the side panel on desktop (no duplicated DOM). -->
+  <div class="case-overlay" id="caseOverlay" hidden>
+    <div class="co-bar">
+      <div class="co-tabs" id="coTabs">
+        <button class="co-tab on" data-tab="evidence">Evidence</button>
+        <button class="co-tab" data-tab="weapons">Weapons</button>
+        <button class="co-tab" data-tab="people">People</button>
+        <button class="co-tab" data-tab="case">Case</button>
+      </div>
+      <button class="co-close" id="coClose" aria-label="Close case file">✕</button>
+    </div>
+    <div class="co-scroll">
+      <div class="co-panel" id="coPanel-evidence"></div>
+      <div class="co-panel" id="coPanel-weapons" hidden></div>
+      <div class="co-panel" id="coPanel-people" hidden></div>
+      <div class="co-panel" id="coPanel-case" hidden></div>
+    </div>
   </div>
 
   <footer>Casedoku · sudoku backbone + load-bearing evidence · procedural &amp; seeded · placeholder art in <code>/assets</code></footer>
@@ -1919,6 +1999,8 @@ function renderCase(){
     li.addEventListener("click",()=>{ li.classList.toggle("used"); if(li.classList.contains("used"))cluesUsed.add(idx); else cluesUsed.delete(idx); });
     list.appendChild(li);
   });
+  if($("sceneObjInfo")) $("sceneObjInfo").innerHTML=`<span class="soi-label">Found beside the body</span>`+
+    `<img class="wicon" src="${tAsset('weapons','weapon-'+story.sceneObject+'.png')}" alt="">${so.n} — but is it the real weapon? Weigh it against the <span class="tag-weapon ev-tag" style="margin:0">WEAPON</span> evidence.`;
   renderPossibleWeapons();
   // current-evidence stepper + tactical progress readout
   clueStep=0; renderEvCurrent();
@@ -2310,8 +2392,38 @@ $("winArchive").onclick=openArchive;
 $("evPrev").onclick=()=>{ clueStep--; renderEvCurrent(); };
 $("evNext").onclick=()=>{ clueStep++; renderEvCurrent(); };
 // current-evidence card and the full list are mutually exclusive (only one open)
-$("evBlock").addEventListener("toggle",()=>{ if($("evBlock").open && $("allEv").open) $("allEv").open=false; });
-$("allEv").addEventListener("toggle",()=>{ if($("allEv").open && $("evBlock").open) $("evBlock").open=false; });
+// current-evidence card and the full list are mutually exclusive ON DESKTOP only (on mobile
+// they live in different places: the stepper by the board, the full list in the overlay tab).
+$("evBlock").addEventListener("toggle",()=>{ if(!caseMQ.matches && $("evBlock").open && $("allEv").open) $("allEv").open=false; });
+$("allEv").addEventListener("toggle",()=>{ if(!caseMQ.matches && $("allEv").open && $("evBlock").open) $("evBlock").open=false; });
+
+/* ---- mobile case-file overlay: reparent the cf-group blocks into tabs (one source of truth) ---- */
+function placeCaseFile(){
+  const mobile=caseMQ.matches;
+  const groups=[["grpCase","coPanel-case","homeCase"],["grpEvidence","coPanel-evidence","homeEvidence"],
+                ["grpWeapons","coPanel-weapons","homeWeapons"],["grpPeople","coPanel-people","homePeople"]];
+  for(const [g,p,h] of groups){ const grp=$(g),panel=$(p),home=$(h); if(!grp||!panel||!home) continue;
+    if(mobile){ if(grp.parentNode!==panel) panel.appendChild(grp); }
+    else { if(grp.previousElementSibling!==home || grp.parentNode!==home.parentNode) home.after(grp); } }
+  // status: near the board on mobile so feedback stays visible; back in the case file on desktop
+  const st=$("status"), sh=$("statusHome"), sm=$("statusMount");
+  if(st&&sh&&sm){ if(mobile){ if(st.parentNode!==sm) sm.appendChild(st); }
+                  else if(st.previousElementSibling!==sh||st.parentNode!==sh.parentNode){ sh.after(st); } }
+  if(!mobile){ const ov=$("caseOverlay"); if(ov){ ov.hidden=true; } document.body.classList.remove("co-open"); }   // never overlay on desktop
+  // on mobile the full evidence list and roster read as always-open inside their tab
+  if(mobile){ if($("allEv")) $("allEv").open=true; if($("poiDetails")) $("poiDetails").open=true; }
+}
+function coTab(name){ document.querySelectorAll(".co-tab").forEach(t=>t.classList.toggle("on",t.dataset.tab===name));
+  document.querySelectorAll(".co-panel").forEach(p=>p.hidden = p.id!=="coPanel-"+name);
+  const sc=document.querySelector(".co-scroll"); if(sc) sc.scrollTop=0; }
+function openCaseFile(){ placeCaseFile(); const ov=$("caseOverlay"); if(!ov) return; ov.hidden=false; document.body.classList.add("co-open"); coTab("evidence"); }
+function closeCaseFile(){ const ov=$("caseOverlay"); if(ov) ov.hidden=true; document.body.classList.remove("co-open"); }
+if($("caseFileBtn")) $("caseFileBtn").onclick=openCaseFile;
+if($("coClose")) $("coClose").onclick=closeCaseFile;
+document.querySelectorAll(".co-tab").forEach(t=>t.onclick=()=>coTab(t.dataset.tab));
+if(caseMQ.addEventListener) caseMQ.addEventListener("change",()=>{ placeCaseFile(); }); else caseMQ.addListener(()=>placeCaseFile());
+window.addEventListener("resize",placeCaseFile);
+placeCaseFile();
 function applyAtmosphere(){
   const focus = settings.atmosphere!=="high";
   document.body.classList.toggle("focus", focus);
