@@ -13,7 +13,7 @@
     --amber:#e7b94d; --amber-soft:#f0d98c; --blood:#c1272d;
     --good:#4caf7d; --bad:#e1554c;
     --grid-thick:#776b4f;
-    --wall:6px;             /* thickness of the region-dividing "house walls" (cell borders) */
+    --wall:8px;             /* thickness of the region-dividing "house walls" (cell borders) */
     --cell-max:62px; --ncols:9;     /* set per-case by JS; mobile shrinks --cell to fit the viewport */
     --cell:var(--cell-max);
     --disc-cream:#efe6d0;   /* token disc fill behind transparent cutouts (theme can override) */
@@ -68,6 +68,12 @@
     font-size:calc(var(--cell)*.34);transition:background .12s;}
   .cell.bt{border-top:var(--wall) solid var(--grid-thick);}
   .cell.bl{border-left:var(--wall) solid var(--grid-thick);}
+  /* DOORWAYS (purely visual): a fixed floor-plan breaks one cell-segment of every internal
+     room wall so the mansion reads as connected. The border keeps its width but goes
+     transparent, so the floor shows through the opening (flanked by the neighbours' wall as
+     jambs) and the board geometry is unchanged. Higher specificity beats the focus-mode walls. */
+  .cell.bt.door-h, body.focus .cell.bt.door-h{border-top-color:transparent;}
+  .cell.bl.door-v, body.focus .cell.bl.door-v{border-left-color:transparent;}
   .cell.given{cursor:default;}
   /* highlight overlays via ::before so they read over the floor art (token stays on top) */
   .cell::before{content:"";position:absolute;inset:0;pointer-events:none;background-repeat:no-repeat;}
@@ -1574,6 +1580,11 @@ function renderBoard(){
     cell.className="cell"+(given[i]?" given":"")+(board[i]===0?" empty":"");
     if(r%cfg.bh===0) cell.classList.add("bt");   // region top wall (incl. board top) — also pushes content down so the wall label clears it
     if(c%cfg.bw===0) cell.classList.add("bl");   // region left wall (incl. board left)
+    // fixed doorway floor-plan (purely visual): open one segment of each INTERNAL shared wall
+    // so every room connects to its neighbours. Offset from the room centre so the top-wall
+    // plaque stays clear. NOTE: doors are decorative only — clues never reference them.
+    if(r%cfg.bh===0 && r!==0 && c%cfg.bw===cfg.bw-1)            cell.classList.add("door-h"); // gap in the horizontal wall
+    if(c%cfg.bw===0 && c!==0 && r%cfg.bh===Math.floor(cfg.bh/2)) cell.classList.add("door-v"); // gap in the vertical wall
     if(i===C.murderCell) cell.classList.add("scene");
     const box=E.boxOf(cfg,r,c), room=THEME.rooms[box%THEME.rooms.length];
     const sr=r%cfg.bh, sc=c%cfg.bw;                                  // sub-position within the room
