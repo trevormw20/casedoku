@@ -84,9 +84,9 @@
      — broader for a male suspect, narrower for female, neutral when the cell is empty — and fed
      in via --shoe-h / --shoe-v (set in refresh()). Defaults below cover before first select. */
   .board{--shoe-h:none; --shoe-v:none;}
-  .cell.peer-row::before{background-color:rgba(120,28,30,.12);
+  .cell.peer-row::before{background-color:rgba(120,28,30,.12);opacity:var(--trail-op,1);
     background-image:var(--shoe-h);background-repeat:repeat-x;background-position:left center;background-size:40px 22px;}
-  .cell.peer-col::before{background-color:rgba(120,28,30,.12);
+  .cell.peer-col::before{background-color:rgba(120,28,30,.12);opacity:var(--trail-op,1);
     background-image:var(--shoe-v);background-repeat:repeat-y;background-position:center top;background-size:22px 40px;}
   .cell.sel::before{background:rgba(231,185,77,.20);}
   .cell.sel{box-shadow:inset 0 0 0 3px var(--amber), 0 0 13px rgba(231,185,77,.7) !important;z-index:3;}
@@ -1193,9 +1193,9 @@ const MANOR = {
     {role:"chef",        L:"D", name:"The Chef",        color:"#C0392B", gender:"male",   motive:"a stolen recipe"},
     {role:"professor",   L:"E", name:"The Professor",   color:"#1E8449", gender:"male",   motive:"a discredited theory"},
     {role:"heiress",     L:"F", name:"The Heiress",     color:"#C2407A", gender:"female", motive:"a cut from the will"},
-    {role:"gardener",    L:"G", name:"The Gardener",    color:"#D86A1E", gender:"male",   motive:"a dismissed grievance"},
+    {role:"gardener",    L:"G", name:"The Gardener",    color:"#D86A1E", gender:"female", motive:"a dismissed grievance"},
     {role:"captain",     L:"H", name:"The Captain",     color:"#2471A3", gender:"male",   motive:"a mutinous grudge"},
-    {role:"doctor",      L:"I", name:"The Doctor",      color:"#17A2A2", gender:"male",   motive:"a malpractice cover-up"},
+    {role:"doctor",      L:"I", name:"The Doctor",      color:"#17A2A2", gender:"female", motive:"a malpractice cover-up"},
     {role:"actress",     L:"J", name:"The Actress",     color:"#B03060", gender:"female", motive:"a ruined reputation"},
     {role:"inspector",   L:"K", name:"The Inspector",   color:"#3A4250", gender:"male",   motive:"a case gone wrong"},
     {role:"maid",        L:"L", name:"The Maid",        color:"#4FA3D1", gender:"female", motive:"a withheld wage"},
@@ -1364,7 +1364,12 @@ const VOCAB = {
 const DIRWORD=(dr,dc)=> dr===-1?"directly above": dr===1?"directly below": dc===-1?"directly to the left of":"directly to the right of";
 
 function vocab(cfg){ return VOCAB[cfg.bh+"x"+cfg.bw] || VOCAB["3x3"]; }
-function sName(theme,v){ return theme.suspects[v-1]; }
+/* per-case playable cast: value v (1..N) maps to theme.suspects[CASE_CAST[v-1]] when a cast
+   is set (a seeded random N-subset of the 16-role roster), else the first N roles. This remaps
+   ALL display (board, tray, clues, accusation, reveal) since everything goes through sName. */
+let CASE_CAST=null;
+function setCast(arr){ CASE_CAST = (arr && arr.length) ? arr.slice() : null; }
+function sName(theme,v){ const i = (CASE_CAST && CASE_CAST[v-1]!==undefined) ? CASE_CAST[v-1] : (v-1); return theme.suspects[i]; }
 function roomName(theme,box){ return theme.rooms[box % theme.rooms.length].name; }
 function spotName(cfg,theme,cell){
   const N=cfg.N, r=Math.floor(cell/N), c=cell%N;
@@ -1421,7 +1426,7 @@ function renderStory(theme, facts, rng){
 }
 
 GLOBAL.CLUDOKU_THEMES={manor:MANOR};
-GLOBAL.CludokuSkin={ renderClue, renderStory, roomName, spotName, sName, vocab, TYPE_LABEL,
+GLOBAL.CludokuSkin={ renderClue, renderStory, roomName, spotName, sName, setCast, vocab, TYPE_LABEL,
   setCaseObjects, objName, pick:(rng,arr)=>arr[Math.floor(rng()*arr.length)] };
 })(typeof window!=="undefined" ? window : globalThis);
 </script>
@@ -1589,8 +1594,22 @@ function dressStory(){
     room:story.sceneRoom, time:story.time, weapon:story.weapon.n, n:cfg.N, atmosphere }, srng);
 }
 
+/* seeded playable cast: a random N-subset of the 16-role roster, deterministic from the case
+   seed (so case codes reproduce the same cast), guaranteed to contain >=2 women and >=2 men. */
+function pickCaseCast(seed, N){
+  const rng=E.makeRNG((seed ^ E.hashStr("cast"))>>>0);
+  const shuf=a=>{ for(let i=a.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+  const all=[...Array(THEME.suspects.length).keys()];
+  const fem=shuf(all.filter(i=>THEME.suspects[i].gender==="female"));
+  const mal=shuf(all.filter(i=>THEME.suspects[i].gender==="male"));
+  const cast=[fem[0],fem[1],mal[0],mal[1]];                 // guarantee >=2 women and >=2 men
+  const used=new Set(cast), rest=shuf(all.filter(i=>!used.has(i)));
+  for(let k=0; cast.length<N; k++) cast.push(rest[k]);
+  return shuf(cast);                                        // randomize which value maps to whom
+}
 function startCase(opts){
   C=E.generateCase(opts); cfg=C.cfg;
+  Skin.setCast(pickCaseCast(C.seed, cfg.N));                // shuffle the playable cast for this case
   board=C.givens.slice(); given=C.givens.map(v=>v!==0);
   sel=-1; selSuspect=-1; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false; cluesUsed=new Set();
   accuseCulprit=-1; guessesLeft=MAX_GUESSES; hintLevel=0; hintTarget=-1; updateGuessPill();
@@ -1873,16 +1892,18 @@ function _shoeURI(orient, hw){
 const SHOE_HW={male:5, female:3, neutral:4};   // sole half-width: broad / narrow / default
 const SHOE={}; for(const _g in SHOE_HW){ SHOE[_g]={ h:'url("'+_shoeURI('h',SHOE_HW[_g])+'")', v:'url("'+_shoeURI('v',SHOE_HW[_g])+'")' }; }
 function setShoeTrail(){ let g="neutral";
-  if(sel>=0 && board[sel]>0){ const su=THEME.suspects[board[sel]-1]; if(su&&su.gender) g=(su.gender==="female"?"female":"male"); }
+  if(sel>=0 && board[sel]>0){ const su=Skin.sName(THEME,board[sel]); if(su&&su.gender) g=(su.gender==="female"?"female":"male"); }
   boardEl.style.setProperty("--shoe-h", SHOE[g].h); boardEl.style.setProperty("--shoe-v", SHOE[g].v); }
+// trail opacity by distance (in cells) from the selected cell: nearest brightest, fading to the far ends
+function trailOp(dist){ const span=Math.max(1,cfg.N-2); return Math.max(0.12, 0.7-(dist-1)*((0.7-0.12)/span)).toFixed(3); }
 function refresh(){ const bad=conflicts(); const N=cfg.N;
   const selVal=sel>=0?board[sel]:0; setShoeTrail();
   const sr=sel>=0?Math.floor(sel/N):-1, sc=sel>=0?sel%N:-1, sb=sel>=0?E.boxOf(cfg,sr,sc):-1;
   for(let i=0;i<N*N;i++){ const cell=boardEl.children[i];
     cell.classList.remove("sel","peer-row","peer-col","match","room-hl");
     if(sel>=0 && i!==sel){ const r=Math.floor(i/N),c=i%N, b=E.boxOf(cfg,r,c);
-      if(r===sr) cell.classList.add("peer-row");                        // horizontal crime-scene tape
-      if(c===sc) cell.classList.add("peer-col");                        // vertical crime-scene tape
+      if(r===sr){ cell.classList.add("peer-row"); cell.style.setProperty("--trail-op", trailOp(Math.abs(c-sc))); }   // fade along the row
+      if(c===sc){ cell.classList.add("peer-col"); cell.style.setProperty("--trail-op", trailOp(Math.abs(r-sr))); }   // fade down the column
       if(b===sb && r!==sr && c!==sc) cell.classList.add("room-hl");     // room cells off the cross
     }
     if(i===sel)cell.classList.add("sel");
