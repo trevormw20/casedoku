@@ -88,13 +88,13 @@
      distance (--trail-d) so the wave travels away left/right along the row and up/down the
      column, on a gentle loop. When animation is disabled (Motion off / reduced-motion via the
      universal rule below) the ::before rests at full opacity = static prints, how they were. */
-  @keyframes stepWalk{0%{opacity:0}11%{opacity:1}80%{opacity:1}100%{opacity:0}}
+  @keyframes stepWalk{from{opacity:0}to{opacity:1}}
   .cell.peer-row::before{background-color:rgba(120,28,30,.12);
     background-image:var(--shoe-h);background-repeat:repeat-x;background-position:left center;background-size:40px 22px;
-    animation:stepWalk 2.1s linear infinite backwards;animation-delay:calc((var(--trail-d,1) - 1) * .1s);}
+    animation:stepWalk .38s ease-out both;animation-delay:calc((var(--trail-d,1) - 1) * .1s);}
   .cell.peer-col::before{background-color:rgba(120,28,30,.12);
     background-image:var(--shoe-v);background-repeat:repeat-y;background-position:center top;background-size:22px 40px;
-    animation:stepWalk 2.1s linear infinite backwards;animation-delay:calc((var(--trail-d,1) - 1) * .1s);}
+    animation:stepWalk .38s ease-out both;animation-delay:calc((var(--trail-d,1) - 1) * .1s);}
   .cell.sel::before{background:rgba(231,185,77,.20);}
   .cell.sel{box-shadow:inset 0 0 0 3px var(--amber), 0 0 13px rgba(231,185,77,.7) !important;z-index:3;}
   .cell.scene::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(193,39,45,.7);
@@ -126,8 +126,9 @@
   .token{position:relative;width:82%;height:82%;border-radius:50%;z-index:2;  /* above the room object (z1), below scene weapon/victim */
     display:flex;align-items:center;justify-content:center;
     background:var(--disc, #888);                 /* fallback: suspect-color disc (set inline) */
-    box-shadow:0 0 0 var(--ring-w) var(--ring,#fff), 0 2px 4px rgba(0,0,0,.55);
-    transition:box-shadow .1s;}
+    /* rings are DIM by default (muted toward the dark panel); they light up on selection (.match / .susp.sel) */
+    box-shadow:0 0 0 var(--ring-w) color-mix(in srgb, var(--ring,#888) 38%, #1b1f29), 0 2px 4px rgba(0,0,0,.55);
+    transition:box-shadow .12s;}
   .token .tletter{font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.75);
     font-size:inherit;line-height:1;}
   .token .tportrait{position:absolute;inset:0;border-radius:50%;
@@ -149,10 +150,12 @@
   /* selected cell's token: thicker glowing ring */
   .cell.sel .token{box-shadow:0 0 0 calc(var(--ring-w) + 1px) var(--ring,#fff),
     0 0 0 calc(var(--ring-w) + 4px) rgba(231,185,77,.6), 0 2px 6px rgba(0,0,0,.6);}
-  /* same-suspect highlight: a clear glow in that suspect's own colour, everywhere they appear */
-  .cell.match{z-index:2;}
-  .cell.match .token{box-shadow:0 0 0 calc(var(--ring-w) + 1px) var(--ring,#fff),
-    0 0 14px 3px var(--ring,#fff), 0 0 0 5px color-mix(in srgb, var(--ring,#fff) 35%, transparent), 0 2px 4px rgba(0,0,0,.55);}
+  /* selected suspect lights up: every matching token gets a bright full-colour ring + glow,
+     a strong jump from the dim default so it's obvious even at mobile token size */
+  .cell.match{z-index:3;}
+  .cell.match .token{box-shadow:0 0 0 calc(var(--ring-w) + 2px) var(--ring,#fff),
+    0 0 18px 5px var(--ring,#fff), 0 0 0 6px color-mix(in srgb, var(--ring,#fff) 48%, transparent), 0 2px 4px rgba(0,0,0,.55);
+    filter:brightness(1.06);}
   /* conflict: red ring layered OUTSIDE the colour ring so it never clashes with it */
   .token.bad{outline:2.5px solid var(--bad);outline-offset:2px;}
 
@@ -166,7 +169,7 @@
   .susp.sel .susp-name{color:var(--amber-soft);}
   .susp .disc{position:relative;width:52px;height:52px;}
   .susp.sel .token{box-shadow:0 0 0 calc(var(--ring-w) + 1.5px) var(--ring,#fff),
-    0 0 0 calc(var(--ring-w) + 5px) rgba(231,185,77,.7), 0 4px 10px rgba(0,0,0,.6);}
+    0 0 16px 4px var(--ring,#fff), 0 0 0 calc(var(--ring-w) + 5px) rgba(231,185,77,.7), 0 4px 10px rgba(0,0,0,.6);}
   .susp.done{filter:grayscale(.75) brightness(.6);}
   .susp .count{position:absolute;bottom:-3px;right:-3px;min-width:18px;height:18px;border-radius:9px;
     background:#13151d;border:1px solid var(--line);color:var(--amber-soft);font-size:11px;font-weight:700;
@@ -419,51 +422,72 @@
   footer{max-width:1240px;margin:26px auto 0;color:var(--ink-dim);font-size:12px;text-align:center;font-style:italic;}
   code{background:#10131a;padding:1px 5px;border-radius:4px;color:var(--amber-soft);font-size:12px;}
 
-  /* ============ phone portrait (<=600px) ============ */
+  /* ============ phone portrait (<=600px) ============
+     The BOARD sizing is intentionally left alone; everything AROUND it scales UP to standard
+     mobile sizes — ~16px base text, nothing below ~13px, and >=44px touch targets. */
   @media (max-width:600px){
-    body{padding:8px max(4px,env(safe-area-inset-left))
+    body{font-size:16px;
+         padding:8px max(4px,env(safe-area-inset-left))
                 calc(32px + env(safe-area-inset-bottom))
                 max(4px,env(safe-area-inset-right));}
-    /* phone: board spans almost the full width (~4px margin each side), cells at their largest */
+    /* board spans almost the full width (~4px margin each side) — unchanged */
     :root{--cell:calc((100vw - 30px) / var(--ncols));}
 
-    /* --- compact header: small brand + pills, icon-only secondary buttons, Accuse keeps its label --- */
-    header.app{gap:8px;margin-bottom:10px;}
+    /* header: legible brand + pills; secondary buttons icon-only, Accuse keeps its label */
+    header.app{gap:9px;margin-bottom:12px;}
     .brand{min-height:0;}
-    header.app img.logo{height:38px;}
-    .brand-text{font-size:17px;letter-spacing:1px;}
-    .brand-text small{font-size:8.5px;letter-spacing:3px;margin-top:2px;}
-    .top-controls{gap:6px;}
-    .pill{padding:6px 8px;font-size:11.5px;gap:4px;}
-    .top-controls .btn{padding:9px 10px;font-size:13px;min-height:40px;}
-    .top-controls .btn img{width:18px;height:18px;}
+    header.app img.logo{height:46px;}
+    .brand-text{font-size:22px;letter-spacing:1px;}
+    .brand-text small{font-size:10px;letter-spacing:3px;margin-top:2px;}
+    .top-controls{gap:7px;}
+    .pill{padding:9px 11px;font-size:14px;gap:5px;}
+    .pill-badge{width:22px;height:22px;}
+    .top-controls .btn{padding:11px 13px;font-size:15px;min-height:46px;}
+    .top-controls .btn img{width:20px;height:20px;}
     .top-controls .btn-tx{display:none;}                            /* secondary buttons -> icon/symbol only */
-    #accuseBtn{padding:9px 13px;}
+    #accuseBtn{padding:11px 16px;font-size:15.5px;}
     #accuseBtn .btn-tx{display:inline;}                             /* ...but Accuse stays labelled + easy to reach */
 
-    /* --- tray + toolbar: tighter, keep ~44px tap targets --- */
-    .tray{gap:8px;}
-    .susp{width:54px;}
-    .susp .disc{width:48px;height:48px;}
-    .susp-name{font-size:10.5px;max-width:56px;}
-    .toolbar{gap:7px;}
-    .toolbar .btn{padding:10px 11px;font-size:13px;min-height:44px;}
+    /* tray + toolbar: larger items, >=44px touch targets, readable labels */
+    .tray-label{font-size:13px;}
+    .tray-hint{font-size:12.5px;}
+    .tray{gap:10px;}
+    .susp{width:60px;}
+    .susp .disc{width:52px;height:52px;}
+    .susp-name{font-size:13px;max-width:62px;}
+    .susp .count{min-width:20px;height:20px;font-size:12px;}
+    .toolbar{gap:9px;}
+    .toolbar .btn{padding:12px 14px;font-size:15px;min-height:48px;}
+    .btn{font-size:15px;}                                            /* general buttons (modals, New Case, etc.) */
 
-    /* --- case panel full width; keep the CONFIDENTIAL stamp from spilling --- */
-    .casefile{padding:14px;overflow:hidden;}
+    /* case file + evidence: comfortable reading sizes */
+    .casefile{padding:16px;overflow:hidden;}
     .casefile::before{right:8px;}
+    .casefile h2{font-size:13px;}
+    .case-title{font-size:23px;}
+    .case-story{font-size:16px;line-height:1.62;}
+    .case-sub{font-size:14px;}
+    .briefing summary,.all-ev summary,.poi summary,.ev-block>summary{font-size:13px;}
+    .ev-clue{font-size:17px;line-height:1.55;}
+    .ev-note,.star-legend,.hint-note{font-size:13px;}
+    .status{font-size:14px;}
+    .ros{font-size:13px;}
+    .clues li{font-size:14px;}
+    .accuse-select,.field input{font-size:16px;}
 
-    /* --- modals: fit the viewport, scroll internally, buttons reachable without zoom --- */
+    /* modals: fit the viewport, scroll internally, readable + reachable */
     .modal-bg{padding:8px;align-items:flex-start;}
-    .modal{padding:16px;max-height:calc(100dvh - 16px);overflow-y:auto;}
-    .modal h2{font-size:20px;}
-    .reveal-wrap{width:120px;height:120px;}
-    .reveal-token{width:72px;height:72px;}
-    .news-headline{font-size:17px;}
-    .news-stamp{right:0;width:58px;}
+    .modal{padding:18px;max-height:calc(100dvh - 16px);overflow-y:auto;}
+    .modal h2{font-size:22px;}
+    .howto-lead,.howto-steps li,.howto-foot{font-size:15px;}
+    .reveal-wrap{width:128px;height:128px;}
+    .reveal-token{width:76px;height:76px;}
+    .news-headline{font-size:19px;}
+    .news-stamp{right:0;width:62px;}
     .payoff-grid{grid-template-columns:1fr;}
-    .accuse-suspects{grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:6px;}
-    .accuse-suspect .token{width:42px!important;height:42px!important;}
+    .accuse-suspects{grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:8px;}
+    .accuse-suspect .as-name{font-size:12px;}
+    .accuse-suspect .token{width:46px!important;height:46px!important;}
   }
 
   /* ===================== JUICE LAYER: motion + feedback =====================
