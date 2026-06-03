@@ -22,7 +22,10 @@ victim-<slug>.png   — crime-scene/deceased portrait (case-file header + crime-
 assigned once the file is confirmed to load, so an absent asset simply shows the
 silhouette placeholder (`.img-missing`). Drop real files in to override automatically.
 
-## Slugs (50) — one file each
+## Slugs (49) — one file each
+<!-- saint-nick-stand-in was removed from THEME.victims: no portrait was generated for it,
+     so the roster is trimmed to the 49 victims that have art. -->
+
 
 ```
 victim-lord-ambrose-vane.png
@@ -71,7 +74,6 @@ victim-station-chief-orlov.png
 victim-navigator-lyra-soon.png
 victim-magnate-dex-corvale.png
 victim-android-curator-vela.png
-victim-saint-nick-stand-in.png
 victim-caroler-margaret-yule.png
 victim-orchard-keeper-hazel.png
 victim-clockmaker-bartleby.png
