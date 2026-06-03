@@ -1,0 +1,2817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Casedoku — Demo</title>
+<link rel="icon" href="../assets/ui/appicon-192.png" />
+<link rel="apple-touch-icon" href="../assets/ui/appicon.png" />
+<!-- ============================================================================
+     DEMO LINKS — edit these three values to point at the real pages.
+     Use "#" to leave a button as a friendly "coming soon" no-op for now.
+     (Steam wishlist, your socials hub, and the Kickstarter campaign.)
+     ============================================================================ -->
+<script>
+  window.DEMO_LINKS = {
+    STEAM_URL:      "#",   // e.g. "https://store.steampowered.com/app/XXXXXXX/Casedoku/"
+    KICKSTARTER_URL:"#",   // e.g. "https://www.kickstarter.com/projects/yourname/casedoku"
+    SOCIALS:        "#"     // e.g. "https://linktr.ee/casedoku"  (single hub link)
+  };
+</script>
+<style>
+  :root{
+    --bg:#0d0f14; --panel:#171a22; --panel-2:#1f2330;
+    --ink:#e8dcc0; --ink-dim:#9aa0ae; --line:#3a3f4c;
+    --amber:#e7b94d; --amber-soft:#f0d98c; --blood:#c1272d;
+    --good:#4caf7d; --bad:#e1554c;
+    --grid-thick:#776b4f;
+    --wall:8px;             /* thickness of the region-dividing "house walls" (cell borders) */
+    --cell-max:62px; --ncols:9;     /* set per-case by JS; mobile shrinks --cell to fit the viewport */
+    --cell:var(--cell-max);
+    --disc-cream:#efe6d0;   /* token disc fill behind transparent cutouts (theme can override) */
+    --disc-given:#473f2c;   /* darker disc for given/locked suspects (vs player-placed cream) */
+    --ring-w:2.4px;         /* token ring thickness */
+  }
+  *{box-sizing:border-box;}
+  /* hard guard: the page can never be wider than the device, so the browser renders at
+     true device width (never the 980px "wide content" fallback that zooms the page out) */
+  html,body{margin:0;height:100%;max-width:100%;overflow-x:hidden;}
+  body{
+    font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    color:var(--ink); background:#0d0f14;
+    min-height:100vh; padding:16px clamp(8px,2.5vw,34px) 60px;
+  }
+  body::before{content:"";position:fixed;inset:0;z-index:-1;
+    background-image:linear-gradient(rgba(8,9,13,.80),rgba(8,9,13,.93)),url("../assets/ui/bg-desktop.jpg");
+    background-size:cover;background-position:center;}
+  @media (max-width:700px){body::before{background-image:linear-gradient(rgba(8,9,13,.82),rgba(8,9,13,.94)),url("../assets/ui/bg-mobile.jpg");}}
+
+  header.app{display:flex;align-items:center;justify-content:space-between;gap:14px;
+    flex-wrap:wrap;max-width:1240px;margin:0 auto 16px;}
+  .brand{display:flex;align-items:center;min-height:56px;}
+  header.app img.logo{height:62px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));}
+  .brand-text{display:flex;flex-direction:column;line-height:1;font-family:Georgia,serif;
+    font-weight:bold;font-size:30px;color:var(--amber-soft);letter-spacing:2px;}
+  .brand-text[hidden]{display:none;}   /* the hidden attr must win over display:flex — show the text ONLY as a fallback when the logo image is missing (setupBrand toggles it) */
+  .brand-text small{font-size:11px;letter-spacing:6px;color:var(--ink-dim);font-weight:normal;margin-top:4px;}
+  .top-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .pill{padding:8px 11px;border-radius:8px;border:1px solid var(--line);background:#1b1f2a;
+    color:var(--ink);font-size:13px;display:inline-flex;align-items:center;gap:6px;}
+  .pill b{color:var(--amber-soft);}
+  .pill-badge{width:20px;height:20px;flex:none;}   /* difficulty emblem; hidden by global handler if missing */
+  select,button,input{font-family:inherit;}
+
+  .layout{display:grid;grid-template-columns:auto 410px;gap:24px;
+    max-width:1240px;margin:0 auto;align-items:start;}
+  .layout>*{min-width:0;}   /* allow columns to shrink below content width (no overflow) */
+  @media (max-width:1040px){
+    .layout{grid-template-columns:1fr;}
+    body{padding-left:8px;padding-right:8px;}
+    /* once stacked, the board becomes the hero: cells GROW to fill the viewport width
+       (the 62px --cell-max cap is desktop-only). ~95% of width here, ~98% on phones. */
+    :root{--cell:calc((100vw - 40px) / var(--ncols));}
+  }
+
+  .board-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;}
+  .board{display:grid;background:var(--grid-thick);gap:1px;padding:3px;
+    border:3px solid var(--grid-thick);border-radius:6px;
+    box-shadow:0 14px 40px rgba(0,0,0,.6),inset 0 0 0 1px #000;user-select:none;}
+  .cell{position:relative;display:flex;align-items:center;justify-content:center;
+    background:var(--panel);cursor:pointer;width:var(--cell);height:var(--cell);
+    font-size:calc(var(--cell)*.34);transition:background .12s;}
+  .cell.bt{border-top:var(--wall) solid var(--grid-thick);}
+  .cell.bl{border-left:var(--wall) solid var(--grid-thick);}
+  /* DOORWAYS (purely visual): a fixed floor-plan breaks one cell-segment of every internal
+     room wall so the mansion reads as connected. The border keeps its width but goes
+     transparent, so the floor shows through the opening (flanked by the neighbours' wall as
+     jambs) and the board geometry is unchanged. Higher specificity beats the focus-mode walls. */
+  .cell.bt.door-h, body.focus .cell.bt.door-h{border-top-color:transparent;}
+  .cell.bl.door-v, body.focus .cell.bl.door-v{border-left-color:transparent;}
+  .cell.given{cursor:default;}
+  /* highlight overlays via ::before so they read over the floor art (token stays on top) */
+  .cell::before{content:"";position:absolute;inset:0;pointer-events:none;background-repeat:no-repeat;}
+  .cell.room-hl::before{background:rgba(231,185,77,.12);}
+  /* row/column selection = a trail of muted-red SHOE prints along the cross: horizontal prints
+     walk along the row, upright prints walk down the column (a left + right shoe offset across
+     the path so it reads as walking). The shoe shape is chosen by the selected cell's occupant
+     — broader for a male suspect, narrower for female, neutral when the cell is empty — and fed
+     in via --shoe-h / --shoe-v (set in refresh()). Defaults below cover before first select. */
+  .board{--shoe-h:none; --shoe-v:none;}
+  /* footsteps walk OUTWARD from the selected cell: each peer print fades in staggered by its
+     distance (--trail-d) so the wave travels away left/right along the row and up/down the
+     column, on a gentle loop. When animation is disabled (Motion off / reduced-motion via the
+     universal rule below) the ::before rests at full opacity = static prints, how they were. */
+  @keyframes stepWalk{from{opacity:0}to{opacity:1}}
+  .cell.peer-row::before{background-color:rgba(120,28,30,.12);
+    background-image:var(--shoe-h);background-repeat:repeat-x;background-position:left center;background-size:40px 22px;
+    animation:stepWalk .38s ease-out both;animation-delay:calc((var(--trail-d,1) - 1) * .1s);}
+  .cell.peer-col::before{background-color:rgba(120,28,30,.12);
+    background-image:var(--shoe-v);background-repeat:repeat-y;background-position:center top;background-size:22px 40px;
+    animation:stepWalk .38s ease-out both;animation-delay:calc((var(--trail-d,1) - 1) * .1s);}
+  /* mobile (body.phone): footprints stay ORIGINAL size; just a slightly stronger red wash for contrast */
+  body.phone .cell.peer-row::before,body.phone .cell.peer-col::before{background-color:rgba(120,28,30,.16);}
+  .cell.sel::before{background:rgba(231,185,77,.20);}
+  .cell.sel{box-shadow:inset 0 0 0 3px var(--amber), 0 0 13px rgba(231,185,77,.7) !important;z-index:3;}
+  .cell.scene::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(193,39,45,.7);
+    border-radius:5px;pointer-events:none;}
+  /* room name sits like a plaque CENTERED on the room's top wall: anchored in the region's
+     top-left cell but translated to the horizontal centre of the 3-cell region and onto the
+     middle of the thick top-wall band. The thick wall pushes the cell content down, so the
+     label clears the tokens/notes — it can stay visible even when a cell has notes. */
+  .room-tag{position:absolute;top:calc(var(--wall) * -0.5);left:calc(var(--cell) * 1.5 + 1px - var(--wall));
+    transform:translate(-50%,-50%);z-index:5;font-size:9px;font-weight:700;letter-spacing:.5px;
+    color:var(--amber-soft);text-transform:uppercase;pointer-events:none;white-space:nowrap;
+    font-family:"Courier New",monospace;display:inline-flex;align-items:center;gap:3px;
+    background:rgba(11,13,18,.88);padding:1px 6px;border-radius:6px;
+    border:1px solid rgba(231,185,77,.5);box-shadow:0 1px 4px rgba(0,0,0,.6);}
+  .room-tag img{width:11px;height:11px;opacity:.95;}
+  .wicon{width:14px;height:14px;vertical-align:-2px;}
+  /* on-board landmarks: room object (bottom-left), murder weapon (scene, top-right),
+     victim body (scene, bottom-right). The transparent PNGs sit directly on the room floor
+     (no backing box) — large and corner-anchored. The room object sits BEHIND the token so
+     its size can't obscure the suspect; the weapon stays above but cornered. */
+  .cell-object{position:absolute;bottom:1px;left:1px;width:66%;height:66%;max-width:44px;max-height:44px;z-index:1;
+    object-fit:contain;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));}
+  .cell-weapon{position:absolute;top:1px;right:1px;width:66%;height:66%;max-width:44px;max-height:44px;z-index:6;
+    object-fit:contain;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7));}
+  .cell-victim{position:absolute;bottom:1px;right:1px;width:50%;height:50%;max-width:30px;max-height:30px;z-index:5;
+    padding:1px;border-radius:50%;background:rgba(11,13,18,.72);box-shadow:0 1px 3px rgba(0,0,0,.75);
+    object-fit:cover;object-position:center top;pointer-events:none;filter:grayscale(.25);}
+  /* ---- suspect token: colored disc + per-case ring + portrait/letter ---- */
+  .token{position:relative;width:82%;height:82%;border-radius:50%;z-index:2;  /* above the room object (z1), below scene weapon/victim */
+    display:flex;align-items:center;justify-content:center;
+    background:var(--disc, #888);                 /* fallback: suspect-color disc (set inline) */
+    /* rings are DIM by default (muted toward the dark panel); they light up on selection (.match / .susp.sel) */
+    box-shadow:0 0 0 var(--ring-w) color-mix(in srgb, var(--ring,#888) 38%, #1b1f29), 0 2px 4px rgba(0,0,0,.55);
+    transition:box-shadow .12s;}
+  .token .tletter{font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.75);
+    font-size:inherit;line-height:1;}
+  .token .tportrait{position:absolute;inset:0;border-radius:50%;
+    background:var(--disc-cream);                 /* cream so transparent cutouts pop */
+    background-size:cover;background-position:center;display:none;}
+  .token.has-img{background:var(--disc-cream);}
+  .token.has-img .tportrait{display:block;}
+  .token.has-img .tletter{display:none;}
+  /* given/locked suspects: darker disc behind the portrait + subtle lock badge */
+  .cell.given .token{background:var(--disc-given);}
+  .cell.given .token.has-img{background:var(--disc-given);}
+  .cell.given .tportrait{background-color:var(--disc-given);}
+  .cell.given .token::after{content:"";position:absolute;right:-1px;bottom:-1px;
+    width:42%;height:42%;max-width:15px;max-height:15px;border-radius:50%;
+    background:#1a1a22 center/64% no-repeat url("../assets/ui/icon-lock.png");
+    box-shadow:0 0 0 1px rgba(0,0,0,.55);opacity:.9;pointer-events:none;}
+  .token.big{width:84px;height:84px;font-size:40px;box-shadow:0 0 0 3.5px var(--ring,#fff),0 8px 20px rgba(0,0,0,.6);}
+  .token.tray{width:100%;height:100%;font-size:22px;}
+  /* selected cell's token: thicker glowing ring */
+  .cell.sel .token{box-shadow:0 0 0 calc(var(--ring-w) + 1px) var(--ring,#fff),
+    0 0 0 calc(var(--ring-w) + 4px) rgba(231,185,77,.6), 0 2px 6px rgba(0,0,0,.6);}
+  /* selected suspect lights up: every matching token gets a bright full-colour ring + glow,
+     a strong jump from the dim default so it's obvious even at mobile token size */
+  .cell.match{z-index:3;}
+  .cell.match .token{box-shadow:0 0 0 calc(var(--ring-w) + 2px) var(--ring,#fff),
+    0 0 18px 5px var(--ring,#fff), 0 0 0 6px color-mix(in srgb, var(--ring,#fff) 48%, transparent), 0 2px 4px rgba(0,0,0,.55);
+    filter:brightness(1.06);}
+  /* conflict: red ring layered OUTSIDE the colour ring so it never clashes with it */
+  .token.bad{outline:2.5px solid var(--bad);outline-offset:2px;}
+
+  /* tray uses the SAME token disc+ring so the picker matches the board; name above */
+  .tray{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:100%;padding-top:4px;}
+  .susp{display:flex;flex-direction:column;align-items:center;gap:4px;width:62px;cursor:pointer;
+    transition:transform .1s;}
+  .susp:hover{transform:translateY(-3px);}
+  .susp-name{font-size:11px;font-weight:700;color:var(--ink);text-align:center;line-height:1;
+    max-width:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .susp.sel .susp-name{color:var(--amber-soft);}
+  .susp .disc{position:relative;width:52px;height:52px;}
+  .susp.sel .token{box-shadow:0 0 0 calc(var(--ring-w) + 1.5px) var(--ring,#fff),
+    0 0 16px 4px var(--ring,#fff), 0 0 0 calc(var(--ring-w) + 5px) rgba(231,185,77,.7), 0 4px 10px rgba(0,0,0,.6);}
+  .susp.done{filter:grayscale(.75) brightness(.6);}
+  .susp .count{position:absolute;bottom:-3px;right:-3px;min-width:18px;height:18px;border-radius:9px;
+    background:#13151d;border:1px solid var(--line);color:var(--amber-soft);font-size:11px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;font-family:"Courier New",monospace;padding:0 4px;}
+
+  .toolbar{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;}
+  .btn{display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+    background:linear-gradient(180deg,#262b38,#1b1f2a);color:var(--ink);
+    border:1px solid var(--line);border-radius:8px;padding:8px 13px;font-size:13.5px;transition:.12s;}
+  .btn:hover{border-color:var(--amber);color:var(--amber-soft);}
+  .btn:active{transform:translateY(1px);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn img{width:17px;height:17px;}
+  .btn.primary{background:linear-gradient(180deg,#7a5e1f,#5a4314);border-color:var(--amber);color:#fff;}
+
+  .casefile{background:linear-gradient(180deg,#1c1f29,#15171f);border:1px solid var(--line);
+    border-radius:10px;padding:18px 20px;box-shadow:0 14px 40px rgba(0,0,0,.55);position:relative;}
+  .casefile::before{content:"CONFIDENTIAL";position:absolute;top:12px;right:-6px;transform:rotate(8deg);
+    border:2px solid rgba(193,39,45,.55);color:rgba(193,39,45,.7);font-family:"Courier New",monospace;
+    font-weight:700;font-size:10px;padding:3px 7px;letter-spacing:1px;border-radius:3px;}
+  .casefile h2{font-size:12px;letter-spacing:3px;color:var(--ink-dim);text-transform:uppercase;
+    margin:0 0 4px;font-family:"Courier New",monospace;}
+  .case-head{display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;}
+  .case-head-text{flex:1;min-width:0;}
+  .victim-card{flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;width:66px;}
+  .victim-portrait{width:64px;height:64px;border-radius:8px;object-fit:cover;object-position:center top;
+    border:2px solid var(--blood);background:#10131a;filter:grayscale(.3) brightness(.92);
+    box-shadow:0 2px 8px rgba(0,0,0,.5);}
+  .victim-tag{font-family:"Courier New",monospace;font-size:8.5px;letter-spacing:1px;text-transform:uppercase;color:var(--blood);}
+  /* victim art absent (files not yet dropped): show a silhouette placeholder instead of a broken image */
+  .victim-portrait.img-missing,.cell-victim.img-missing{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23596273' d='M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 1.8c-4.4 0-8 2.7-8 6.2v.5h16v-.5c0-3.5-3.6-6.2-8-6.2Z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:center 60%;background-size:64%;}
+  .case-title{font-size:21px;color:var(--blood);margin:0 0 4px;font-variant:small-caps;letter-spacing:1px;}
+  .case-story{font-size:15px;line-height:1.6;color:var(--ink);margin:0 0 8px;
+    border-left:3px solid rgba(231,185,77,.5);padding:2px 0 2px 11px;}
+  .case-story::first-letter{font-size:1.35em;color:var(--amber-soft);font-weight:700;}
+  .case-sub{color:var(--ink-dim);font-style:italic;font-size:13px;margin-bottom:6px;line-height:1.45;}
+  .case-sub b{color:var(--amber-soft);font-style:normal;}
+  .sec{margin:16px 0 6px;font-family:"Courier New",monospace;font-size:11px;letter-spacing:2px;
+    color:var(--amber);text-transform:uppercase;border-bottom:1px dashed var(--line);padding-bottom:4px;
+    display:flex;justify-content:space-between;align-items:center;}
+  .sec .req{color:var(--blood);font-size:9.5px;letter-spacing:1px;}
+  .clues{list-style:none;margin:0;padding:0;font-size:15.5px;line-height:1.55;}
+  .clues li{padding:7px 8px 7px 28px;position:relative;color:var(--ink);border-radius:6px;cursor:default;}
+  .clues li::before{content:attr(data-n);position:absolute;left:7px;top:7px;color:var(--blood);
+    font-family:"Courier New",monospace;font-size:12px;font-weight:700;}
+  .clues li.key{background:rgba(231,185,77,.06);}
+  .keymark{color:var(--amber);font-size:13px;margin-right:3px;}
+  .clues li:hover{background:rgba(231,185,77,.10);}
+  .clues li.used{opacity:.5;text-decoration:line-through;text-decoration-color:rgba(231,185,77,.4);}
+  .clues li b{color:var(--amber-soft);}
+  .clue-type{font-size:10px;color:var(--ink-dim);font-family:"Courier New",monospace;
+    text-transform:uppercase;letter-spacing:.5px;}
+  .roster{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;}
+  .ros{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink-dim);}
+  .ros .dot{width:14px;height:14px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.3);
+    display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700;}
+  .ros .nm{color:var(--ink);} .ros .mo{font-style:italic;font-size:11px;}
+  .status{margin-top:12px;min-height:18px;font-size:13.5px;font-style:italic;}
+  .status.good{color:var(--good);} .status.bad{color:var(--bad);}
+  .hint-note{font-size:12px;color:var(--ink-dim);font-style:italic;margin-top:8px;
+    border-top:1px dashed var(--line);padding-top:8px;}
+  /* panel hierarchy (P3) */
+  .briefing{margin:4px 0 2px;}
+  .briefing summary,.all-ev summary,.poi summary,.ev-block>summary{
+    cursor:pointer;font-family:"Courier New",monospace;font-size:10.5px;letter-spacing:1.5px;
+    text-transform:uppercase;color:var(--ink-dim);padding:4px 0;list-style:revert;}
+  .briefing[open] .case-story{margin-top:6px;}
+  /* calm single-focus current-evidence card */
+  .ev-block{margin:6px 0 2px;}
+  .ev-block>summary{color:var(--amber);display:flex;justify-content:space-between;align-items:center;}
+  .ev-block .ev-count{color:var(--ink-dim);font-weight:400;letter-spacing:1px;}
+  .ev-card{display:flex;align-items:center;gap:12px;background:#171a22;border:1px solid var(--line);
+    border-radius:10px;padding:18px 14px;margin:7px 0 0;min-height:80px;box-shadow:0 2px 8px rgba(0,0,0,.3);}
+  .ev-clue{flex:1;margin:0;font-size:16px;line-height:1.55;color:var(--ink);text-align:center;}
+  .ev-clue b{color:var(--amber-soft);}
+  .ev-clue .keymark{margin-right:4px;opacity:.85;}
+  .ev-nav{flex:none;width:30px;height:30px;border:1px solid var(--line);background:#10131a;color:var(--amber-soft);
+    border-radius:50%;cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;transition:.12s;}
+  .ev-nav:hover{border-color:var(--amber);background:#1b1f2a;}
+  .ev-note{font-size:12px;color:var(--ink-dim);line-height:1.45;margin:8px 0 2px;font-style:italic;}
+  .scene-word{color:var(--blood);font-weight:700;font-style:normal;}
+  .all-ev{margin:2px 0;} .poi{margin:8px 0 2px;}
+  /* evidence TYPE TAG chips — tell the player which clue solves WHO / WHAT / WHY */
+  .ev-tag{display:inline-block;font-family:"Courier New",monospace;font-size:8.5px;font-weight:700;letter-spacing:.5px;
+    padding:1px 5px;border-radius:4px;margin-right:6px;vertical-align:1px;border:1px solid transparent;white-space:nowrap;}
+  .tag-sighting{background:rgba(36,113,163,.22);color:#7fb6e0;border-color:rgba(36,113,163,.5);}
+  .tag-position{background:rgba(120,108,79,.28);color:#cbb98a;border-color:rgba(120,108,79,.55);}
+  .tag-relative{background:rgba(155,90,182,.22);color:#cf9fe6;border-color:rgba(155,90,182,.5);}
+  .tag-weapon{background:rgba(193,39,45,.22);color:#e88a8e;border-color:rgba(193,39,45,.5);}
+  .tag-motive{background:rgba(76,175,125,.2);color:#7fd0a6;border-color:rgba(76,175,125,.5);}
+  /* Possible Weapons marking row (per-case, tap to cycle) */
+  .possible-weapons-sec{margin:9px 0 2px;border-top:1px dashed var(--line);padding-top:8px;}
+  .pw-label{font-family:"Courier New",monospace;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);margin-bottom:6px;}
+  .pw-hint{text-transform:none;letter-spacing:0;font-style:italic;color:var(--ink-dim);font-size:11px;}
+  .possible-weapons{display:flex;gap:8px;flex-wrap:wrap;}
+  .wcand{display:flex;align-items:center;gap:6px;background:#171a22;border:1px solid var(--line);border-radius:9px;
+    padding:6px 9px;cursor:pointer;color:var(--ink);font-family:inherit;font-size:13px;transition:.12s;}
+  .wcand .wicon{width:24px;height:24px;}
+  .wcand-name{font-weight:700;}
+  .wcand-mark{font-family:"Courier New",monospace;font-size:8.5px;letter-spacing:1px;text-transform:uppercase;padding:1px 5px;border-radius:4px;}
+  .wcand.mark-possible{border-color:rgba(231,185,77,.5);} .wcand.mark-possible .wcand-mark{background:rgba(231,185,77,.18);color:var(--amber-soft);}
+  .wcand.mark-doubtful{border-color:rgba(225,150,40,.65);} .wcand.mark-doubtful .wcand-mark{background:rgba(225,150,40,.22);color:#e6a04a;}
+  .wcand.mark-cleared{opacity:.5;filter:grayscale(.6);} .wcand.mark-cleared .wcand-name{text-decoration:line-through;} .wcand.mark-cleared .wcand-mark{background:rgba(120,120,120,.22);color:#9aa0ae;}
+  /* accusation weapon picker */
+  .accuse-weapons{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:2px;}
+  .accuse-weapon{display:flex;align-items:center;gap:6px;background:#171a22;border:1px solid var(--line);border-radius:9px;padding:7px 10px;cursor:pointer;color:var(--ink);font-size:13px;}
+  .accuse-weapon .wicon{width:22px;height:22px;}
+  .accuse-weapon:hover{border-color:var(--amber);}
+  .accuse-weapon.on{border-color:var(--amber);background:#2c2718;box-shadow:0 0 0 1px var(--amber);}
+  .accuse-q-hint{font-weight:400;font-size:11px;color:var(--ink-dim);font-style:italic;}
+  /* scene-object call-out (lives in the Weapons group / tab) */
+  .scene-obj-info{font-size:13px;color:var(--ink);line-height:1.5;background:rgba(193,39,45,.08);
+    border-left:3px solid var(--blood);border-radius:0 7px 7px 0;padding:8px 11px;margin-bottom:8px;}
+  .scene-obj-info .wicon{width:20px;height:20px;vertical-align:-5px;margin:0 3px;}
+  .soi-label{display:block;font-family:"Courier New",monospace;font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--blood);margin-bottom:2px;}
+  .cf-group{margin:0 0 6px;}
+  /* ===== mobile case-file: button + full-screen tabbed overlay (both hidden on desktop) ===== */
+  .case-file-btn{display:none;}
+  .status-mount:empty{display:none;}
+  .case-overlay{position:fixed;inset:0;z-index:60;background:linear-gradient(180deg,#171a22,#0f1116);display:flex;flex-direction:column;}
+  .case-overlay[hidden]{display:none;}
+  .co-bar{display:flex;align-items:flex-end;gap:8px;padding:max(8px,env(safe-area-inset-top)) 8px 0;border-bottom:1px solid var(--line);}
+  .co-tabs{display:flex;gap:2px;flex:1;}
+  .co-tab{flex:1;min-width:0;background:none;border:none;border-bottom:3px solid transparent;color:var(--ink-dim);
+    font-family:inherit;font-size:15px;font-weight:700;padding:14px 4px;cursor:pointer;white-space:nowrap;min-height:48px;}
+  .co-tab.on{color:var(--amber-soft);border-bottom-color:var(--amber);}
+  .co-close{flex:none;width:46px;height:46px;border-radius:11px;border:1px solid var(--line);background:#1b1f2a;color:var(--ink);font-size:22px;line-height:1;cursor:pointer;margin-bottom:6px;}
+  .co-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 16px calc(28px + env(safe-area-inset-bottom));}
+  body.co-open{overflow:hidden;}
+  /* tray label + first-time tip + stronger selection (P6) */
+  .tray-label{font-family:"Courier New",monospace;font-size:11px;letter-spacing:1px;color:var(--amber);
+    text-transform:uppercase;text-align:center;margin-top:2px;}
+  .tray-hint{color:var(--ink-dim);text-transform:none;letter-spacing:0;font-family:inherit;font-size:12px;font-style:italic;}
+  .first-tip{display:flex;align-items:center;gap:12px;justify-content:center;flex-wrap:wrap;
+    background:#1c1f29;border:1px solid var(--amber);border-radius:9px;padding:9px 14px;
+    color:var(--ink);font-size:13.5px;max-width:9*var(--cell);box-shadow:0 4px 14px rgba(0,0,0,.5);}
+  .first-tip[hidden]{display:none;}   /* let the hidden attribute actually hide it (beats display:flex) */
+  .first-tip b{color:var(--amber-soft);}
+  /* mobile-only host for the Current Evidence stepper, sized to sit by the board */
+  .ev-mount{width:100%;max-width:calc(9 * var(--cell));}
+  .ev-mount[hidden]{display:none;}
+  .ev-mount .ev-block{width:100%;margin:0;}
+  .susp.sel{transform:translateY(-3px) scale(1.06);}
+  .susp.sel .susp-name{color:var(--amber-soft);}
+  .susp.sel .count{background:var(--amber);color:#1a1a22;border-color:var(--amber);}
+  /* Focus / Atmosphere mode (P4) — reduce texture competition during play */
+  body.focus .cell.empty{outline:1px solid rgba(231,185,77,.13);outline-offset:-3px;}
+  body.focus .cell:not(.given):hover{outline:2px solid var(--amber);outline-offset:-2px;cursor:pointer;}
+  body.focus .cell.sel{box-shadow:inset 0 0 0 3px var(--amber),0 0 12px rgba(231,185,77,.45);}
+  body.focus{--ring-w:3px;}
+  body.focus .token{width:88%;height:88%;}
+  /* Board tokens are a fixed SQUARE sized to fit the smallest cell content box. Cells on a
+     region's top row / left column have thick (8px) walls eating into their content box, so a
+     %-sized token would render as an OVAL there. A fixed square (== width & height) keeps every
+     token a perfect circle. Specificity (.board .cell .token) beats body.focus .token. */
+  .board .cell .token{flex:none;
+    width:min(calc(.86 * var(--cell)), calc(var(--cell) - var(--wall) - 2px));
+    height:min(calc(.86 * var(--cell)), calc(var(--cell) - var(--wall) - 2px));}
+  body.focus .cell.bt{border-top-width:var(--wall);border-top-color:#a89668;}
+  body.focus .cell.bl{border-left-width:var(--wall);border-left-color:#a89668;}
+  body.focus .room-tag{background:rgba(8,9,13,.86);}
+  /* Case Assistant + hint highlights (P7) */
+  .assistant{display:flex;gap:10px;align-items:flex-start;background:#15171f;border:1px solid var(--line);
+    border-left:3px solid var(--amber);border-radius:8px;padding:9px 12px;font-size:13.5px;color:var(--ink);
+    max-width:calc(9*var(--cell));line-height:1.45;}
+  .assist-icon{width:22px;height:22px;flex:none;margin-top:1px;}
+  .assist-portrait{width:42px;height:42px;flex:none;border-radius:8px;object-fit:cover;
+    border:1px solid var(--line);background:#10131a;}   /* shows only once assistant.png exists */
+  .assist-name{font-family:"Courier New",monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+    color:var(--amber);margin-bottom:2px;}
+  #assistantText b{color:var(--amber-soft);}
+  .cell.hint-room{box-shadow:inset 0 0 0 2px rgba(231,185,77,.5);}
+  .cell.hint-cell{box-shadow:inset 0 0 0 3px var(--amber),0 0 16px rgba(231,185,77,.7);
+    animation:hintpulse 1s ease-in-out infinite alternate;}
+  @keyframes hintpulse{to{box-shadow:inset 0 0 0 3px var(--amber),0 0 24px rgba(231,185,77,.95);}}
+  /* pencil-mark candidates (P3-notes): fixed 3x3 sub-grid of colored dots */
+  .cand-grid{position:absolute;inset:5px;display:grid;grid-template-columns:repeat(3,1fr);
+    grid-template-rows:repeat(3,1fr);gap:1px;pointer-events:none;}
+  .cand{display:flex;align-items:center;justify-content:center;}
+  .cand i{width:84%;height:84%;max-width:14px;max-height:14px;border-radius:50%;font-style:normal;
+    font-size:7px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;
+    text-shadow:0 1px 1px rgba(0,0,0,.8);box-shadow:0 0 0 1px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.3);}
+  /* notes-mode active: toolbar button lit + selected cell turns teal so the mode is obvious */
+  .btn.on{border-color:var(--amber);background:linear-gradient(180deg,#7a5e1f,#5a4314);color:#fff;}
+  body.notes .cell.sel{box-shadow:inset 0 0 0 3px #34a8bc, 0 0 13px rgba(52,168,188,.6) !important;}
+  body.notes .cell.sel::before{background:rgba(52,168,188,.18);}
+  .board-wrap{position:relative;}
+  body.notes .board-wrap::after{content:"✎ NOTES MODE";position:absolute;top:-6px;right:0;background:#34a8bc;color:#08222a;
+    font:700 9px "Courier New",monospace;letter-spacing:1px;padding:3px 8px;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.5);}
+
+  .modal-bg{position:fixed;inset:0;background:rgba(4,5,8,.82);display:none;align-items:center;
+    justify-content:center;z-index:50;padding:18px;overflow:auto;}
+  .modal-bg.show{display:flex;}
+  .modal{background:linear-gradient(180deg,#1d212c,#13151d);border:1px solid var(--amber);
+    border-radius:12px;max-width:560px;width:100%;padding:26px;position:relative;
+    box-shadow:0 20px 60px rgba(0,0,0,.7);}
+  .modal.center{text-align:center;}
+  .modal .x{position:absolute;top:10px;right:10px;cursor:pointer;background:none;border:none;padding:6px;}
+  .modal .x img{width:20px;height:20px;}
+  .modal h2{margin:.2em 0;color:var(--amber-soft);font-variant:small-caps;letter-spacing:2px;}
+  .reveal-wrap{position:relative;width:140px;height:140px;margin:6px auto;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle, rgba(231,185,77,.18), rgba(0,0,0,0) 68%);
+    background-image:url("../assets/ui/frame-spotlight.png");background-size:contain;background-repeat:no-repeat;background-position:center;}
+  .reveal-token{position:relative;z-index:1;width:84px;height:84px;display:flex;align-items:center;justify-content:center;}
+  /* prison bars IN FRONT of the culprit (shown only on a win). CSS bars are the fallback;
+     a real ../assets/ui/frame-bars.png is layered on via setupBars() when present. */
+  .reveal-bars{position:absolute;inset:0;z-index:3;pointer-events:none;display:none;border-radius:8px;
+    background:
+      linear-gradient(#0f1116,#0f1116) top/100% 6px no-repeat,
+      linear-gradient(#0f1116,#0f1116) bottom/100% 6px no-repeat,
+      repeating-linear-gradient(90deg,#0f1116 0 7px, transparent 7px 22px);
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.6));}
+  .reveal-wrap.jailed .reveal-bars{display:block;}
+  .killer-name{font-size:27px;color:var(--blood);font-variant:small-caps;letter-spacing:1px;text-align:center;}
+  /* accusation modal */
+  .accuse-intro{color:var(--ink-dim);font-style:italic;text-align:center;font-size:14px;margin:.2em 0 6px;}
+  .accuse-intro b{color:var(--amber-soft);font-style:normal;}
+  .accuse-guesses{text-align:center;font-family:"Courier New",monospace;font-size:12px;letter-spacing:.5px;
+    color:var(--amber);margin-bottom:8px;}
+  .accuse-guesses b{color:var(--amber-soft);}
+  .modal.failed{border-color:var(--bad);}
+  .modal.failed .reveal-wrap{background-image:none;background:radial-gradient(circle,rgba(193,39,45,.25),transparent 68%);}
+  .accuse-q{font-family:"Courier New",monospace;font-size:11px;letter-spacing:1.5px;color:var(--amber);
+    text-transform:uppercase;margin:14px 0 6px;}
+  .accuse-suspects{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px;}
+  .accuse-suspect{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;
+    background:#171a22;border:1px solid var(--line);border-radius:9px;padding:8px 4px 6px;transition:.12s;}
+  .accuse-suspect .token{flex:none!important;width:46px!important;height:46px!important;aspect-ratio:1;font-size:20px;}  /* !important beats body.focus token sizing so it stays square */
+  .accuse-suspect .as-name{font-size:10.5px;color:var(--ink);font-weight:700;max-width:100%;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .accuse-suspect:hover{border-color:var(--amber);}
+  .accuse-suspect.on{border-color:var(--amber);background:#2c2718;box-shadow:0 0 0 1px var(--amber);}
+  .accuse-select{width:100%;background:#10131a;border:1px solid var(--line);border-radius:7px;color:var(--ink);
+    padding:9px 10px;font-size:14px;font-family:inherit;}
+  .accuse-feedback{min-height:18px;font-size:13.5px;font-style:italic;color:var(--bad);text-align:center;margin-top:10px;}
+  .accuse-feedback.good{color:var(--good);}
+  /* payoff. background-image is a graceful hook: if ../assets/ui/newspaper.png is
+     absent the image simply doesn't paint and the cream box (background-color) shows. */
+  .newspaper{position:relative;background-color:#efe6d0;color:#1a1a22;border:1px solid #b8a878;border-radius:6px;
+    background-image:url("../assets/ui/newspaper.png");background-size:cover;background-position:center;
+    padding:12px 14px 14px;margin:2px 0 6px;box-shadow:0 4px 14px rgba(0,0,0,.5);text-align:center;}
+  .news-masthead{font-family:Georgia,serif;font-weight:bold;font-size:12px;letter-spacing:3px;text-transform:uppercase;
+    border-bottom:2px solid #1a1a22;padding-bottom:4px;margin-bottom:6px;}
+  .news-headline{font-family:Georgia,serif;font-weight:bold;font-size:20px;line-height:1.15;text-transform:uppercase;letter-spacing:.5px;}
+  .news-stamp{position:absolute;right:-10px;top:-14px;width:78px;transform:rotate(9deg);pointer-events:none;
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));}
+  .payoff-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;text-align:left;}
+  .po-cell{background:#171a22;border:1px solid var(--line);border-radius:8px;padding:8px 10px;}
+  .po-label{display:block;font-family:"Courier New",monospace;font-size:9.5px;letter-spacing:1px;color:var(--amber);text-transform:uppercase;margin-bottom:3px;}
+  .po-val{font-size:13px;color:var(--ink);} .po-val .wicon{width:18px;height:18px;}
+  .accuse-score{text-align:center;margin:8px 0;}
+  .acc-stars{font-size:20px;color:var(--amber);letter-spacing:2px;}
+  .acc-stars .acc-num{font-size:13px;color:var(--amber-soft);letter-spacing:0;vertical-align:1px;margin-left:4px;}
+  .acc-bits{font-size:13px;color:var(--ink-dim);margin-top:2px;font-weight:700;}
+  .acc-correct{font-size:12.5px;color:var(--ink-dim);font-style:italic;margin-top:4px;line-height:1.4;}
+  .acc-correct.good{color:var(--good);font-style:normal;font-weight:700;}
+  /* how-to-play modal */
+  .howto-lead{color:var(--ink);font-size:14.5px;line-height:1.55;margin:.3em 0 10px;text-align:center;}
+  .howto-steps{margin:0 0 10px;padding-left:22px;}
+  .howto-steps li{margin:7px 0;font-size:14px;line-height:1.5;color:var(--ink);}
+  .howto-steps li b{color:var(--amber-soft);}
+  .howto-foot{font-size:13px;color:var(--ink-dim);line-height:1.5;background:rgba(231,185,77,.07);
+    border-left:3px solid var(--amber);border-radius:0 6px 6px 0;padding:8px 11px;margin:0 0 6px;}
+  .howto-foot b{color:var(--amber-soft);}
+  /* star legend near the evidence */
+  .star-legend{font-size:12px;color:var(--ink-dim);line-height:1.45;margin:6px 0 2px;
+    border-top:1px dashed var(--line);padding-top:6px;}
+  .star-legend .keymark{color:var(--amber);}
+  .star-legend b{color:var(--amber-soft);}
+  .reasoning-details summary{cursor:pointer;color:var(--ink-dim);font-size:13px;font-family:"Courier New",monospace;
+    letter-spacing:1px;text-transform:uppercase;padding:4px 0;}
+  .payoff-actions{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap;}
+  /* archive */
+  .trophies{display:flex;gap:10px;flex-wrap:wrap;}
+  .trophy{width:54px;height:54px;border-radius:9px;background:#171a22;border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;padding:5px;}
+  .trophy img{max-width:100%;max-height:100%;}
+  .archive-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto;}
+  .arch-row{background:#171a22;border:1px solid var(--line);border-radius:8px;padding:8px 11px;}
+  .arch-row b{color:var(--amber-soft);} .arch-meta{display:block;font-size:12px;color:var(--ink-dim);margin-top:2px;}
+  .muted{color:var(--ink-dim);font-style:italic;font-size:13px;}
+  .chain{list-style:none;padding:0;margin:14px 0;text-align:left;}
+  .chain li{padding:8px 10px 8px 14px;border-left:2px solid var(--amber);background:rgba(231,185,77,.06);
+    margin:6px 0;border-radius:0 6px 6px 0;font-size:13.5px;line-height:1.45;}
+  .chain li b{color:var(--amber-soft);} .chain li .x{color:var(--bad);}
+  .diff-row{display:flex;gap:8px;justify-content:center;margin:14px 0;flex-wrap:wrap;}
+  .diff-row .btn.on{border-color:var(--amber);background:linear-gradient(180deg,#7a5e1f,#5a4314);color:#fff;}
+  .diff-opt{flex-direction:column;gap:5px;padding:10px 12px;min-width:96px;}
+  .diff-opt .diff-badge{width:44px;height:44px;}   /* badge png; hidden by global handler if missing */
+  .diff-opt span{display:flex;flex-direction:column;line-height:1.15;font-weight:700;}
+  .diff-opt small{font-weight:400;font-size:11px;color:var(--ink-dim);letter-spacing:1px;}
+  .field{display:flex;gap:8px;align-items:center;justify-content:center;margin:10px 0;flex-wrap:wrap;}
+  .field input{background:#10131a;border:1px solid var(--line);border-radius:7px;color:var(--ink);
+    padding:8px 10px;font-size:14px;letter-spacing:1px;width:160px;text-align:center;text-transform:uppercase;}
+  footer{max-width:1240px;margin:26px auto 0;color:var(--ink-dim);font-size:12px;text-align:center;font-style:italic;}
+  code{background:#10131a;padding:1px 5px;border-radius:4px;color:var(--amber-soft);font-size:12px;}
+
+  /* ============ MOBILE: game-first + tabbed case-file overlay ============
+     Toggled by body.phone (set by JS when matchMedia(<=700px) matches OR a physical phone is
+     detected laying out wide — "desktop site" mode / ignored viewport meta). --ps is a scale
+     factor: 1 normally, ~layoutWidth/screenWidth in force-phone so text stays readable after the
+     device visually downscales the wide layout. The board fills width via body.phone --cell. */
+  body.phone{font-size:calc(16px * var(--ps,1));
+       padding:8px max(4px,env(safe-area-inset-left))
+              calc(28px + env(safe-area-inset-bottom))
+              max(4px,env(safe-area-inset-right));
+       --cell:calc((100vw - calc(30px * var(--ps,1))) / var(--ncols));}   /* board fills the layout width (no 62px cap) */
+  body.phone .casefile{display:none;}                  /* side panel hidden; the case file is the overlay */
+
+  /* COMPACT header: flatten brand + top-controls into one flowing flex (display:contents) so the
+     small logo sits inline with the pills, then everything wraps into ~2 tight rows — no logo row,
+     so the board starts high on the first screen. */
+  body.phone header.app{gap:calc(6px * var(--ps,1)) calc(7px * var(--ps,1));margin-bottom:calc(8px * var(--ps,1));justify-content:flex-start;align-items:center;}
+  body.phone .brand,body.phone .top-controls{display:contents;}
+  body.phone header.app img.logo{height:calc(26px * var(--ps,1));}
+  body.phone .pill{padding:calc(6px * var(--ps,1)) calc(9px * var(--ps,1));font-size:calc(14px * var(--ps,1));gap:4px;min-height:0;}
+  body.phone .pill-badge{width:calc(18px * var(--ps,1));height:calc(18px * var(--ps,1));}
+  body.phone .top-controls .btn{padding:calc(8px * var(--ps,1)) calc(11px * var(--ps,1));font-size:calc(14px * var(--ps,1));min-height:calc(40px * var(--ps,1));}
+  body.phone .top-controls .btn img{width:calc(18px * var(--ps,1));height:calc(18px * var(--ps,1));}
+  body.phone .top-controls .btn-tx{display:none;}
+  body.phone #accuseBtn{padding:calc(8px * var(--ps,1)) calc(13px * var(--ps,1));font-size:calc(15px * var(--ps,1));}
+  body.phone #accuseBtn .btn-tx{display:inline;}
+
+  /* tray + toolbar + near-board evidence */
+  body.phone .board-wrap{gap:calc(9px * var(--ps,1));}   /* tighter vertical rhythm so the board starts higher */
+  body.phone .tray-label{font-size:calc(15px * var(--ps,1));}
+  body.phone .tray-hint{font-size:calc(13px * var(--ps,1));}
+  body.phone .tray{gap:calc(10px * var(--ps,1));}
+  body.phone .susp{width:calc(60px * var(--ps,1));}
+  body.phone .susp .disc{width:calc(52px * var(--ps,1));height:calc(52px * var(--ps,1));}
+  body.phone .susp-name{font-size:calc(14px * var(--ps,1));max-width:calc(62px * var(--ps,1));}
+  body.phone .susp .count{min-width:calc(22px * var(--ps,1));height:calc(22px * var(--ps,1));font-size:calc(13px * var(--ps,1));}
+  body.phone .toolbar{gap:calc(10px * var(--ps,1));}
+  body.phone .toolbar .btn{padding:calc(13px * var(--ps,1)) calc(15px * var(--ps,1));font-size:calc(15px * var(--ps,1));min-height:calc(48px * var(--ps,1));}
+  body.phone .btn{font-size:calc(15px * var(--ps,1));}
+  /* slim Current Evidence card: small label band, tight padding, ~2 lines of clue text, inline arrows */
+  body.phone .ev-block{margin:2px 0 0;}
+  body.phone .ev-block>summary{font-size:calc(11px * var(--ps,1));padding:1px 0;letter-spacing:1px;}
+  body.phone .ev-card{padding:calc(8px * var(--ps,1)) calc(10px * var(--ps,1));min-height:0;margin:3px 0 0;gap:calc(8px * var(--ps,1));border-radius:9px;}
+  body.phone .ev-clue{font-size:calc(15px * var(--ps,1));line-height:1.4;}
+  body.phone .ev-nav{width:calc(34px * var(--ps,1));height:calc(34px * var(--ps,1));font-size:calc(19px * var(--ps,1));flex:none;}
+  body.phone .keymark{font-size:calc(14px * var(--ps,1));}
+  body.phone .status{font-size:calc(15px * var(--ps,1));margin-top:8px;text-align:center;}
+
+  /* prominent Case File launcher under the toolbar */
+  body.phone .case-file-btn{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
+    width:100%;margin:6px 0 0;padding:calc(16px * var(--ps,1));min-height:calc(56px * var(--ps,1));border-radius:12px;cursor:pointer;
+    background:linear-gradient(180deg,#7a5e1f,#5a4314);border:1px solid var(--amber);color:#fff;
+    font-family:inherit;font-size:calc(18px * var(--ps,1));font-weight:700;letter-spacing:.5px;box-shadow:0 4px 14px rgba(0,0,0,.45);}
+  body.phone .case-file-btn .cf-sub{font-weight:400;font-size:calc(12.5px * var(--ps,1));color:rgba(255,255,255,.72);letter-spacing:1px;}
+
+  /* overlay tab labels (section headers) */
+  body.phone .co-tab{font-size:calc(16px * var(--ps,1));min-height:calc(48px * var(--ps,1));}
+  body.phone .co-close{width:calc(46px * var(--ps,1));height:calc(46px * var(--ps,1));font-size:calc(22px * var(--ps,1));}
+
+  /* overlay content — readable type scale, decluttered (sections show open, no nested boxes) */
+  body.phone .co-panel .case-title{font-size:calc(24px * var(--ps,1));line-height:1.2;}
+  body.phone .co-panel .case-story{font-size:calc(16px * var(--ps,1));line-height:1.65;}
+  body.phone .co-panel .case-sub{font-size:calc(15px * var(--ps,1));line-height:1.55;}
+  body.phone .co-panel .clues{display:flex;flex-direction:column;gap:4px;}
+  body.phone .co-panel .clues li{font-size:calc(16px * var(--ps,1));line-height:1.55;padding:10px 4px;}
+  body.phone .co-panel .ev-tag{font-size:calc(12px * var(--ps,1));padding:2px 7px;}
+  body.phone .co-panel .star-legend,body.phone .co-panel .ev-note,body.phone .co-panel .hint-note,body.phone .co-panel .scene-obj-info{font-size:calc(15px * var(--ps,1));line-height:1.55;}
+  body.phone .co-panel .ros{font-size:calc(16px * var(--ps,1));}
+  body.phone .co-panel .wcand{font-size:calc(16px * var(--ps,1));padding:12px 14px;min-height:calc(52px * var(--ps,1));}
+  body.phone .co-panel .wcand .wicon{width:calc(30px * var(--ps,1));height:calc(30px * var(--ps,1));}
+  body.phone .co-panel .pw-label{font-size:calc(14px * var(--ps,1));}
+  body.phone .co-panel .pw-hint{font-size:calc(13px * var(--ps,1));}
+  body.phone .co-panel .briefing>summary{font-size:calc(14px * var(--ps,1));}
+  body.phone .co-panel .victim-portrait{width:calc(78px * var(--ps,1));height:calc(78px * var(--ps,1));}
+  body.phone .co-panel .case-head{gap:14px;margin-bottom:10px;}
+  body.phone .co-panel .possible-weapons-sec{border-top:none;padding-top:0;}
+  body.phone .co-panel .all-ev>summary,body.phone .co-panel .poi>summary{display:none;}   /* always-open sections inside their tab */
+  body.phone .co-panel details{border:none;}
+  body.phone .co-panel .roster{grid-template-columns:1fr;gap:10px;}
+
+  /* modals: fit, scroll internally, reachable */
+  body.phone .modal-bg{padding:8px;align-items:flex-start;}
+  body.phone .modal{padding:18px;max-height:calc(100dvh - 16px);overflow-y:auto;}
+  body.phone .modal h2{font-size:calc(22px * var(--ps,1));}
+  body.phone .howto-lead,body.phone .howto-steps li,body.phone .howto-foot{font-size:calc(16px * var(--ps,1));}
+  body.phone .reveal-wrap{width:calc(128px * var(--ps,1));height:calc(128px * var(--ps,1));}
+  body.phone .reveal-token{width:calc(76px * var(--ps,1));height:calc(76px * var(--ps,1));}
+  body.phone .news-headline{font-size:calc(20px * var(--ps,1));}
+  body.phone .news-stamp{right:0;width:calc(62px * var(--ps,1));}
+  body.phone .payoff-grid{grid-template-columns:1fr;}
+  body.phone .accuse-q{font-size:calc(14.5px * var(--ps,1));}
+  body.phone .accuse-select,body.phone .field input{font-size:calc(16px * var(--ps,1));min-height:calc(46px * var(--ps,1));}
+  body.phone .accuse-suspects{grid-template-columns:repeat(auto-fill,minmax(calc(66px * var(--ps,1)),1fr));gap:8px;}
+  body.phone .accuse-suspect .as-name{font-size:calc(13px * var(--ps,1));}
+  body.phone .accuse-suspect .token{width:calc(46px * var(--ps,1))!important;height:calc(46px * var(--ps,1))!important;}
+  /* tiny on-page debug aid (?debug=1) */
+  .phone-debug{position:fixed;left:4px;bottom:4px;z-index:200;background:rgba(0,0,0,.82);color:#7fd0a6;
+    font:12px/1.4 "Courier New",monospace;padding:6px 9px;border:1px solid #4caf7d;border-radius:6px;pointer-events:none;white-space:pre;}
+
+  /* ===================== JUICE LAYER: motion + feedback =====================
+     GPU-friendly (transform/opacity; one small box-shadow aside). Every animation is gated
+     by body.no-motion (Motion toggle OFF) and by prefers-reduced-motion (always honored). */
+  @keyframes jPop{0%{transform:scale(.6)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
+  .token.j-pop{animation:jPop .19s cubic-bezier(.34,1.56,.64,1);}
+  @keyframes jRing{0%{transform:scale(.72);opacity:.75}100%{transform:scale(1.2);opacity:0}}
+  .j-ring{position:absolute;inset:-2px;border:2px solid var(--amber-soft);border-radius:8px;
+    pointer-events:none;z-index:6;opacity:0;animation:jRing .4s ease-out;}
+  @keyframes jShake{0%,100%{transform:translate3d(0,0,0)}15%{transform:translate3d(-4px,0,0)}30%{transform:translate3d(4px,0,0)}45%{transform:translate3d(-3px,0,0)}60%{transform:translate3d(3px,0,0)}80%{transform:translate3d(-1px,0,0)}}
+  .j-shake{animation:jShake .32s ease !important;}
+  @keyframes jFlash{0%{opacity:0}22%{opacity:.5}100%{opacity:0}}
+  .j-flash{position:absolute;inset:0;pointer-events:none;background:var(--blood);opacity:0;z-index:8;border-radius:inherit;animation:jFlash .4s ease;}
+  .j-flash.screen{position:fixed;z-index:80;}
+  @keyframes jBulb{0%{opacity:0}9%{opacity:.85}100%{opacity:0}}
+  .j-bulb{position:fixed;inset:0;background:#fff;pointer-events:none;z-index:85;opacity:0;animation:jBulb .5s ease-out;}
+  @keyframes jFloat{0%{opacity:0;transform:translate(-50%,4px) scale(.9)}18%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-48px) scale(1)}}
+  .j-float{position:fixed;z-index:90;color:var(--bad);font-weight:800;font-size:15px;
+    font-family:"Courier New",monospace;pointer-events:none;text-shadow:0 1px 3px rgba(0,0,0,.8);animation:jFloat 1.1s ease-out;}
+  @keyframes jBars{0%{transform:translateY(-115%)}68%{transform:translateY(3%)}84%{transform:translateY(-4%)}100%{transform:translateY(0)}}
+  .reveal-wrap.j-slam .reveal-bars{animation:jBars .42s cubic-bezier(.3,.7,.35,1);}
+  @keyframes jThunk{0%{transform:scale(2.6) rotate(-14deg);opacity:0}50%{opacity:1}72%{transform:scale(.88) rotate(11deg)}100%{transform:scale(1) rotate(9deg)}}
+  .news-stamp.j-thunk{animation:jThunk .42s cubic-bezier(.3,1.25,.5,1);}
+  @keyframes jPuff{0%{transform:scale(.3);opacity:.55}100%{transform:scale(1.9);opacity:0}}
+  .j-puff{width:60px;height:60px;border-radius:50%;pointer-events:none;z-index:86;opacity:0;
+    background:radial-gradient(circle,rgba(222,212,182,.75),transparent 68%);animation:jPuff .5s ease-out;}
+  @keyframes jSpin{0%{transform:rotate(-540deg) scale(.16);opacity:0}72%{opacity:1}100%{transform:rotate(0) scale(1);opacity:1}}
+  .newspaper.j-spin{animation:jSpin .55s cubic-bezier(.2,.7,.3,1);}
+  @keyframes jConfetti{0%{transform:translate3d(0,0,0) rotate(0);opacity:1}100%{transform:translate3d(var(--cx),var(--cy),0) rotate(var(--cr));opacity:0}}
+  .j-confetti{position:fixed;width:8px;height:8px;z-index:88;pointer-events:none;animation:jConfetti var(--cd) ease-out;}
+  @keyframes jModalIn{0%{transform:scale(.93) translateY(8px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
+  .modal-bg.show .modal{animation:jModalIn .2s ease-out;}
+  @keyframes jBgIn{0%{opacity:0}100%{opacity:1}}
+  .modal-bg.show{animation:jBgIn .18s ease-out;}
+  .btn:active{transform:translateY(1px) scale(.97);}   /* subtle press feedback */
+  .code-hint{font-size:12.5px;color:var(--ink-dim);margin:2px 0 2px;min-height:16px;text-align:center;}
+  .code-hint b{color:var(--amber-soft);font-family:"Courier New",monospace;letter-spacing:1px;cursor:pointer;}
+  .code-hint.err{color:var(--bad);font-style:italic;}
+  /* Motion OFF or reduced-motion -> disable every animation (snap straight to final state) */
+  body.no-motion *, body.no-motion *::before, body.no-motion *::after{animation:none !important;}
+  @media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation:none !important;} }
+
+  /* ===================== DEMO BUILD additions ===================== */
+  /* small DEMO badge near the logo */
+  .demo-badge{display:inline-flex;align-items:center;gap:5px;margin-left:10px;align-self:center;
+    font-family:"Courier New",monospace;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+    color:var(--amber-soft);background:rgba(231,185,77,.10);border:1px solid rgba(231,185,77,.5);
+    padding:3px 8px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.5);}
+
+  /* ---- Case Select screen (the demo's only entry to a case) ---- */
+  .case-select{position:fixed;inset:0;z-index:70;overflow-y:auto;
+    background:linear-gradient(rgba(8,9,13,.86),rgba(8,9,13,.95)),url("../assets/ui/bg-desktop.jpg");
+    background-size:cover;background-position:center;
+    display:flex;flex-direction:column;align-items:center;padding:40px 18px 60px;}
+  .case-select[hidden]{display:none;}
+  .cs-logo{height:74px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));margin-bottom:6px;}
+  .cs-logo[hidden]{display:none;}
+  .cs-wordmark{font-family:Georgia,serif;font-weight:bold;font-size:34px;color:var(--amber-soft);letter-spacing:3px;}
+  .cs-title{font-family:"Courier New",monospace;letter-spacing:4px;text-transform:uppercase;color:var(--ink-dim);
+    font-size:13px;margin:6px 0 2px;}
+  .cs-tagline{color:var(--ink);font-style:italic;font-size:15px;max-width:560px;text-align:center;margin:4px 0 22px;line-height:1.5;}
+  .cs-tagline b{color:var(--amber-soft);font-style:normal;}
+  .cs-grid{display:grid;grid-template-columns:repeat(2,minmax(240px,310px));gap:18px;width:100%;max-width:680px;}
+  .cs-card{position:relative;text-align:left;cursor:pointer;color:var(--ink);
+    background:linear-gradient(180deg,#1c1f29,#15171f);border:1px solid var(--line);border-radius:12px;
+    padding:18px 18px 16px;box-shadow:0 14px 40px rgba(0,0,0,.55);transition:.14s;overflow:hidden;}
+  .cs-card:hover{border-color:var(--amber);transform:translateY(-3px);box-shadow:0 18px 48px rgba(0,0,0,.6);}
+  .cs-card::before{content:"CASE FILE";position:absolute;top:12px;right:-8px;transform:rotate(8deg);
+    border:2px solid rgba(193,39,45,.5);color:rgba(193,39,45,.65);font-family:"Courier New",monospace;
+    font-weight:700;font-size:9px;padding:2px 7px;letter-spacing:1px;border-radius:3px;}
+  .cs-card-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .cs-badge{width:34px;height:34px;flex:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));}
+  .cs-badge.img-missing{display:none;}
+  .cs-flavor{font-size:19px;color:var(--blood);font-variant:small-caps;letter-spacing:1px;line-height:1.1;}
+  .cs-size{display:block;font-family:"Courier New",monospace;font-size:10px;letter-spacing:1.5px;
+    text-transform:uppercase;color:var(--ink-dim);margin-top:2px;}
+  .cs-desc{font-size:13.5px;line-height:1.5;color:var(--ink);min-height:40px;}
+  .cs-foot{display:flex;align-items:center;justify-content:space-between;margin-top:12px;
+    border-top:1px dashed var(--line);padding-top:9px;font-family:"Courier New",monospace;font-size:11px;letter-spacing:1px;}
+  .cs-no{color:var(--ink-dim);}
+  .cs-open{color:var(--amber-soft);}
+  .cs-card.done{border-color:rgba(76,175,125,.55);}
+  .cs-stamp{position:absolute;bottom:10px;right:12px;transform:rotate(-9deg);
+    font-family:"Courier New",monospace;font-weight:700;font-size:13px;letter-spacing:1px;
+    color:var(--good);border:2px solid var(--good);border-radius:5px;padding:2px 8px;opacity:.92;display:none;}
+  .cs-card.done .cs-stamp{display:block;}
+  .cs-card.done .cs-open{visibility:hidden;}
+  .cs-progress{margin:18px 0 0;font-family:"Courier New",monospace;font-size:12px;letter-spacing:1.5px;color:var(--ink-dim);}
+  .cs-progress b{color:var(--amber-soft);}
+  .cs-allclear{margin-top:14px;}
+
+  /* ---- demo call-to-action block (in the win payoff + the demo-complete screen) ---- */
+  .demo-cta{margin:12px 0 4px;border-top:1px dashed var(--line);padding-top:12px;}
+  .demo-cta-lead{font-size:13.5px;color:var(--ink);font-style:italic;margin:0 0 9px;}
+  .demo-cta-lead b{color:var(--amber-soft);font-style:normal;}
+  .demo-cta-actions{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;}
+  .cta-btn{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:700;
+    border-radius:9px;padding:10px 14px;border:1px solid var(--line);color:var(--ink);
+    background:linear-gradient(180deg,#262b38,#1b1f2a);transition:.12s;}
+  .cta-btn:hover{transform:translateY(-2px);}
+  .cta-btn .cta-ico{font-size:16px;line-height:1;}
+  .cta-steam{border-color:#66c0f4;color:#cfeaff;background:linear-gradient(180deg,#1b3346,#12222e);}
+  .cta-steam:hover{box-shadow:0 6px 18px rgba(102,192,244,.3);border-color:#9fd6ff;}
+  .cta-kick{border-color:#05ce78;color:#bff7dc;background:linear-gradient(180deg,#123a2a,#0d271d);}
+  .cta-kick:hover{box-shadow:0 6px 18px rgba(5,206,120,.28);border-color:#3ee79b;}
+  .cta-social{border-color:var(--amber);color:var(--amber-soft);background:linear-gradient(180deg,#3a2f14,#251d0d);}
+  .cta-social:hover{box-shadow:0 6px 18px rgba(231,185,77,.28);}
+
+  /* ---- "Demo Complete" finale modal ---- */
+  .demo-done-art{font-size:46px;margin:2px 0 0;}
+  #demoCompleteModal h2{font-size:30px;color:var(--amber-soft);}
+  .demo-done-sub{color:var(--ink);font-size:15px;line-height:1.55;margin:6px auto 4px;max-width:440px;}
+  .demo-done-sub b{color:var(--amber-soft);}
+
+  /* ---- desktop-only notice (small / touch screens) ---- */
+  .desktop-notice{position:fixed;inset:0;z-index:90;background:rgba(6,7,11,.94);
+    display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px;}
+  .desktop-notice.show{display:flex;}
+  .desktop-notice .dn-card{background:linear-gradient(180deg,#1d212c,#13151d);border:1px solid var(--amber);
+    border-radius:14px;max-width:440px;padding:28px 26px;box-shadow:0 20px 60px rgba(0,0,0,.7);}
+  .desktop-notice h2{color:var(--amber-soft);font-variant:small-caps;letter-spacing:2px;margin:.1em 0 .3em;}
+  .desktop-notice p{color:var(--ink);font-size:15px;line-height:1.55;margin:0 0 16px;}
+</style>
+</head>
+<body>
+  <header class="app">
+    <div class="brand">
+      <img class="logo" id="brandLogo" alt="Casedoku" hidden />
+      <span class="brand-text" id="brandText" hidden>CASEDOKU<small>MANOR</small></span>
+      <span class="demo-badge" title="This is a free demo build">◆ Demo</span>
+    </div>
+    <div class="top-controls">
+      <span class="pill" id="timerPill" title="Time on this case">⏱ 00:00</span>
+      <span class="pill" id="guessPill" title="Accusation attempts left (a wrong one costs +1:00)">Guesses: 3</span>
+      <span class="pill" id="diffPill">—</span>
+      <span class="pill" id="codePill" title="Copy share code" style="cursor:pointer">Case No. —</span>
+      <button class="btn primary" id="accuseBtn" title="Name the killer — you have 3 guesses (full board not required)">⚖ <span class="btn-tx">Accuse</span></button>
+      <button class="btn" id="howtoBtn" title="How to play">?<span class="btn-tx"> How to Play</span></button>
+      <button class="btn" id="archiveBtn"><img src="../assets/ui/icon-notebook.png" alt=""/><span class="btn-tx">Archive</span></button>
+      <button class="btn" id="newBtn"><img src="../assets/ui/icon-back.png" alt=""/><span class="btn-tx">Cases</span></button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="board-wrap">
+      <div class="first-tip" id="firstTip" hidden>
+        <span>📓 Each suspect appears <b>exactly once</b> in every row, every column, and every room — then use the evidence to finish.</span>
+        <button class="btn" id="firstTipOk">Got it</button>
+      </div>
+      <!-- on mobile, the Current Evidence stepper (#evBlock) is relocated here once the tip is dismissed -->
+      <div class="ev-mount" id="evMount" hidden></div>
+      <div class="board" id="board"></div>
+      <div class="tray-label">Suspects <span class="tray-hint">— tap to select, then a cell · badge = number left to place</span></div>
+      <div class="tray" id="tray"></div>
+      <div class="toolbar">
+        <button class="btn" id="undoBtn"><img src="../assets/ui/icon-undo.png" alt=""/>Undo</button>
+        <button class="btn" id="redoBtn"><img src="../assets/ui/icon-redo.png" alt=""/>Redo</button>
+        <button class="btn" id="eraseBtn"><img src="../assets/ui/icon-erase.png" alt=""/>Erase</button>
+        <button class="btn" id="clearBtn" title="Reset the whole puzzle back to its starting givens">🧹 Clear</button>
+        <button class="btn" id="notesBtn" title="Pencil-mark candidates (press N)">✎ Notes</button>
+        <button class="btn" id="hintBtn"><img src="../assets/ui/icon-hint.png" alt=""/>Ask the Clerk</button>
+        <button class="btn" id="checkBtn"><img src="../assets/ui/icon-check.png" alt=""/>Check</button>
+        <button class="btn" id="atmoBtn" title="Toggle board atmosphere">Atmosphere: —</button>
+        <button class="btn" id="motionBtn" title="Toggle animations">✨ Motion: On</button>
+        <button class="btn" id="soundBtn" title="Toggle sound effects">♪ Sound: Off</button>
+        <button class="btn" id="musicBtn" title="Toggle background music">🎵 Music: On</button>
+      </div>
+      <!-- mobile-only: opens the tabbed case-file overlay (the side panel is hidden on phones) -->
+      <button class="case-file-btn" id="caseFileBtn">📁 Case File <span class="cf-sub">Evidence · Weapons · People · Case</span></button>
+      <div class="status-mount" id="statusMount"></div>
+      <div class="assistant" id="assistant" hidden>
+        <img class="assist-portrait" id="assistPortrait" alt="" hidden/>
+        <img src="../assets/ui/icon-notebook.png" alt="" class="assist-icon" id="assistNote"/>
+        <div><div class="assist-name">Case Assistant</div><div id="assistantText"></div></div>
+      </div>
+    </div>
+
+    <!-- Desktop: side panel. Mobile: the cf-group blocks are reparented into the #caseOverlay tabs
+         (one source of truth — moved, never duplicated). Anchors mark each group's desktop home. -->
+    <aside class="casefile">
+      <h2 class="casefile-title">Case File</h2>
+
+      <div id="homeCase"></div>
+      <div class="cf-group" id="grpCase">
+        <div class="case-head">
+          <div class="victim-card">
+            <img class="victim-portrait" id="caseVictim" alt="victim" />
+            <span class="victim-tag">The Victim</span>
+          </div>
+          <div class="case-head-text">
+            <div class="case-title" id="caseTitle">—</div>
+            <div class="case-sub" id="caseSub"></div>
+          </div>
+        </div>
+        <details class="briefing" id="briefing" open>
+          <summary>Case briefing</summary>
+          <div class="case-story" id="caseStory"></div>
+        </details>
+        <div class="hint-note" id="loadBearingNote"></div>
+      </div>
+
+      <!-- current-evidence stepper: desktop here; on mobile it relocates near the board (#evMount) -->
+      <div id="evHome" hidden></div>
+      <details class="ev-block" id="evBlock" open>
+        <summary>Current Evidence <span class="ev-count" id="evStep">— / —</span></summary>
+        <div class="ev-card">
+          <button class="ev-nav" id="evPrev" title="Previous clue" aria-label="Previous clue">‹</button>
+          <p class="ev-clue" id="evClue">—</p>
+          <button class="ev-nav" id="evNext" title="Next clue" aria-label="Next clue">›</button>
+        </div>
+      </details>
+
+      <div id="homeEvidence"></div>
+      <div class="cf-group" id="grpEvidence">
+        <details class="all-ev" id="allEv">
+          <summary>All evidence <span class="req">★ = key</span></summary>
+          <ul class="clues" id="clueList"></ul>
+        </details>
+        <p class="star-legend"><span class="keymark">★</span> <b>Key evidence</b> — required to crack the case. The rest corroborate. <b>Every clue is true.</b></p>
+        <p class="ev-note" id="evProgress"></p>
+      </div>
+
+      <div id="homeWeapons"></div>
+      <div class="cf-group" id="grpWeapons">
+        <div class="scene-obj-info" id="sceneObjInfo"></div>
+        <div class="possible-weapons-sec">
+          <div class="pw-label">Possible Weapons <span class="pw-hint">— tap to mark: possible → doubtful → cleared</span></div>
+          <div class="possible-weapons" id="possibleWeapons"></div>
+        </div>
+      </div>
+
+      <div id="homePeople"></div>
+      <div class="cf-group" id="grpPeople">
+        <details class="poi" id="poiDetails" open>
+          <summary>Persons of Interest</summary>
+          <div class="roster" id="roster"></div>
+        </details>
+      </div>
+
+      <div id="statusHome"></div>
+      <div class="status" id="status"></div>
+    </aside>
+  </div>
+
+  <!-- MOBILE case-file overlay: full-screen, tabbed. The cf-group blocks above are moved into
+       these panels on mobile and returned to the side panel on desktop (no duplicated DOM). -->
+  <div class="case-overlay" id="caseOverlay" hidden>
+    <div class="co-bar">
+      <div class="co-tabs" id="coTabs">
+        <button class="co-tab on" data-tab="evidence">Evidence</button>
+        <button class="co-tab" data-tab="weapons">Weapons</button>
+        <button class="co-tab" data-tab="people">People</button>
+        <button class="co-tab" data-tab="case">Case</button>
+      </div>
+      <button class="co-close" id="coClose" aria-label="Close case file">✕</button>
+    </div>
+    <div class="co-scroll">
+      <div class="co-panel" id="coPanel-evidence"></div>
+      <div class="co-panel" id="coPanel-weapons" hidden></div>
+      <div class="co-panel" id="coPanel-people" hidden></div>
+      <div class="co-panel" id="coPanel-case" hidden></div>
+    </div>
+  </div>
+
+  <footer>Casedoku · sudoku backbone + load-bearing evidence · procedural &amp; seeded · placeholder art in <code>/assets</code></footer>
+
+  <!-- ===== DEMO: Case Select — the only way into a case (4 fixed cases) ===== -->
+  <div class="case-select" id="caseSelect" hidden>
+    <img class="cs-logo" id="csLogo" alt="Casedoku" hidden />
+    <div class="cs-wordmark" id="csWordmark" hidden>CASEDOKU</div>
+    <div class="cs-title">Casedoku — Demo · Blackwood Manor</div>
+    <p class="cs-tagline">A sudoku you finish with detective work. <b>Four hand-picked cases</b>, one of each difficulty — place the suspects, weigh the evidence, and name the killer.</p>
+    <div class="cs-grid" id="csGrid"></div>
+    <div class="cs-progress" id="csProgress"></div>
+    <button class="btn primary cs-allclear" id="csHowto" style="margin-top:14px">How to play</button>
+  </div>
+
+  <!-- ===== DEMO: finale shown once all 4 cases are solved ===== -->
+  <div class="modal-bg" id="demoCompleteModal">
+    <div class="modal center">
+      <button class="x" id="demoCompleteClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
+      <div class="demo-done-art">🕵️‍♂️🏆</div>
+      <h2>Demo Complete</h2>
+      <p class="demo-done-sub">You cracked all <b>four</b> cases of the Casedoku demo. The full game has <b>endless procedural mysteries</b>, more themes, weapons, and culprits to unmask.</p>
+      <div class="demo-cta" id="demoCompleteCta"></div>
+      <button class="btn" id="demoCompleteBack" style="margin-top:14px"><img src="../assets/ui/icon-back.png" alt=""/>Back to the case files</button>
+    </div>
+  </div>
+
+  <!-- ===== DEMO: desktop-only notice (small / touch screens) ===== -->
+  <div class="desktop-notice" id="desktopNotice">
+    <div class="dn-card">
+      <h2>Best on Desktop</h2>
+      <p>This Casedoku demo is designed for a <b>desktop / Steam-sized</b> screen. On a small or touch display the two-column case file won't fit comfortably.</p>
+      <button class="btn primary" id="desktopNoticeOk">Continue anyway</button>
+    </div>
+  </div>
+
+  <!-- How to Play -->
+  <div class="modal-bg" id="howtoModal">
+    <div class="modal">
+      <button class="x" id="howtoClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
+      <h2 style="text-align:center">How to Play</h2>
+      <p class="howto-lead">A sudoku you finish with detective work. The starting clues are <b>intentionally not enough</b> on their own — sudoku logic and the evidence work <b>together</b>, interleaved.</p>
+      <ol class="howto-steps">
+        <li><b>Place the suspects</b> so each appears exactly once in every <b>row</b>, every <b>column</b>, and every <b>room</b> (3×3 block).</li>
+        <li><b>Use the evidence</b> to resolve what sudoku alone can't — the clues break the ties the grid leaves open. (You can't finish by sudoku alone.)</li>
+        <li><b>Make your accusation</b> once the grid is complete: name the culprit, the proof, and the motive.</li>
+      </ol>
+      <p class="howto-foot">Tap a cell to select it, then tap a suspect to place them. <b>★</b> marks <b>key</b> evidence (required); the rest corroborate. <b>Every clue is true.</b><br>You may <b>Accuse</b> at any time — but you get only <b>3 guesses</b>, and each wrong accusation adds <b>+1:00</b> to your time. Three misses and the case goes cold.</p>
+      <button class="btn primary" id="howtoGo" style="margin-top:6px">Start sleuthing</button>
+    </div>
+  </div>
+
+  <!-- Final Deduction — the player makes the accusation -->
+  <div class="modal-bg" id="accuseModal">
+    <div class="modal">
+      <button class="x" id="accuseClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
+      <h2 style="text-align:center">Final Deduction</h2>
+      <p class="accuse-intro">Name the killer. You don't have to finish the grid first — but you get only <b>3 guesses</b>, and a wrong accusation adds <b>+1:00</b> to your time.</p>
+      <div class="accuse-guesses" id="accuseGuesses"></div>
+      <div class="accuse-q">1 · Who is the culprit? <span class="accuse-q-hint">(decides the case)</span></div>
+      <div class="accuse-suspects" id="accuseSuspects"></div>
+      <div class="accuse-q">2 · What was the <b>true</b> weapon? <span class="accuse-q-hint">([WEAPON] clues)</span></div>
+      <div class="accuse-weapons" id="accuseWeapons"></div>
+      <div class="accuse-q">3 · What was the motive? <span class="accuse-q-hint">([MOTIVE] clues)</span></div>
+      <select id="accuseMotive" class="accuse-select"></select>
+      <div class="accuse-q">4 · Which evidence proves it? <span class="accuse-q-hint">(the decisive clue)</span></div>
+      <select id="accuseEvidence" class="accuse-select"></select>
+      <div class="accuse-feedback" id="accuseFeedback"></div>
+      <button class="btn primary" id="accuseSubmit" style="margin-top:8px;width:100%">J'accuse — name the killer</button>
+    </div>
+  </div>
+
+  <!-- Case Complete payoff -->
+  <div class="modal-bg" id="winModal">
+    <div class="modal center">
+      <button class="x" id="winClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
+      <div class="newspaper">
+        <img class="news-stamp" src="../assets/ui/stamp-caseclosed.png" alt="" />
+        <div class="news-masthead">The Blackwood Herald</div>
+        <div class="news-headline" id="newsHeadline">—</div>
+      </div>
+      <div class="reveal-wrap" id="revealWrap"><div class="reveal-token" id="revealToken"></div><div class="reveal-bars" id="revealBars"></div></div>
+      <div class="killer-name" id="killerName">—</div>
+      <p id="killerMotive" style="color:var(--ink-dim);font-style:italic;margin:4px 0 8px"></p>
+      <div class="payoff-grid">
+        <div class="po-cell"><span class="po-label">Key evidence</span><span class="po-val" id="poEvidence">—</span></div>
+        <div class="po-cell"><span class="po-label">Trophy unlocked</span><span class="po-val" id="poTrophy">—</span></div>
+      </div>
+      <div id="accuseScore" class="accuse-score"></div>
+      <details class="reasoning-details">
+        <summary>The chain of reasoning</summary>
+        <ul class="chain" id="chain"></ul>
+        <p id="winStory" style="line-height:1.5"></p>
+      </details>
+      <div class="demo-cta" id="winCta"></div>
+      <div class="payoff-actions">
+        <button class="btn" id="winArchive"><img src="../assets/ui/icon-notebook.png" alt=""/>Evidence Archive</button>
+        <button class="btn primary" id="winNew"><img src="../assets/ui/icon-back.png" alt=""/>Back to Cases</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Evidence Archive -->
+  <div class="modal-bg" id="archiveModal">
+    <div class="modal">
+      <button class="x" id="archiveClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
+      <h2 style="text-align:center">Evidence Archive</h2>
+      <div class="sec">Trophies <span class="req" id="trophyCount"></span></div>
+      <div class="trophies" id="trophyShelf"></div>
+      <div class="sec">Solved Cases <span class="req" id="archiveCount"></span></div>
+      <div class="archive-list" id="archiveList"></div>
+    </div>
+  </div>
+
+<!-- ====================================================================
+     ENGINE  — pure logic, no DOM. Safe to eval in Node for testing.
+     Defines globalThis.CludokuEngine
+     ==================================================================== -->
+<script id="cludoku-engine">
+(function(GLOBAL){
+"use strict";
+
+/* ---------- seeded RNG (mulberry32) ---------- */
+function makeRNG(seed){
+  let a = (seed>>>0) || 1;
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function hashStr(s){
+  let h = 2166136261 >>> 0;
+  for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function rint(rng,n){ return Math.floor(rng()*n); }
+function shuffle(rng,arr){ for(let i=arr.length-1;i>0;i--){ const j=rint(rng,i+1); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+function sample(rng,arr,k){ const a=arr.slice(); shuffle(rng,a); return a.slice(0,k); }
+
+/* ---------- generic sudoku core ----------
+   cfg = {N, bh, bw}  with N = bh*bw
+   grid = flat array length N*N, values 1..N, 0 = empty
+   box id = boxRow*bh + boxCol, boxRow=floor(r/bh) in [0,bw), boxCol=floor(c/bw) in [0,bh)
+*/
+function boxOf(cfg,r,c){ return Math.floor(r/cfg.bh)*cfg.bh + Math.floor(c/cfg.bw); }
+function rcOfBox(cfg,box){ const boxRow=Math.floor(box/cfg.bh), boxCol=box%cfg.bh;
+  return {r0:boxRow*cfg.bh, c0:boxCol*cfg.bw}; }
+
+function candMask(cfg,g,r,c){
+  const N=cfg.N; let used=0;
+  for(let k=0;k<N;k++){ used |= 1<<g[r*N+k]; used |= 1<<g[k*N+c]; }
+  const {r0,c0}=rcOfBox(cfg, boxOf(cfg,r,c));
+  for(let i=0;i<cfg.bh;i++) for(let j=0;j<cfg.bw;j++) used |= 1<<g[(r0+i)*N+(c0+j)];
+  return used;
+}
+function candList(cfg,g,r,c){
+  const used=candMask(cfg,g,r,c), out=[];
+  for(let v=1;v<=cfg.N;v++) if(!(used & (1<<v))) out.push(v);
+  return out;
+}
+
+/* find empty cell with fewest candidates (MRV). returns {idx,cands} | null(full) | {dead:true} */
+function pickCell(cfg,g){
+  const N=cfg.N; let bi=-1, bc=null;
+  for(let i=0;i<N*N;i++){
+    if(g[i]!==0) continue;
+    const cs=candList(cfg,g, Math.floor(i/N), i%N);
+    if(cs.length===0) return {dead:true};
+    if(bc===null || cs.length<bc.length){ bi=i; bc=cs; if(cs.length===1) break; }
+  }
+  return bi<0 ? null : {idx:bi, cands:bc};
+}
+
+/* enumerate solutions of `start`, up to cap+1 (so caller can detect overflow).
+   collect=false -> just count (capped). returns {count, sols, capped} */
+function search(cfg, start, cap, collect){
+  const g = start.slice();
+  let count=0; const sols = collect ? [] : null;
+  function rec(){
+    if(count>cap) return;                 // overflow; bail
+    const p = pickCell(cfg,g);
+    if(p===null){ count++; if(collect) sols.push(g.slice()); return; }
+    if(p.dead) return;
+    for(const v of p.cands){
+      g[p.idx]=v; rec(); g[p.idx]=0;
+      if(count>cap) return;
+    }
+  }
+  rec();
+  return {count, sols, capped: count>cap};
+}
+function countCompletions(cfg,start,cap){ return search(cfg,start,cap,false).count; }
+
+function fillSolved(cfg,rng){
+  const N=cfg.N, g=new Array(N*N).fill(0);
+  function rec(){
+    const p=pickCell(cfg,g);
+    if(p===null) return true;
+    if(p.dead) return false;
+    for(const v of shuffle(rng, p.cands.slice())){ g[p.idx]=v; if(rec()) return true; g[p.idx]=0; }
+    return false;
+  }
+  rec(); return g;
+}
+function isValidFull(cfg,g){
+  const N=cfg.N;
+  for(let r=0;r<N;r++){ const s=new Set(); for(let c=0;c<N;c++){ const v=g[r*N+c]; if(v<1||v>N||s.has(v))return false; s.add(v);} }
+  for(let c=0;c<N;c++){ const s=new Set(); for(let r=0;r<N;r++){ const v=g[r*N+c]; if(s.has(v))return false; s.add(v);} }
+  for(let b=0;b<N;b++){ const s=new Set(); const {r0,c0}=rcOfBox(cfg,b);
+    for(let i=0;i<cfg.bh;i++)for(let j=0;j<cfg.bw;j++){ const v=g[(r0+i)*N+(c0+j)]; if(s.has(v))return false; s.add(v);} }
+  return true;
+}
+
+/* ---------- difficulty tiers ---------- */
+const TIERS = {
+  // clueGoal = total displayed clues to aim for (required load-bearing set + true
+  // corroborating clues). Required-only count is far smaller; see pickExtras().
+  // Gentler curve: lower targetMin => fewer pre-clue arrangements => MORE givens; more
+  // DIRECT bias on the lower tiers. Easy = quick, mostly-sudoku; Extreme = the hard one.
+  easy:    {key:"easy",    label:"Easy",    cfg:{N:6,bh:2,bw:3}, targetMin:2,  cap:6,  bias:"direct",   clueGoal:3},
+  medium:  {key:"medium",  label:"Medium",  cfg:{N:9,bh:3,bw:3}, targetMin:4,  cap:12, bias:"direct",   clueGoal:5},
+  hard:    {key:"hard",    label:"Hard",    cfg:{N:9,bh:3,bw:3}, targetMin:12, cap:36, bias:"mixed",    clueGoal:7},
+  extreme: {key:"extreme", label:"Extreme", cfg:{N:9,bh:3,bw:3}, targetMin:26, cap:72, bias:"indirect", clueGoal:10},
+};
+const TIER_CHAR = {easy:"E", medium:"M", hard:"H", extreme:"X"};
+const CHAR_TIER = {E:"easy", M:"medium", H:"hard", X:"extreme"};
+
+/* ---------- remove givens until the puzzle is AMBIGUOUS (>=2 completions)
+   under sudoku rules alone, but still enumerable (<= cap). This is what makes
+   the clues load-bearing: sudoku + givens cannot finish the grid. ---------- */
+function removeToBand(cfg, solution, rng, targetMin, cap){
+  const N=cfg.N, givens=solution.slice();
+  const order=shuffle(rng,[...Array(N*N).keys()]);
+  let cur=1;
+  for(const idx of order){
+    if(cur>=targetMin) break;
+    const saved=givens[idx]; givens[idx]=0;
+    const c=countCompletions(cfg,givens,cap);
+    if(c>cap){ givens[idx]=saved; }      // would blow past enumerable cap
+    else cur=c;
+  }
+  // guarantee genuine ambiguity (>=2)
+  if(cur<2){
+    for(const idx of order){
+      if(givens[idx]===0) continue;
+      const saved=givens[idx]; givens[idx]=0;
+      const c=countCompletions(cfg,givens,cap);
+      if(c>cap){ givens[idx]=saved; continue; }
+      cur=c; if(cur>=2) break;
+    }
+  }
+  const {sols,capped}=search(cfg,givens,cap,true);
+  return {givens, completions:sols, capped};
+}
+
+/* ---------- clue predicates ----------
+   Every clue is { type, p:{...params}, pred(g)->bool }, true of the solution by
+   construction. Because each symbol appears once per row/col/box, only POSITION-
+   anchored facts discriminate, so clues reference cells, in-room spots, directions,
+   regions and counts — never the trivial "symbol X is in room R". */
+function cellOfValInBox(cfg,g,box,val){
+  const {r0,c0}=rcOfBox(cfg,box);
+  for(let i=0;i<cfg.bh;i++)for(let j=0;j<cfg.bw;j++){
+    const r=r0+i,c=c0+j; if(g[r*cfg.N+c]===val) return {r,c,sr:i,sc:j};
+  } return null;
+}
+function makePred(cfg,type,p){
+  const N=cfg.N;
+  switch(type){
+    case "sighting":   return g=> g[p.cell]===p.val;
+    case "exclusion":  return g=> g[p.cell]!==p.val;
+    case "position":   return g=>{ const e=cellOfValInBox(cfg,g,p.box,p.val); return e && (p.axis==="row"? e.sr===p.band : e.sc===p.band); };
+    case "relative":   return g=>{ const a=cellOfValInBox(cfg,g,p.box,p.val), b=cellOfValInBox(cfg,g,p.box,p.val2);
+                                    if(!a||!b) return false; return (a.r-b.r)===p.dr && (a.c-b.c)===p.dc; };
+    case "adjacency":  return g=>{ const a=cellOfValInBox(cfg,g,p.box,p.val), b=cellOfValInBox(cfg,g,p.box,p.val2);
+                                    if(!a||!b) return false; const adj=(Math.abs(a.r-b.r)+Math.abs(a.c-b.c))===1; return adj===p.adjacent; };
+    case "count":      return g=>{ let n=0; for(const ci of p.cells) if(p.vals.includes(g[ci])) n++; return n===p.k; };
+  }
+  return ()=>true;
+}
+
+/* build a pool of candidate clues, all true of the solution.
+   sceneCell = the crime-scene cell: no clue may reference it (would name the culprit). */
+function buildPool(cfg, solution, givens, ambigCells, rng, sceneCell){
+  const N=cfg.N, pool=[];
+  // the cells a clue actually pins; a clue is redundant if all of them are already GIVEN
+  const subjectCells=(type,p)=>{
+    if(type==="sighting"||type==="exclusion") return [p.cell];
+    if(type==="position"){ const e=cellOfValInBox(cfg,solution,p.box,p.val); return e?[e.r*N+e.c]:[]; }
+    if(type==="relative"||type==="adjacency"){
+      const a=cellOfValInBox(cfg,solution,p.box,p.val), b=cellOfValInBox(cfg,solution,p.box,p.val2);
+      return [a?a.r*N+a.c:-1, b?b.r*N+b.c:-1].filter(i=>i>=0); }
+    return [];
+  };
+  const fullyGiven=cells=> cells.length>0 && cells.every(ci=>givens[ci]!==0);
+  const add=(type,p)=>{ const cells=subjectCells(type,p);
+    if(fullyGiven(cells)) return;                         // skip clues already revealed by the givens
+    if(sceneCell>=0 && cells.includes(sceneCell)) return; // never name the crime-scene cell's occupant
+    const c={type,p,pred:makePred(cfg,type,p)}; if(c.pred(solution)) pool.push(c); };
+
+  // SIGHTINGS on every ambiguous cell — guarantees a covering set always exists.
+  for(const cell of ambigCells) add("sighting",{cell, val:solution[cell]});
+
+  // EXCLUSIONS on ambiguous cells (rule out a wrong suspect at a spot)
+  for(const cell of ambigCells){
+    for(const v of sample(rng,[...Array(N).keys()].map(x=>x+1).filter(v=>v!==solution[cell]),2))
+      add("exclusion",{cell, val:v});
+  }
+
+  // POSITION, RELATIVE, ADJACENCY scoped within each room (box)
+  const boxes=[...Array(N).keys()];
+  for(const box of boxes){
+    const {r0,c0}=rcOfBox(cfg,box);
+    const cells=[]; for(let i=0;i<cfg.bh;i++)for(let j=0;j<cfg.bw;j++) cells.push({r:r0+i,c:c0+j,sr:i,sc:j});
+    // positions
+    for(const e of sample(rng,cells,Math.min(4,cells.length))){
+      const val=solution[e.r*N+e.c];
+      add("position",{box, val, axis:"row", band:e.sr});
+      add("position",{box, val, axis:"col", band:e.sc});
+    }
+    // relative + adjacency among pairs in this box
+    for(let a=0;a<cells.length;a++)for(let b=0;b<cells.length;b++){
+      if(a===b) continue;
+      const ea=cells[a], eb=cells[b];
+      const va=solution[ea.r*N+ea.c], vb=solution[eb.r*N+eb.c];
+      const dr=ea.r-eb.r, dc=ea.c-eb.c;
+      if(Math.abs(dr)+Math.abs(dc)===1) add("relative",{box, val:va, val2:vb, dr, dc});
+    }
+    // a few adjacency / non-adjacency facts
+    const vlist=cells.map(e=>solution[e.r*N+e.c]);
+    for(const [va,vb] of sample(rng, allPairs(vlist), Math.min(3, vlist.length))){
+      const a=cellOfValInBox(cfg,solution,box,va), b=cellOfValInBox(cfg,solution,box,vb);
+      add("adjacency",{box, val:va, val2:vb, adjacent:(Math.abs(a.r-b.r)+Math.abs(a.c-b.c))===1});
+    }
+  }
+
+  // (No COUNT clues: a column/row "wing" is a union of complete lines, so each suspect
+  // always appears a fixed number of times there — the count is trivially true and
+  // non-informative, and reads oddly. Only informative, cleanly-phrasable types are used.)
+  return pool;
+}
+function allPairs(arr){ const out=[]; for(let i=0;i<arr.length;i++)for(let j=i+1;j<arr.length;j++) out.push([arr[i],arr[j]]); return out; }
+
+/* greedy minimum-ish covering set, biased by difficulty toward direct/indirect clues */
+const COST = {
+  direct:   {sighting:1,  position:1.3, relative:1.6, adjacency:1.9, exclusion:2.2, count:2.6},
+  mixed:    {sighting:1.4,position:1.2, relative:1.3, adjacency:1.5, exclusion:1.6, count:1.7},
+  indirect: {sighting:2.6,position:1.6, relative:1.2, adjacency:1.3, exclusion:1.4, count:1.1},
+  cryptic:  {sighting:3.2,position:2.0, relative:1.4, adjacency:1.3, exclusion:1.2, count:1.0},
+};
+function coverAndMinimize(pool, completions, solIdx, bias, rng){
+  const cost=COST[bias]||COST.mixed;
+  // precompute the set of "other" completions each clue eliminates
+  const others=[]; for(let i=0;i<completions.length;i++) if(i!==solIdx) others.push(i);
+  pool.forEach(cl=>{ cl.kills=new Set(); for(const i of others) if(!cl.pred(completions[i])) cl.kills.add(i); });
+  const remaining=new Set(others);
+  const chosen=[];
+  while(remaining.size){
+    let best=null, bestScore=-1;
+    for(const cl of pool){
+      if(chosen.includes(cl)) continue;
+      let gain=0; for(const i of cl.kills) if(remaining.has(i)) gain++;
+      if(gain===0) continue;
+      const score=gain/(cost[cl.type]||1.5);
+      if(score>bestScore){ bestScore=score; best=cl; }
+    }
+    if(!best) break;                 // (cannot happen: sightings on ambig cells cover all)
+    chosen.push(best);
+    for(const i of best.kills) remaining.delete(i);
+  }
+  // minimize: drop any clue still redundant
+  for(let i=chosen.length-1;i>=0;i--){
+    const without=chosen.slice(0,i).concat(chosen.slice(i+1));
+    const killed=new Set();
+    for(const cl of without) for(const x of cl.kills) killed.add(x);
+    if(others.every(x=>killed.has(x))) chosen.splice(i,1);
+  }
+  return chosen;
+}
+
+/* corroborating clues: extra facts that are ALL true of the solution (pulled from
+   the same all-true candidate pool), added on top of the required cover so a case
+   reads like a real investigation. They never change uniqueness (the required set
+   already forces it) and never mislead (every one holds for the solution). Selected
+   round-robin across clue types for texture, deduped against the required set. */
+function clueKey(c){ return c.type+":"+JSON.stringify(c.p); }
+/* the facts a clue establishes about a suspect — used to drop information-redundant
+   clues. A sighting subsumes the suspect's row-band and column-band, so a later
+   position clue about the same suspect/band adds nothing and is skipped. */
+function clueInfoKeys(cfg, solution, c){
+  const N=cfg.N, p=c.p;
+  if(c.type==="sighting"){ const e=cellOfValInBox(cfg,solution,boxOf(cfg,Math.floor(p.cell/N),p.cell%N),p.val);
+    const box=boxOf(cfg,Math.floor(p.cell/N),p.cell%N);
+    return ["pos:"+p.val+":"+p.cell, "rb:"+p.val+":"+box+":"+(e?e.sr:-1), "cb:"+p.val+":"+box+":"+(e?e.sc:-1)]; }
+  if(c.type==="position") return [(p.axis==="row"?"rb:":"cb:")+p.val+":"+p.box+":"+p.band];
+  if(c.type==="relative")  return ["rel:"+Math.min(p.val,p.val2)+":"+Math.max(p.val,p.val2)+":"+p.box];
+  if(c.type==="adjacency") return ["adj:"+Math.min(p.val,p.val2)+":"+Math.max(p.val,p.val2)+":"+p.box];
+  if(c.type==="exclusion") return ["notat:"+p.val+":"+p.cell];
+  return [];
+}
+function pickExtras(pool, required, goal, rng, cfg, solution){
+  const want=Math.max(0, (goal||required.length)-required.length);
+  if(want<=0) return [];
+  const seen=new Set(required.map(clueKey)), byType={};
+  for(const c of pool){ const k=clueKey(c); if(seen.has(k)) continue; seen.add(k);
+    (byType[c.type]=byType[c.type]||[]).push(c); }
+  // facts already established; knownFull = suspects whose exact cell a sighting pins
+  const established=new Set(), knownFull=new Set();
+  const record=c=>{ clueInfoKeys(cfg,solution,c).forEach(k=>established.add(k)); if(c.type==="sighting") knownFull.add(c.p.val); };
+  const redundant=c=>{
+    // a relation between two suspects adds nothing once both their positions are known
+    if(c.type==="relative"||c.type==="adjacency") return knownFull.has(c.p.val) && knownFull.has(c.p.val2);
+    const keys=clueInfoKeys(cfg,solution,c); return keys.length && keys.every(k=>established.has(k));
+  };
+  required.forEach(record);
+  const types=shuffle(rng, Object.keys(byType));
+  for(const t of types) shuffle(rng, byType[t]);
+  const out=[];
+  while(out.length<want){
+    let progress=false;
+    for(const t of types){
+      const arr=byType[t];
+      while(arr && arr.length){
+        const c=arr.shift();
+        if(redundant(c)) continue;            // adds no new fact about the suspect(s)
+        record(c); out.push(c); progress=true; break;
+      }
+      if(out.length>=want) break;
+    }
+    if(!progress) break;   // pool exhausted (or only redundant clues remain)
+  }
+  return out;
+}
+
+/* ---------- case assembly ---------- */
+function parseSeed(input){
+  // case code form: <tierChar><base36 seed>   e.g. "M3xk1z"
+  if(typeof input==="string"){
+    const m=/^([EMHX])([0-9a-z]+)$/i.exec(input.trim());
+    if(m){ const tier=CHAR_TIER[m[1].toUpperCase()]; const seed=parseInt(m[2],36)>>>0; if(tier) return {tier,seed}; }
+    return {seed:hashStr(input)};
+  }
+  if(typeof input==="number") return {seed:input>>>0};
+  return {seed: hashStr(String(input))};
+}
+function caseCode(tier,seed){ return TIER_CHAR[tier] + (seed>>>0).toString(36); }
+
+function generateCase(opts){
+  opts=opts||{};
+  let tier = opts.difficulty || "medium";
+  let seed;
+  if(opts.seed!==undefined && opts.seed!==null && opts.seed!==""){
+    const p=parseSeed(opts.seed); seed=p.seed; if(p.tier && !opts.difficulty) tier=p.tier;
+  } else seed = (hashStr(String(opts.salt||"")) ^ ((Math.floor((opts.rand||0)*4294967296))>>>0))>>>0;
+  if(!TIERS[tier]) tier="medium";
+  const T=TIERS[tier], cfg=T.cfg;
+  const rng=makeRNG(seed ^ hashStr(tier));
+
+  const solution=fillSolved(cfg,rng);
+  const {givens,completions,capped}=removeToBand(cfg,solution,rng,T.targetMin,T.cap);
+  const NN=cfg.N*cfg.N;
+  // ambiguous cells: differ across completions
+  const ambig=[]; for(let i=0;i<NN;i++){ const v=completions[0][i]; if(completions.some(g=>g[i]!==v)) ambig.push(i); }
+  const solIdx=completions.findIndex(g=>g.every((v,i)=>v===solution[i]));
+
+  // crime-scene = the most ambiguous cell; pick it FIRST so no clue can reference its occupant
+  let murderCell=ambig[0], bestSpread=-1;
+  for(const cell of ambig){ const s=new Set(completions.map(g=>g[cell])); if(s.size>bestSpread){ bestSpread=s.size; murderCell=cell; } }
+
+  const pool=buildPool(cfg,solution,givens,ambig,rng,murderCell);
+  const required=coverAndMinimize(pool,completions,solIdx,T.bias,rng);
+
+  // --- verification (the heart): the REQUIRED set alone must force the solution ---
+  const withClues=completions.filter(g=>required.every(c=>c.pred(g)));
+  const uniqueWithClues = withClues.length===1 && withClues[0].every((v,i)=>v===solution[i]);
+  const ambiguousWithout = completions.length>=2 && !capped;
+  if(!uniqueWithClues || !ambiguousWithout){
+    // extremely unlikely; retry with a perturbed seed for robustness
+    return generateCase(Object.assign({},opts,{seed:(seed+0x9E3779B9)>>>0, difficulty:tier}));
+  }
+
+  // add true, NON-REDUNDANT corroborating clues for a richer case file; required stay load-bearing
+  const keySet=new Set(required);
+  const allClues=required.concat(pickExtras(pool, required, T.clueGoal, rng, cfg, solution));
+  shuffle(rng, allClues);                          // natural display order
+
+  // --- provable killer (scene cell chosen above, never named by a clue) ---
+  const killer=solution[murderCell];
+  const sceneCandidates=[...new Set(completions.map(g=>g[murderCell]))];
+  const reasoning=[];
+  for(const v of sceneCandidates){
+    if(v===killer) continue;
+    const comp=completions.find(g=>g[murderCell]===v);
+    let clueIdx=allClues.findIndex(c=>keySet.has(c) && !c.pred(comp));   // prefer a load-bearing (key) clue
+    if(clueIdx<0) clueIdx=allClues.findIndex(c=>!c.pred(comp));          // fall back to any contradicting clue
+    reasoning.push({ruledOut:v, clue:clueIdx});
+  }
+  // the key evidence that ties the culprit to the scene (used to grade the accusation's "proof")
+  const proofClues=[...new Set(reasoning.map(r=>r.clue).filter(i=>i>=0))];
+
+  // one object landmark per room (box), placed at a fixed cell (not the scene), so the
+  // board's furniture art is meaningful and clues can read "next to the bookshelf".
+  const objectCells=[];
+  for(let box=0;box<cfg.N;box++){
+    const {r0,c0}=rcOfBox(cfg,box), bc=[];
+    for(let i=0;i<cfg.bh;i++)for(let j=0;j<cfg.bw;j++){ const ci=(r0+i)*cfg.N+(c0+j); if(ci!==murderCell) bc.push(ci); }
+    objectCells[box]=bc[Math.floor(rng()*bc.length)];
+  }
+
+  return {
+    tier, seed, code:caseCode(tier,seed), cfg,
+    solution, givens,
+    clues: allClues.map(c=>({type:c.type, p:c.p, key:keySet.has(c)})),  // key = load-bearing
+    cluePreds: allClues.map(c=>c.pred),           // for live UI validation
+    requiredCount: required.length,
+    completionsWithout: completions.length,
+    ambiguousCells: ambig,
+    murderCell, killer, sceneCandidates, reasoning, proofClues, objectCells,
+  };
+}
+
+/* ---------- public verify helpers (used by tests + UI) ---------- */
+function completionsOf(cfg,givens,cap){ return search(cfg,givens,cap||200,true); }
+
+/* ---------- self test ---------- */
+function selfTest(o){
+  o=o||{}; const trials=o.trials||6;
+  const tiers=o.difficulties||["easy","medium","hard","extreme"];
+  const report={pass:0, fail:0, fails:[], timings:{}, examples:{}};
+  for(const tier of tiers){
+    let tsum=0;
+    for(let t=0;t<trials;t++){
+      const seed=(hashStr(tier+"#"+t)>>>0);
+      const t0=Date.now();
+      let C; try{ C=generateCase({difficulty:tier, seed}); }
+      catch(e){ report.fail++; report.fails.push({tier,seed,err:String(e)}); continue; }
+      tsum+=Date.now()-t0;
+      const cfg=C.cfg, fails=[];
+      // 1. valid full solution
+      if(!isValidFull(cfg,C.solution)) fails.push("solution not a valid Latin square");
+      // 2. givens subset of solution
+      for(let i=0;i<cfg.N*cfg.N;i++) if(C.givens[i]!==0 && C.givens[i]!==C.solution[i]){ fails.push("given conflicts solution"); break; }
+      // 3. givens ALONE are ambiguous (clues required)
+      const without=completionsOf(cfg,C.givens, 400);
+      if(without.capped) fails.push("completions exceeded cap (not enumerable)");
+      if(without.count<2) fails.push("givens alone already unique — clues NOT load-bearing");
+      // 4. givens + clues == exactly the solution
+      const preds=C.clues.map(cl=>makePred(cfg,cl.type,cl.p));
+      const withC=without.sols.filter(g=>preds.every(p=>p(g)));
+      if(!(withC.length===1 && withC[0].every((v,i)=>v===C.solution[i]))) fails.push("givens+clues NOT uniquely the solution (got "+withC.length+")");
+      // 5. every clue is true of the solution
+      if(!preds.every(p=>p(C.solution))) fails.push("a clue is false for the solution");
+      // 6. killer provably forced: >=2 candidates at scene without clues, exactly killer with clues
+      const sceneVals=new Set(without.sols.map(g=>g[C.murderCell]));
+      if(sceneVals.size<2) fails.push("scene cell not ambiguous (killer not clue-dependent)");
+      const sceneWith=new Set(withC.map(g=>g[C.murderCell]));
+      if(!(sceneWith.size===1 && sceneWith.has(C.killer))) fails.push("killer not uniquely forced by evidence");
+      // 7. reasoning: each ruled-out rival genuinely violates the cited clue
+      for(const step of C.reasoning){
+        const comp=without.sols.find(g=>g[C.murderCell]===step.ruledOut);
+        if(!comp || step.clue<0 || preds[step.clue](comp)) { fails.push("reasoning step does not hold"); break; }
+      }
+      // 8. seeded determinism
+      const again=generateCase({difficulty:tier, seed});
+      if(again.code!==C.code || !again.solution.every((v,i)=>v===C.solution[i]) ||
+         again.givens.join()!==C.givens.join() || JSON.stringify(again.clues)!==JSON.stringify(C.clues))
+        fails.push("not deterministic for fixed seed");
+      // 9. case code round-trips
+      const ps=parseSeed(C.code);
+      if(ps.tier!==tier || ps.seed!==C.seed) fails.push("case code does not round-trip");
+      // 10. WEAPON deduction: 3 candidates incl scene+true; clues true of true weapon; narrows to 1 on Medium+
+      const WT=[{slug:"a",traits:["sharp","narrow"]},{slug:"b",traits:["heavy","blunt"]},{slug:"c",traits:["firearm"]},
+                {slug:"d",traits:["heavy","metal"]},{slug:"e",traits:["poison"]},{slug:"f",traits:["ligature"]},{slug:"g",traits:["sharp","metal"]}];
+      const W=generateCase===generateCase?buildWeaponCase(C.seed,tier,WT):null;
+      const wmap=Object.fromEntries(WT.map(w=>[w.slug,new Set(w.traits)]));
+      if(W.candidates.length!==3) fails.push("weapon: candidates != 3");
+      if(!W.candidates.includes(W.trueWeapon)) fails.push("weapon: true weapon not a candidate");
+      if(!W.candidates.includes(W.sceneObject)) fails.push("weapon: scene object not a candidate");
+      for(const cl of W.clues){ if(wmap[W.trueWeapon].has(cl.trait)!==cl.has){ fails.push("weapon: a clue is false of the true weapon"); break; } }
+      if(tier==="easy"){ if(W.sceneObject!==W.trueWeapon) fails.push("weapon: Easy scene object must BE the true weapon"); }
+      else { const surv=W.candidates.filter(s=>W.clues.every(cl=>wmap[s].has(cl.trait)===cl.has));
+             if(!(surv.length===1 && surv[0]===W.trueWeapon)) fails.push("weapon: clues do not narrow to exactly the true weapon (got "+surv.length+")"); }
+      // 11. MOTIVE clues: true of the killer's tag, and narrow 3 distinct-tag options to 1
+      const mtags=["money","secret","revenge"], kt=mtags[C.seed%3], mc=buildMotiveClues(C.seed,kt,tier);
+      if(!mc.length || !mc.every(cl=>cl.tag===kt)) fails.push("motive: a clue is not true of the killer's motive");
+      const mSurv=mtags.filter(t=>mc.every(cl=>cl.tag===t));
+      if(!(mSurv.length===1 && mSurv[0]===kt)) fails.push("motive: clues do not narrow to exactly one motive");
+
+      if(fails.length){ report.fail++; report.fails.push({tier,seed,fails}); }
+      else { report.pass++; if(!report.examples[tier]) report.examples[tier]={code:C.code, givens:C.givens.filter(x=>x).length, completionsWithout:C.completionsWithout, clues:C.clues.length, sceneCandidates:C.sceneCandidates.length}; }
+    }
+    report.timings[tier]=Math.round(tsum/trials)+"ms avg";
+  }
+  return report;
+}
+
+/* ---------- weapon deduction layer (independent of the sudoku; seeded per case) ----------
+   weapons: [{slug, traits:[...]}]. Returns the TRUE weapon, the SCENE OBJECT found by the body
+   (may be PLANTED on Hard/Extreme), exactly 3 CANDIDATES (scene + true always included), and
+   WEAPON clues that are TRUE of the true weapon and (Medium+) narrow the 3 candidates to 1. */
+function buildWeaponCase(seed, tier, weapons){
+  const rng=makeRNG((seed ^ hashStr("weapon"))>>>0);
+  const pick=arr=>arr[Math.floor(rng()*arr.length)];
+  const tset=w=>new Set(w.traits);
+  const distinct=(a,b)=>{ const A=tset(a),B=tset(b); if(A.size!==B.size) return true; for(const t of A) if(!B.has(t)) return true; return false; };
+  const trueW=pick(weapons);
+  const plantChance = tier==="extreme"?0.7 : tier==="hard"?0.45 : 0;
+  const planted = rng() < plantChance;
+  let scene=trueW;
+  if(planted){ const decoys=weapons.filter(w=>w.slug!==trueW.slug && distinct(w,trueW)); if(decoys.length) scene=pick(decoys); }
+  const cand=[trueW]; if(scene.slug!==trueW.slug) cand.push(scene);
+  const pool=shuffle(rng, weapons.filter(w=>!cand.some(c=>c.slug===w.slug) && distinct(w,trueW)));
+  for(const w of pool){ if(cand.length>=3) break; cand.push(w); }
+  shuffle(rng,cand);
+  const clues=[];
+  if(tier!=="easy"){
+    for(const c of cand){ if(c.slug===trueW.slug) continue;
+      if(clues.some(cl=> tset(c).has(cl.trait)!==cl.has )) continue;     // already rejected by an existing clue
+      const tT=tset(trueW), tC=tset(c); let chosen=null;
+      for(const t of tT) if(!tC.has(t)){ chosen={trait:t, has:true}; break; }   // confirm a trait the true weapon has, c lacks
+      if(!chosen) for(const t of tC) if(!tT.has(t)){ chosen={trait:t, has:false}; break; }   // reject a trait c has, the true weapon lacks
+      if(chosen) clues.push(chosen);
+    }
+  }
+  return { trueWeapon:trueW.slug, sceneObject:scene.slug, candidates:cand.map(w=>w.slug), clues, planted };
+}
+/* MOTIVE clues: assert the killer's motive tag (1, or 2 on Hard/Extreme). With 3 distinct-tag
+   motive options presented, these TRUE clues narrow the options to exactly the killer's. */
+function buildMotiveClues(seed, killerTag, tier){
+  const n=(tier==="hard"||tier==="extreme")?2:1, out=[];
+  for(let i=0;i<n;i++) out.push({tag:killerTag, idx:i});
+  return out;
+}
+
+GLOBAL.CludokuEngine = {
+  makeRNG, hashStr, TIERS, generateCase, parseSeed, caseCode,
+  isValidFull, completionsOf, makePred, boxOf, rcOfBox, cellOfValInBox, selfTest,
+  buildWeaponCase, buildMotiveClues,
+};
+})(typeof window!=="undefined" ? window : globalThis);
+</script>
+
+<!-- ====================================================================
+     THEME + RENDER  — the swappable story/art layer. Engine emits structured
+     clues; this maps suspect/room/weapon proper nouns and renders clue English.
+     New theme packs = new entries in CLUDOKU_THEMES.
+     ==================================================================== -->
+<script id="cludoku-theme">
+(function(GLOBAL){
+"use strict";
+
+const MANOR = {
+  id:"manor", name:"Blackwood Manor (Classic Whodunit)", place:"Blackwood Manor",
+  // each suspect carries a `role` slug -> ../assets/themes/manor/suspects/suspect-<role>.png
+  suspects:[
+    {role:"colonel",     L:"A", name:"The Colonel",     color:"#D4A017", gender:"male",   mtag:"secret",      motive:"a buried war secret"},
+    {role:"widow",       L:"B", name:"The Widow",       color:"#7D3C98", gender:"female", mtag:"inheritance", motive:"a contested inheritance"},
+    {role:"butler",      L:"C", name:"The Butler",      color:"#5D6D7E", gender:"male",   mtag:"revenge",     motive:"years of unpaid loyalty"},
+    {role:"chef",        L:"D", name:"The Chef",        color:"#C0392B", gender:"male",   mtag:"reputation",  motive:"a stolen recipe"},
+    {role:"professor",   L:"E", name:"The Professor",   color:"#1E8449", gender:"male",   mtag:"reputation",  motive:"a discredited theory"},
+    {role:"heiress",     L:"F", name:"The Heiress",     color:"#C2407A", gender:"female", mtag:"inheritance", motive:"a cut from the will"},
+    {role:"gardener",    L:"G", name:"The Gardener",    color:"#D86A1E", gender:"female", mtag:"revenge",     motive:"a dismissed grievance"},
+    {role:"captain",     L:"H", name:"The Captain",     color:"#2471A3", gender:"male",   mtag:"revenge",     motive:"a mutinous grudge"},
+    {role:"doctor",      L:"I", name:"The Doctor",      color:"#17A2A2", gender:"female", mtag:"secret",      motive:"a malpractice cover-up"},
+    {role:"actress",     L:"J", name:"The Actress",     color:"#B03060", gender:"female", mtag:"reputation",  motive:"a ruined reputation"},
+    {role:"inspector",   L:"K", name:"The Inspector",   color:"#3A4250", gender:"male",   mtag:"secret",      motive:"a case gone wrong"},
+    {role:"maid",        L:"L", name:"The Maid",        color:"#4FA3D1", gender:"female", mtag:"money",       motive:"a withheld wage"},
+    {role:"heir",        L:"M", name:"The Heir",        color:"#7A8B3C", gender:"male",   mtag:"inheritance", motive:"an impatient fortune"},
+    {role:"magician",    L:"N", name:"The Magician",    color:"#3D348B", gender:"male",   mtag:"reputation",  motive:"an exposed trick"},
+    {role:"antiquarian", L:"O", name:"The Antiquarian", color:"#9C6B30", gender:"male",   mtag:"money",       motive:"a priceless forgery"},
+    {role:"nurse",       L:"P", name:"The Nurse",       color:"#D98C9A", gender:"female", mtag:"secret",      motive:"a fatal prescription"},
+  ],
+  victims:["Lord Blackwood","the Dowager Countess","Sir Hugh Pennington","the family solicitor","old Mr. Ashford"],
+  // each weapon: `slug` -> ../assets/themes/manor/weapons/weapon-<slug>.png; `traits` drive the
+  // [WEAPON] confirm/reject clues. Trait sets are kept distinct so any pair is distinguishable.
+  weapons:[
+    {n:"the kitchen knife", slug:"knife",      traits:["sharp","narrow"]},
+    {n:"the candlestick",   slug:"candlestick",traits:["heavy","blunt"]},
+    {n:"the revolver",      slug:"revolver",   traits:["firearm"]},
+    {n:"the heavy rope",    slug:"rope",       traits:["ligature"]},
+    {n:"the wrench",        slug:"wrench",      traits:["heavy","metal"]},
+    {n:"a vial of poison",  slug:"poison",     traits:["poison"]},
+    {n:"the lead pipe",     slug:"pipe",       traits:["heavy","metal","long"]},
+    {n:"the fireplace poker",slug:"poker",     traits:["sharp","metal","long"]},
+    {n:"the cast-iron pan", slug:"pan",        traits:["heavy","broad"]},
+    {n:"the letter opener", slug:"letteropener",traits:["sharp","narrow","small"]},
+    {n:"the rolling pin",   slug:"rollingpin", traits:["heavy","wood"]},
+    {n:"the garden shears", slug:"shears",     traits:["sharp","metal"]},
+  ],
+  // [WEAPON] clue templates per trait: confirm (weapon HAD the trait) / reject (it did NOT)
+  weaponClues:{
+    sharp:{yes:"The fatal wound was clean and sharp-edged.", no:"It was no cutting blade — the skin wasn't sliced."},
+    narrow:{yes:"The wound was narrow and deep.", no:"The wound was far too broad for any slender blade."},
+    small:{yes:"Only a small, slim implement could have left that mark.", no:"No small pocket-sized object did this."},
+    heavy:{yes:"The blow fell with the weight of something heavy.", no:"There was little force — nothing heavy was swung."},
+    blunt:{yes:"It was unmistakable blunt-force trauma.", no:"There was no blunt impact at all."},
+    metal:{yes:"Flecks of metal were left in the wound.", no:"No trace of metal was found on the body."},
+    long:{yes:"The angle suggests a long-handled object.", no:"The killer struck up close — nothing long-reached."},
+    broad:{yes:"A broad, flat surface delivered the blow.", no:"The bruise was not broad or flat."},
+    wood:{yes:"Splinters of wood were recovered from the scene.", no:"Not a single wood fragment was present."},
+    firearm:{yes:"A single gunshot rang out that night.", no:"No shot was fired — the house stayed silent."},
+    ligature:{yes:"There were ligature marks around the throat.", no:"There were no marks of strangulation."},
+    poison:{yes:"Toxicology confirms a dose of poison.", no:"The victim showed no signs of poison whatsoever."},
+  },
+  // [MOTIVE] clue templates per motive tag (each suspect carries an `mtag`)
+  motiveClues:{
+    money:["This killing was about money — someone stood to gain.","Follow the coin: greed was the only motive that fits."],
+    inheritance:["A name in a will was worth killing for here.","Someone's share of the estate drove this."],
+    secret:["The killer was burying a secret that would have ruined them.","This was done to keep a damning truth from coming out."],
+    revenge:["This was personal — an old grudge finally repaid.","Someone settled a long-nursed score."],
+    reputation:["Someone killed to protect their good name.","A reputation was on the line — and worth a life."],
+  },
+  times:["just before midnight","at the stroke of nine","during the thunderstorm","at supper","as the clock struck two"],
+  // victim cast — a SEPARATE roster from the playable suspects (never placeable, never a
+  // candidate; only "the body" of a case). Eligible victims are those whose themes[]
+  // intersect victimThemes; selection is weighted by overlap. Art lives in /victims/.
+  victimThemes:["manor","noir","general"],
+  victims:[
+    {slug:"lord-ambrose-vane",name:"Lord Ambrose Vane",gender:"male",age:"elderly",class:"noble",vibe:"arrogant",themes:["manor","noir","general"]},
+    {slug:"dowager-clarissa-vane",name:"Dowager Clarissa Vane",gender:"female",age:"elderly",class:"noble",vibe:"stern",themes:["manor","general"]},
+    {slug:"reginald-thorne",name:"Reginald Thorne",gender:"male",age:"middle-aged",class:"wealthy",vibe:"powerful",themes:["noir","manor","general"]},
+    {slug:"vivian-thorne",name:"Vivian Thorne",gender:"female",age:"middle-aged",class:"wealthy",vibe:"refined",themes:["manor","noir","general"]},
+    {slug:"old-mr-pemberton",name:"Old Mr. Pemberton",gender:"male",age:"elderly",class:"merchant",vibe:"bitter",themes:["manor","general"]},
+    {slug:"agnes-holloway",name:"Agnes Holloway",gender:"female",age:"elderly",class:"servant",vibe:"warm",themes:["manor","general"]},
+    {slug:"butler-crispin",name:"Butler Crispin",gender:"male",age:"middle-aged",class:"servant",vibe:"secretive",themes:["manor","noir","general"]},
+    {slug:"nanny-edith-frost",name:"Nanny Edith Frost",gender:"female",age:"elderly",class:"servant",vibe:"fragile",themes:["manor","general"]},
+    {slug:"doctor-silas-marsh",name:"Doctor Silas Marsh",gender:"male",age:"middle-aged",class:"professional",vibe:"mysterious",themes:["noir","manor","general"]},
+    {slug:"nurse-beatrice-lowe",name:"Nurse Beatrice Lowe",gender:"female",age:"middle-aged",class:"professional",vibe:"nervous",themes:["noir","general"]},
+    {slug:"barrister-quill",name:"Barrister Quill",gender:"male",age:"elderly",class:"professional",vibe:"stern",themes:["noir","manor","general"]},
+    {slug:"madam-isolde-fenn",name:"Madam Isolde Fenn",gender:"female",age:"middle-aged",class:"wealthy",vibe:"mysterious",themes:["noir","general"]},
+    {slug:"professor-aldous-finch",name:"Professor Aldous Finch",gender:"male",age:"elderly",class:"scholar",vibe:"absent-minded",themes:["manor","general"]},
+    {slug:"archivist-cordelia-wren",name:"Archivist Cordelia Wren",gender:"female",age:"middle-aged",class:"scholar",vibe:"secretive",themes:["manor","noir","general"]},
+    {slug:"colonel-rupert-hayes",name:"Colonel Rupert Hayes",gender:"male",age:"elderly",class:"military",vibe:"powerful",themes:["manor","general"]},
+    {slug:"captain-mira-vance",name:"Captain Mira Vance",gender:"female",age:"middle-aged",class:"military",vibe:"stern",themes:["noir","general"]},
+    {slug:"painter-lucien-roy",name:"Painter Lucien Roy",gender:"male",age:"young",class:"artist",vibe:"mysterious",themes:["noir","general"]},
+    {slug:"chanteuse-delphine",name:"Chanteuse Delphine",gender:"female",age:"young",class:"artist",vibe:"warm",themes:["noir","general"]},
+    {slug:"jeweller-otto-brandt",name:"Jeweller Otto Brandt",gender:"male",age:"middle-aged",class:"merchant",vibe:"nervous",themes:["noir","general"]},
+    {slug:"florist-poppy-meade",name:"Florist Poppy Meade",gender:"female",age:"young",class:"working",vibe:"warm",themes:["general","seasonal"]},
+    {slug:"groundskeeper-mungo",name:"Groundskeeper Mungo",gender:"male",age:"elderly",class:"working",vibe:"gruff",themes:["manor","general"]},
+    {slug:"chambermaid-tilly",name:"Chambermaid Tilly",gender:"female",age:"young",class:"servant",vibe:"nervous",themes:["manor","general"]},
+    {slug:"vicar-edmund-pyke",name:"Vicar Edmund Pyke",gender:"male",age:"elderly",class:"clergy",vibe:"warm",themes:["manor","general"]},
+    {slug:"sister-mary-aldwin",name:"Sister Mary Aldwin",gender:"female",age:"middle-aged",class:"clergy",vibe:"fragile",themes:["medieval","general"]},
+    {slug:"the-drifter-cole",name:"The Drifter Cole",gender:"male",age:"middle-aged",class:"outsider",vibe:"mysterious",themes:["noir","general"]},
+    {slug:"fortune-teller-zara",name:"Fortune-Teller Zara",gender:"female",age:"middle-aged",class:"outsider",vibe:"mysterious",themes:["noir","general"]},
+    {slug:"financier-harlan-cross",name:"Financier Harlan Cross",gender:"male",age:"middle-aged",class:"wealthy",vibe:"arrogant",themes:["noir","general"]},
+    {slug:"heiress-rosalind-day",name:"Heiress Rosalind Day",gender:"female",age:"young",class:"noble",vibe:"refined",themes:["manor","general"]},
+    {slug:"young-master-felix",name:"Young Master Felix",gender:"male",age:"young",class:"noble",vibe:"arrogant",themes:["manor","general"]},
+    {slug:"governess-prudence",name:"Governess Prudence",gender:"female",age:"middle-aged",class:"professional",vibe:"stern",themes:["manor","general"]},
+    {slug:"king-aldric-the-grey",name:"King Aldric the Grey",gender:"male",age:"elderly",class:"noble",vibe:"powerful",themes:["medieval","fantasy"]},
+    {slug:"queen-mother-elspeth",name:"Queen Mother Elspeth",gender:"female",age:"elderly",class:"noble",vibe:"stern",themes:["medieval","fantasy"]},
+    {slug:"court-alchemist-bram",name:"Court Alchemist Bram",gender:"male",age:"middle-aged",class:"scholar",vibe:"secretive",themes:["fantasy","medieval"]},
+    {slug:"the-veiled-oracle",name:"The Veiled Oracle",gender:"female",age:"middle-aged",class:"clergy",vibe:"mysterious",themes:["fantasy"]},
+    {slug:"knight-sir-godfrey",name:"Knight Sir Godfrey",gender:"male",age:"middle-aged",class:"military",vibe:"powerful",themes:["medieval","fantasy"]},
+    {slug:"lady-rowena-of-ash",name:"Lady Rowena of Ash",gender:"female",age:"young",class:"noble",vibe:"refined",themes:["medieval","fantasy"]},
+    {slug:"guildmaster-orrin",name:"Guildmaster Orrin",gender:"male",age:"elderly",class:"merchant",vibe:"bitter",themes:["medieval","general"]},
+    {slug:"hedge-witch-morrow",name:"Hedge-Witch Morrow",gender:"female",age:"elderly",class:"outsider",vibe:"mysterious",themes:["fantasy","seasonal"]},
+    {slug:"senator-gaius-velm",name:"Senator Gaius Velm",gender:"male",age:"elderly",class:"noble",vibe:"arrogant",themes:["roman"]},
+    {slug:"vestal-claudia",name:"Vestal Claudia",gender:"female",age:"young",class:"clergy",vibe:"fragile",themes:["roman"]},
+    {slug:"general-lucius-faro",name:"General Lucius Faro",gender:"male",age:"middle-aged",class:"military",vibe:"powerful",themes:["roman"]},
+    {slug:"matron-octavia",name:"Matron Octavia",gender:"female",age:"middle-aged",class:"wealthy",vibe:"refined",themes:["roman"]},
+    {slug:"station-chief-orlov",name:"Station Chief Orlov",gender:"male",age:"middle-aged",class:"professional",vibe:"stern",themes:["space","futuristic"]},
+    {slug:"navigator-lyra-soon",name:"Navigator Lyra Soon",gender:"female",age:"young",class:"professional",vibe:"nervous",themes:["space","futuristic"]},
+    {slug:"magnate-dex-corvale",name:"Magnate Dex Corvale",gender:"male",age:"middle-aged",class:"wealthy",vibe:"arrogant",themes:["futuristic","noir"]},
+    {slug:"android-curator-vela",name:"Android Curator Vela",gender:"female",age:"middle-aged",class:"professional",vibe:"mysterious",themes:["futuristic","space"]},
+    {slug:"caroler-margaret-yule",name:"Caroler Margaret Yule",gender:"female",age:"middle-aged",class:"working",vibe:"warm",themes:["holiday","seasonal"]},
+    {slug:"orchard-keeper-hazel",name:"Orchard-Keeper Hazel",gender:"female",age:"elderly",class:"working",vibe:"warm",themes:["seasonal","general"]},
+    {slug:"clockmaker-bartleby",name:"Clockmaker Bartleby",gender:"male",age:"elderly",class:"professional",vibe:"absent-minded",themes:["manor","noir","general"]},
+  ],
+  // narrative library (swappable per theme pack). Slots are filled with the case's
+  // procedural facts: {place} {victim} {room} {time} {weapon} {n}. {atmosphere} is flavor.
+  story:{
+    atmosphere:["A thunderstorm","An uneasy hush","A bitter autumn chill","A creeping river fog",
+                "A heavy silence","A single guttering candle"],
+    setup:[
+      "{atmosphere} had settled over {place} when {victim} was found dead {time}.",
+      "The guests had gathered at {place} for the weekend — and {time}, {victim} was found dead.",
+      "{place} keeps its secrets well, but not tonight: {victim} lies dead, discovered {time}.",
+      "What began as a quiet evening at {place} ended with {victim} murdered, {time}.",
+    ],
+    // victim profile — woven from the victim's tags so the body matches the portrait
+    profile:[
+      "{victim} was {victimDesc}, a familiar figure about {place}.",
+      "Those who knew {victim} — {victimDesc} — are still reeling at the news.",
+      "{victim}, {victimDesc}, had lived a life full enough to leave both friends and enemies behind.",
+      "By every account {victim} was {victimDesc}.",
+    ],
+    discovery:[
+      "The body was found in {room}, {weapon} left close at hand.",
+      "{victim} had been struck down in {room} with {weapon}.",
+      "It happened in {room}, and {weapon} was the instrument.",
+      "The scene was {room}; the weapon, {weapon}; the hour, unmistakable.",
+    ],
+    suspects:[
+      "All {n} houseguests had reason to wish it done, and every one claims to have been elsewhere.",
+      "{n} suspects remain beneath this roof, each with a motive and a tidy alibi.",
+      "That leaves {n} suspects — old friends, bitter rivals, and at least one liar.",
+      "Every one of the {n} guests has an alibi. Only one of them is lying.",
+    ],
+    hook:[
+      "Only one alibi will crack. Seat every guest by the evidence to unmask the killer.",
+      "Read the evidence, place each suspect, and the murderer will have nowhere left to hide.",
+      "Work the room. When every guest is in their place, only the truth will be left standing.",
+      "Follow the clues, fill every room, and the one whose story fails is your culprit.",
+    ],
+    // newspaper headlines for the payoff screen. {KILLER} {VICTIM} {PLACE} are upper-cased.
+    headlines:[
+      "{KILLER} GUILTY IN {PLACE} SLAYING",
+      "ARREST AT {PLACE}: {KILLER} UNMASKED",
+      "{PLACE} MYSTERY SOLVED — {KILLER} TO STAND TRIAL",
+      "{KILLER} EXPOSED IN {VICTIM} CASE",
+      "JUSTICE AT {PLACE}: {KILLER} NAMED CULPRIT",
+      "THE NET CLOSES: {KILLER} HELD FOR {VICTIM} MURDER",
+    ],
+  },
+  // rooms indexed by box id (need >=9). slug -> room floor png; icon -> object png on the room tag
+  rooms:[
+    {name:"the Study", slug:"study", icon:"bookshelf", hue:35},
+    {name:"the Library", slug:"library", icon:"lamp", hue:48},
+    {name:"the Conservatory", slug:"conservatory", icon:"plant", hue:140},
+    {name:"the Billiard Room", slug:"billiard", icon:"chair", hue:175},
+    {name:"the Grand Hall", slug:"hall", icon:"rug", hue:0},
+    {name:"the Lounge", slug:"lounge", icon:"tv", hue:265},
+    {name:"the Kitchen", slug:"kitchen", icon:"table", hue:200},
+    {name:"the Bedroom", slug:"bedroom", icon:"bed", hue:320},
+    {name:"the Dining Room", slug:"dining", icon:"painting", hue:20},
+  ],
+  // token disc/ring styling (theme-aware; a pack can restyle the whole token system here)
+  tokenStyle:{
+    disc:"#efe6d0",                 // disc fill behind transparent cutouts
+    // curated high-contrast ring palette — used to keep all active tokens distinct
+    ringPalette:["#E6194B","#3CB44B","#4363D8","#F58231","#911EB4","#1FBFC4",
+                 "#F032E6","#E6C619","#9A6324","#42B0A0","#B03060","#5D6D7E",
+                 "#7A8B3C","#2471A3","#D86A1E"],
+  },
+};
+
+// structural vocabulary by board shape (bh x bw box). Falls back gracefully.
+// Only references things visible on the board: grid sub-positions, rows, columns,
+// 3x3-region bands, and relative positions. No doors/walls/windows/hearths.
+const VOCAB = {
+  "3x3":{
+    spots:["the top-left","the top-middle","the top-right",
+           "the middle-left","the centre","the middle-right",
+           "the bottom-left","the bottom-middle","the bottom-right"],
+    rowBands:["the top row","the middle row","the bottom row"],
+    colBands:["the left column","the centre column","the right column"],
+    colWings:["the west wing","the central rooms","the east wing"],
+    rowWings:["the upper floor","the main floor","the lower floor"],
+  },
+  "2x3":{
+    spots:["the top-left","the top-middle","the top-right",
+           "the bottom-left","the bottom-middle","the bottom-right"],
+    rowBands:["the top row","the bottom row"],
+    colBands:["the left column","the centre column","the right column"],
+    colWings:["the west wing","the east wing"],
+    rowWings:["the top floor","the middle floor","the lower floor"],
+  },
+};
+const DIRWORD=(dr,dc)=> dr===-1?"directly above": dr===1?"directly below": dc===-1?"directly to the left of":"directly to the right of";
+
+function vocab(cfg){ return VOCAB[cfg.bh+"x"+cfg.bw] || VOCAB["3x3"]; }
+/* per-case playable cast: value v (1..N) maps to theme.suspects[CASE_CAST[v-1]] when a cast
+   is set (a seeded random N-subset of the 16-role roster), else the first N roles. This remaps
+   ALL display (board, tray, clues, accusation, reveal) since everything goes through sName. */
+let CASE_CAST=null;
+function setCast(arr){ CASE_CAST = (arr && arr.length) ? arr.slice() : null; }
+function sName(theme,v){ const i = (CASE_CAST && CASE_CAST[v-1]!==undefined) ? CASE_CAST[v-1] : (v-1); return theme.suspects[i]; }
+function roomName(theme,box){ return theme.rooms[box % theme.rooms.length].name; }
+function spotName(cfg,theme,cell){
+  const N=cfg.N, r=Math.floor(cell/N), c=cell%N;
+  const E=GLOBAL.CludokuEngine; const box=E.boxOf(cfg,r,c); const {r0,c0}=E.rcOfBox(cfg,box);
+  const sr=r-r0, sc=c-c0; const V=vocab(cfg);
+  return {room:roomName(theme,box), spot:V.spots[sr*cfg.bw+sc] || "a spot"};
+}
+
+/* render a structured clue to English */
+let CASE_OBJECTS=[];                       // box -> object landmark cell, for "next to the X" clue text
+function setCaseObjects(arr){ CASE_OBJECTS=Array.isArray(arr)?arr:[]; }
+const OBJ_NAME={tv:"television"};          // slug -> readable; default = the slug itself
+function objName(slug){ return OBJ_NAME[slug]||slug; }
+function renderClue(cfg,theme,clue){
+  const V=vocab(cfg), p=clue.p, S=v=>sName(theme,v).name;
+  const list=arr=>arr.length<=1?arr[0]:arr.slice(0,-1).join(", ")+" and "+arr[arr.length-1];
+  switch(clue.type){
+    case "sighting":{ const x=spotName(cfg,theme,p.cell);
+      // if the sighted cell sits beside its room's object, reference the object landmark
+      const E=GLOBAL.CludokuEngine, N=cfg.N, r=Math.floor(p.cell/N), c=p.cell%N, box=E.boxOf(cfg,r,c), oc=CASE_OBJECTS[box];
+      if(oc!=null){ const dr=r-Math.floor(oc/N), dc=c-(oc%N);
+        if(Math.abs(dr)+Math.abs(dc)===1)
+          return `A witness places <b>${S(p.val)}</b> ${DIRWORD(dr,dc)} the ${objName(theme.rooms[box%theme.rooms.length].icon)} in ${x.room}.`; }
+      return `A witness places <b>${S(p.val)}</b> in ${x.spot} of ${x.room}.`; }
+    case "exclusion":{ const x=spotName(cfg,theme,p.cell);
+      return `Whoever stood in ${x.spot} of ${x.room}, it was <b>not</b> ${S(p.val)}.`; }
+    case "position":{ const room=roomName(theme,p.box);
+      const band=(p.axis==="row"?V.rowBands:V.colBands)[p.band]||"that side";
+      return `In ${room}, <b>${S(p.val)}</b> kept to ${band}.`; }
+    case "relative":{ const room=roomName(theme,p.box);
+      return `In ${room}, <b>${S(p.val)}</b> stood ${DIRWORD(p.dr,p.dc)} <b>${S(p.val2)}</b>.`; }
+    case "adjacency":{ const room=roomName(theme,p.box);
+      return p.adjacent ? `In ${room}, <b>${S(p.val)}</b> and <b>${S(p.val2)}</b> stood side by side.`
+                        : `In ${room}, <b>${S(p.val)}</b> and <b>${S(p.val2)}</b> were never side by side.`; }
+    case "count":{ const wings=(p.region==="colband"?V.colWings:V.rowWings);
+      const where=wings[p.band]||"that part of the house";
+      return `Of ${list(p.vals.map(S))}, exactly <b>${p.k}</b> ${p.k===1?"was":"were"} seen in ${where}.`; }
+  }
+  return "An indecipherable note.";
+}
+const TYPE_LABEL={sighting:"sighting",exclusion:"exclusion",position:"position",relative:"relative",adjacency:"adjacency",count:"count"};
+/* evidence type chips: map each clue's logical type to a player-facing TAG */
+const EV_TAG={sighting:"SIGHTING", exclusion:"POSITION", position:"POSITION", relative:"RELATIVE",
+  adjacency:"RELATIVE", count:"POSITION", weapon:"WEAPON", motive:"MOTIVE"};
+function weaponBySlug(theme, slug){ return (theme.weapons||[]).find(w=>w.slug===slug) || {n:slug, slug, traits:[]}; }
+function renderWeaponClue(theme, clue){ const t=(theme.weaponClues||{})[clue.trait]; if(!t) return "The weapon left a telltale mark.";
+  return clue.has ? t.yes : t.no; }
+function renderMotiveClue(theme, clue){ const arr=(theme.motiveClues||{})[clue.tag]; if(!arr||!arr.length) return "The motive points one way only.";
+  return arr[(clue.idx||0)%arr.length]; }
+
+/* build a short cozy-mystery intro from the theme's story library + case facts.
+   facts = {place, victim, room, time, weapon, n}. Deterministic given rng (seed). */
+function renderStory(theme, facts, rng){
+  const S=theme.story; if(!S) return "";
+  const pick=arr=>arr[Math.floor(rng()*arr.length)];
+  // caller may pin the atmosphere (so the victim mood-nudge and narrative agree); else pick one
+  const atmosphere=facts.atmosphere!=null ? facts.atmosphere : pick(S.atmosphere||[""]);
+  const data=Object.assign({}, facts, {atmosphere});
+  const fill=s=>s.replace(/\{(\w+)\}/g,(m,k)=> data[k]!==undefined?data[k]:m);
+  return [S.setup, S.profile, S.discovery, S.suspects, S.hook]
+    .filter(Boolean).map(slot=>fill(pick(slot))).join(" ");
+}
+
+GLOBAL.CLUDOKU_THEMES={manor:MANOR};
+GLOBAL.CludokuSkin={ renderClue, renderStory, roomName, spotName, sName, setCast, vocab, TYPE_LABEL,
+  EV_TAG, weaponBySlug, renderWeaponClue, renderMotiveClue,
+  setCaseObjects, objName, pick:(rng,arr)=>arr[Math.floor(rng()*arr.length)] };
+})(typeof window!=="undefined" ? window : globalThis);
+</script>
+
+<!-- ====================================================================
+     UI / GAME
+     ==================================================================== -->
+<script id="cludoku-ui">
+(function(){
+"use strict";
+if(typeof document==="undefined") return;
+/* ---- active theme + asset paths (data-driven; swap ACTIVE_THEME for a pack) ---- */
+const ACTIVE_THEME="manor";
+const THEME=window.CLUDOKU_THEMES[ACTIVE_THEME];
+const E=window.CludokuEngine, Skin=window.CludokuSkin;
+const tAsset=(kind,file)=>`../assets/themes/${ACTIVE_THEME}/${kind}/${file}`;
+const uiAsset=file=>`../assets/ui/${file}`;
+/* graceful fallback: any <img> whose file is missing simply hides (no broken icon),
+   leaving the CSS/placeholder underneath. background-image assets fall back to their
+   background-color automatically, so the board never breaks on a partial asset set. */
+document.addEventListener("error",e=>{ const t=e.target;
+  if(t && t.tagName==="IMG"){ t.style.visibility="hidden"; } }, true);
+/* set an <img>'s src only once we know the file loads, so a missing asset never becomes a
+   broken image — it just leaves the .img-missing CSS placeholder showing. */
+function loadOptionalImg(img, src){
+  if(!img) return;
+  const probe=new Image();
+  probe.onload=()=>{ img.src=src; img.style.visibility="visible"; img.classList.remove("img-missing"); };
+  probe.onerror=()=>{ img.removeAttribute("src"); img.classList.add("img-missing"); };
+  probe.src=src;
+}
+const $=id=>document.getElementById(id);
+const boardEl=$("board"), trayEl=$("tray");
+const caseMQ=window.matchMedia("(max-width:700px)");   // "mobile" — game-first screen + case-file overlay + bolder footprints
+
+let C=null, cfg=null, board=null, given=null, sel=-1, selSuspect=-1;
+let undoStack=[], redoStack=[], hintsUsed=0, solved=false, story=null, cluesUsed=new Set();
+let accuseCulprit=-1, accuseWeapon="", guessesLeft=3, clueStep=0, hintLevel=0, hintTarget=-1;
+const MAX_GUESSES=3;
+let notesMode=false, candidates=[];   // candidates[i] = Set of suspect values pencilled into cell i
+
+/* ---- persistence (localStorage; runs locally) ---- */
+const LS={
+  get(k,d){ try{ const v=localStorage.getItem("casedoku."+k); return v?JSON.parse(v):d; }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem("casedoku."+k, JSON.stringify(v)); }catch(e){} }
+};
+let settings=LS.get("settings",{atmosphere:"low"});   // Focus(low) by default
+if(settings.motion===undefined) settings.motion=true;   // animations ON by default
+if(settings.sound===undefined) settings.sound=false;    // sound effects OFF by default
+if(settings.music===undefined) settings.music=true;     // background music ON by default
+/* ---- flavor labels ---- */
+const TIER_FLAVOR={easy:"Routine Case",medium:"Troubling Case",hard:"Grim Case",extreme:"Cold Case"};
+function cap(s){ return s? s.charAt(0).toUpperCase()+s.slice(1) : s; }
+function stripTags(h){ return String(h).replace(/<[^>]*>/g,""); }
+function nowStr(){ try{ return new Date().toLocaleDateString(); }catch(e){ return ""; } }
+
+function shade(hex,amt){ const n=parseInt(hex.slice(1),16);
+  let r=Math.max(0,Math.min(255,(n>>16)+amt)), g=Math.max(0,Math.min(255,((n>>8)&255)+amt)), b=Math.max(0,Math.min(255,(n&255)+amt));
+  return `#${(r<<16|g<<8|b).toString(16).padStart(6,"0")}`; }
+
+/* ---- per-case token ring assignment (theme-aware, guaranteed-distinct) ---- */
+const TOKENCFG=THEME.tokenStyle||{};
+const DISC_CREAM=TOKENCFG.disc||"#efe6d0";
+const RING_PALETTE=(TOKENCFG.ringPalette&&TOKENCFG.ringPalette.length)?TOKENCFG.ringPalette:
+  ["#E6194B","#3CB44B","#4363D8","#F58231","#911EB4","#1FBFC4","#F032E6","#E6C619",
+   "#9A6324","#42B0A0","#B03060","#5D6D7E","#7A8B3C","#2471A3","#D86A1E"];
+let RING=[];                                   // per-case: suspect value (1..N) -> ring colour
+function _rgb(h){ h=h.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
+function _cdist(a,b){ const x=_rgb(a),y=_rgb(b); return Math.hypot(x[0]-y[0],x[1]-y[1],x[2]-y[2]); }
+function assignRings(N){
+  const CLOSE=78, used=[];
+  for(let i=0;i<N;i++){
+    const sig=THEME.suspects[i].color;
+    let pick = used.some(u=>_cdist(u,sig)<CLOSE) ? null : sig;        // keep signature when it stays distinct
+    if(!pick){                                                        // else take the farthest palette colour
+      let best=null,bestMin=-1;
+      for(const c of RING_PALETTE){
+        if(used.some(u=>_cdist(u,c)<14)) continue;                    // skip already-used
+        const m=used.length ? Math.min(...used.map(u=>_cdist(u,c))) : 999;
+        if(m>bestMin){ bestMin=m; best=c; }
+      }
+      pick = best || sig;
+    }
+    used.push(pick);
+  }
+  return used;
+}
+
+/* shared suspect-token builder — board, tray and reveal use the SAME disc+ring */
+function makeToken(val, variant){
+  const s=Skin.sName(THEME,val), t=document.createElement("div");
+  t.className="token"+(variant?(" "+variant):"");
+  t.style.setProperty("--ring", RING[val-1] || s.color);
+  t.style.setProperty("--disc", s.color);                            // fallback disc fill (lettered token)
+  const portrait=document.createElement("div"); portrait.className="tportrait";
+  const letter=document.createElement("span"); letter.className="tletter"; letter.textContent=s.L;
+  const url=tAsset('suspects','suspect-'+s.role+'.png');
+  t.classList.add("has-img"); portrait.style.backgroundImage=`url("${url}")`;
+  const probe=new Image();                                           // graceful fallback if file is missing
+  probe.onerror=()=>{ t.classList.remove("has-img"); };
+  probe.src=url;
+  t.appendChild(portrait); t.appendChild(letter);
+  return t;
+}
+
+/* ---- victim pool: a separate cast, never placeable (only "the body" of a case) ---- */
+const VICTIM_RECENT_KEY="recentVictims", VICTIM_NOREPEAT=8;
+// readable class nouns + atmosphere→vibe affinities for descriptor text and the weight nudge
+const VICTIM_CLASS_NOUN={noble:"aristocrat",wealthy:"socialite",merchant:"merchant",servant:"household servant",
+  professional:"professional",scholar:"scholar",military:"officer",artist:"artist",working:"tradesperson",
+  clergy:"cleric",outsider:"outsider"};
+const ATMO_VIBE={"A thunderstorm":"powerful","An uneasy hush":"secretive","A bitter autumn chill":"bitter",
+  "A creeping river fog":"mysterious","A heavy silence":"stern","A single guttering candle":"fragile"};
+const aOrAn=w=>/^[aeiou]/i.test(w)?"an":"a";
+function victimDescriptor(v){
+  const cls=VICTIM_CLASS_NOUN[v.class]||v.class, lead=`${v.vibe}, ${v.age}`;
+  return `${aOrAn(v.vibe)} ${lead} ${cls}`;        // e.g. "an arrogant, elderly aristocrat"
+}
+// eligible = victims whose themes[] intersect the theme's victimThemes; weight = overlap count
+function eligibleVictims(theme){
+  const set=new Set(theme.victimThemes||[ACTIVE_THEME]), out=[];
+  for(const v of (theme.victims||[])){ let m=0; for(const t of v.themes) if(set.has(t)) m++; if(m>0) out.push({v,matches:m}); }
+  return out;
+}
+// weighted tagged pick, deterministic from the case rng. excludes the last VICTIM_NOREPEAT
+// victims used in OTHER cases (different seed) — so re-loading the SAME seed stays deterministic.
+function pickVictim(theme, seed, rng, atmosphere){
+  const elig=eligibleVictims(theme); if(!elig.length) return null;
+  const recent=LS.get(VICTIM_RECENT_KEY,[]);
+  const excl=new Set(recent.filter(e=>e&&e.seed!==seed).map(e=>e.slug));
+  let pool=elig.filter(e=>!excl.has(e.v.slug)); if(!pool.length) pool=elig;   // exhausted -> allow repeats
+  const moodVibe=ATMO_VIBE[atmosphere];
+  const weighted=pool.map(e=>({v:e.v, w:e.matches + (moodVibe && e.v.vibe===moodVibe ? 1 : 0)}));
+  const total=weighted.reduce((s,x)=>s+x.w,0);
+  let r=rng()*total, chosen=weighted[weighted.length-1];
+  for(const x of weighted){ if((r-=x.w)<0){ chosen=x; break; } }
+  return chosen.v;
+}
+function recordVictim(slug, seed){
+  let recent=LS.get(VICTIM_RECENT_KEY,[]).filter(e=>e&&e.slug!==slug);
+  recent.push({slug, seed}); if(recent.length>VICTIM_NOREPEAT) recent=recent.slice(recent.length-VICTIM_NOREPEAT);
+  LS.set(VICTIM_RECENT_KEY, recent);
+}
+
+function dressStory(){
+  const rng=E.makeRNG((C.seed ^ E.hashStr("story"))>>>0);
+  const pick=arr=>arr[Math.floor(rng()*arr.length)];
+  const killer=Skin.sName(THEME,C.killer);
+  const sceneRoom=Skin.roomName(THEME, E.boxOf(cfg, Math.floor(C.murderCell/cfg.N), C.murderCell%cfg.N));
+  // killer's false alibi: claim a different room
+  let alibiRoom=sceneRoom; for(let t=0;t<8 && alibiRoom===sceneRoom;t++) alibiRoom=Skin.roomName(THEME, Math.floor(rng()*Math.min(cfg.N,THEME.rooms.length)));
+  // pin the atmosphere first so it can nudge the victim mood AND the narrative agree
+  const atmosphere=pick((THEME.story&&THEME.story.atmosphere)||[""]);
+  // victim = a tagged member of the separate victim cast (the body) — never a placeable suspect
+  const seedKey=C.seed>>>0;
+  const vsel=pickVictim(THEME, seedKey, rng, atmosphere) || (THEME.victims&&THEME.victims[0]) || {slug:"",name:"the victim",age:"",class:"",vibe:""};
+  if(vsel.slug) recordVictim(vsel.slug, seedKey);
+  // --- WEAPON deduction (engine, seeded): true weapon, scene object (maybe planted), 3 candidates, [WEAPON] clues ---
+  const wcase=E.buildWeaponCase(C.seed, C.tier, THEME.weapons);
+  const wName=slug=>Skin.weaponBySlug(THEME,slug).n;
+  // --- MOTIVE: clue(s) of the killer's motive tag + 3 motive options (killer + 2 distinct-tag distractors) ---
+  const killerTag=killer.mtag||"secret";
+  const motiveClues=E.buildMotiveClues(C.seed, killerTag, C.tier);
+  const mrng=E.makeRNG((C.seed ^ E.hashStr("motiveopt"))>>>0);
+  const others=[]; for(let v=1;v<=cfg.N;v++){ if(v===C.killer) continue; const su=Skin.sName(THEME,v); others.push({mtag:su.mtag, motive:su.motive}); }
+  for(let i=others.length-1;i>0;i--){ const j=Math.floor(mrng()*(i+1)); [others[i],others[j]]=[others[j],others[i]]; }
+  const dist=[], usedTags=new Set([killerTag]);
+  for(const o of others){ if(dist.length>=2) break; if(!usedTags.has(o.mtag) && !dist.some(d=>d.motive===o.motive)){ dist.push(o); usedTags.add(o.mtag); } }
+  for(const o of others){ if(dist.length>=2) break; if(!dist.some(d=>d.motive===o.motive) && o.motive!==killer.motive) dist.push(o); }   // fallback fill
+  const motiveOptions=[{motive:killer.motive, correct:true}, ...dist.map(d=>({motive:d.motive, correct:false}))];
+  for(let i=motiveOptions.length-1;i>0;i--){ const j=Math.floor(mrng()*(i+1)); [motiveOptions[i],motiveOptions[j]]=[motiveOptions[j],motiveOptions[i]]; }
+
+  story={ victim:vsel.name, victimDisplay:vsel.name, victimSlug:vsel.slug, victimTags:vsel,
+    sceneObject:wcase.sceneObject, trueWeapon:wcase.trueWeapon, weaponCandidates:wcase.candidates,
+    weaponClues:wcase.clues, weaponPlanted:wcase.planted, weaponMarks:{},
+    motiveClues, motiveOptions, killerTag,
+    time:pick(THEME.times), atmosphere, sceneRoom, alibiRoom, killer, caseNo:100+(C.seed%900) };
+  wcase.candidates.forEach(s=>story.weaponMarks[s]="possible");   // per-case player marks (not persisted)
+  story.title=`The Murder of ${vsel.name}`;
+  // unified evidence list: position clues (solve WHO) + [WEAPON] (solve WHAT) + [MOTIVE] (solve WHY), each tagged
+  story.evidence=[];
+  C.clues.forEach((cl,i)=>story.evidence.push({ tag:Skin.EV_TAG[cl.type]||cl.type.toUpperCase(),
+    text:Skin.renderClue(cfg,THEME,cl), key:cl.key, proof:C.proofClues.includes(i), kind:"pos" }));
+  story.weaponClues.forEach(wc=>story.evidence.push({ tag:"WEAPON", text:Skin.renderWeaponClue(THEME,wc), key:true, proof:false, kind:"weapon" }));
+  story.motiveClues.forEach(mc=>story.evidence.push({ tag:"MOTIVE", text:Skin.renderMotiveClue(THEME,mc), key:true, proof:false, kind:"motive" }));
+  // cozy-mystery narrative intro (own rng stream); names the SCENE object (what was found by the body)
+  const srng=E.makeRNG((C.seed ^ E.hashStr("narrative"))>>>0);
+  story.narrative=Skin.renderStory(THEME, {
+    place:THEME.place||"the manor", victim:story.victim, victimDesc:vsel.slug?victimDescriptor(vsel):"",
+    room:story.sceneRoom, time:story.time, weapon:wName(wcase.sceneObject), n:cfg.N, atmosphere }, srng);
+}
+
+/* seeded playable cast: a random N-subset of the 16-role roster, deterministic from the case
+   seed (so case codes reproduce the same cast), guaranteed to contain >=2 women and >=2 men. */
+function pickCaseCast(seed, N){
+  const rng=E.makeRNG((seed ^ E.hashStr("cast"))>>>0);
+  const shuf=a=>{ for(let i=a.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+  const all=[...Array(THEME.suspects.length).keys()];
+  const fem=shuf(all.filter(i=>THEME.suspects[i].gender==="female"));
+  const mal=shuf(all.filter(i=>THEME.suspects[i].gender==="male"));
+  const cast=[fem[0],fem[1],mal[0],mal[1]];                 // guarantee >=2 women and >=2 men
+  const used=new Set(cast), rest=shuf(all.filter(i=>!used.has(i)));
+  for(let k=0; cast.length<N; k++) cast.push(rest[k]);
+  return shuf(cast);                                        // randomize which value maps to whom
+}
+function startCase(opts){
+  C=E.generateCase(opts); cfg=C.cfg;
+  Skin.setCast(pickCaseCast(C.seed, cfg.N));                // shuffle the playable cast for this case
+  board=C.givens.slice(); given=C.givens.map(v=>v!==0);
+  sel=-1; selSuspect=-1; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false; cluesUsed=new Set();
+  accuseCulprit=-1; guessesLeft=MAX_GUESSES; hintLevel=0; hintTarget=-1; updateGuessPill();
+  candidates=Array.from({length:cfg.N*cfg.N},()=>new Set());
+  notesMode=false; applyNotesMode();
+  const as=$("assistant"); if(as) as.hidden=true;
+  RING=assignRings(cfg.N);                                    // distinct ring colour per active suspect
+  document.documentElement.style.setProperty("--disc-cream",DISC_CREAM);
+  Skin.setCaseObjects(C.objectCells);                         // object landmarks for "next to the X" clues
+  dressStory();
+  setVar("--cell-max", cfg.N<=6 ? "72px" : "62px"); setVar("--ncols", cfg.N);  // CSS derives --cell (mobile fits to width)
+  boardEl.style.gridTemplateColumns=`repeat(${cfg.N}, var(--cell))`;
+  renderBoard(); renderTray(); renderCase();
+  $("diffPill").innerHTML=`<img class="pill-badge" src="../assets/ui/badge-${C.tier}.png" alt=""/>`+
+    `<b>${TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label}</b> · ${cfg.N}×${cfg.N}`;
+  $("codePill").textContent=`Case No. ${story.caseNo}`;
+  $("loadBearingNote").innerHTML=
+    `Sudoku logic alone leaves <b>${C.completionsWithout}</b> possible arrangements of this house — `+
+    `only the evidence narrows it to one. The scene (dashed) hides the killer.`;
+  setStatus(`Case No. ${story.caseNo} opened — ${board.filter(v=>!v).length} positions to place.`,"");
+  startTimer();
+}
+function setVar(k,v){ document.documentElement.style.setProperty(k,v); }
+/* ---- simple MM:SS case timer (freezes on solve/accusation; resets each case) ---- */
+let timerStart=0, timerId=null, timerFrozen=false, frozenMs=0, penaltyMs=0;
+function fmtTime(ms){ const s=Math.max(0,Math.floor(ms/1000)); return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`; }
+function elapsedMs(){ return (timerFrozen?frozenMs:Math.max(0,Date.now()-timerStart)) + penaltyMs; }
+function tickTimer(){ $("timerPill").textContent=`⏱ ${fmtTime(elapsedMs())}`; }
+function startTimer(){ if(timerId)clearInterval(timerId); timerStart=Date.now(); penaltyMs=0; frozenMs=0; timerFrozen=false; tickTimer(); timerId=setInterval(tickTimer,1000); }
+function freezeTimer(){ if(!timerFrozen){ frozenMs=Math.max(0,Date.now()-timerStart); timerFrozen=true; } if(timerId){ clearInterval(timerId); timerId=null; } }
+function addPenalty(ms){ penaltyMs+=ms; tickTimer(); }   // reflected in the timer immediately (running or frozen)
+
+/* ---- board ---- */
+function tokenEl(val){ return makeToken(val); }
+function floorDim(){ return settings.atmosphere==="high" ? ".40" : ".66"; }  // Focus dims textures
+function renderBoard(){
+  boardEl.innerHTML="";
+  const N=cfg.N, dim=floorDim();
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    const i=r*N+c, cell=document.createElement("div");
+    cell.className="cell"+(given[i]?" given":"")+(board[i]===0?" empty":"");
+    if(r%cfg.bh===0) cell.classList.add("bt");   // region top wall (incl. board top) — also pushes content down so the wall label clears it
+    if(c%cfg.bw===0) cell.classList.add("bl");   // region left wall (incl. board left)
+    // fixed doorway floor-plan (purely visual): open one segment of each INTERNAL shared wall
+    // so every room connects to its neighbours. Offset from the room centre so the top-wall
+    // plaque stays clear. NOTE: doors are decorative only — clues never reference them.
+    if(r%cfg.bh===0 && r!==0 && c%cfg.bw===cfg.bw-1)            cell.classList.add("door-h"); // gap in the horizontal wall
+    if(c%cfg.bw===0 && c!==0 && r%cfg.bh===Math.floor(cfg.bh/2)) cell.classList.add("door-v"); // gap in the vertical wall
+    if(i===C.murderCell) cell.classList.add("scene");
+    const box=E.boxOf(cfg,r,c), room=THEME.rooms[box%THEME.rooms.length];
+    const sr=r%cfg.bh, sc=c%cfg.bw;                                  // sub-position within the room
+    const fx=cfg.bw>1?(sc/(cfg.bw-1))*100:0, fy=cfg.bh>1?(sr/(cfg.bh-1))*100:0;
+    cell.style.backgroundColor=`hsla(${room.hue},38%,50%,0.12)`;      // fallback tint if the floor image is missing
+    cell.style.backgroundImage=`linear-gradient(rgba(13,15,20,${dim}),rgba(13,15,20,${dim})),url("${tAsset('rooms','room-'+room.slug+'.jpg')}")`;   // rooms are JPG (smaller than PNG)
+    cell.style.backgroundSize=`${cfg.bw*100}% ${cfg.bh*100}%`;        // one floor image tiled across the room
+    cell.style.backgroundPosition=`${fx}% ${fy}%`;
+    cell.dataset.i=i;
+    if(r%cfg.bh===0 && c%cfg.bw===0){ const tag=document.createElement("span"); tag.className="room-tag";
+      tag.innerHTML=`<img src="${tAsset('objects','object-'+room.icon+'.png')}" alt="">`+room.name.replace(/^the /i,""); cell.appendChild(tag); }
+    // object landmark for this room (behind the token) — gives the furniture art a purpose
+    if(C.objectCells && C.objectCells[box]===i){ const o=document.createElement("img"); o.className="cell-object";
+      o.src=tAsset('objects','object-'+room.icon+'.png'); o.alt=""; cell.appendChild(o); }
+    if(board[i]!==0) cell.appendChild(tokenEl(board[i]));
+    else if(candidates[i] && candidates[i].size) cell.appendChild(candGrid(i));
+    // crime-scene (dashed) cell: the victim's body + the SCENE OBJECT found beside it (may be planted)
+    if(i===C.murderCell && story){
+      const b=document.createElement("img"); b.className="cell-victim img-missing";
+      b.alt=""; b.title=`${story.victimDisplay||"the victim"} (deceased)`; cell.appendChild(b);
+      if(story.victimSlug) loadOptionalImg(b, tAsset('victims','victim-'+story.victimSlug+'.png'));
+      const so=Skin.weaponBySlug(THEME,story.sceneObject);
+      const w=document.createElement("img"); w.className="cell-weapon";
+      w.src=tAsset('weapons','weapon-'+story.sceneObject+'.png'); w.alt=""; w.title=`Found beside the body: ${so.n}`; cell.appendChild(w);
+    }
+    cell.addEventListener("click",()=>onCell(i));
+    boardEl.appendChild(cell);
+  }
+  refresh();
+}
+function renderTray(){
+  trayEl.innerHTML="";
+  const counts={}; for(let v=1;v<=cfg.N;v++)counts[v]=cfg.N;
+  for(const v of board) if(v) counts[v]--;
+  for(let v=1;v<=cfg.N;v++){
+    const s=Skin.sName(THEME,v), el=document.createElement("div");
+    el.className="susp"+((sel>=0 && board[sel]===v)?" sel":"")+(counts[v]<=0?" done":"");  // marks who's in the selected cell
+    el.title=counts[v]>0?`${s.name}: ${counts[v]} left to place · press ${s.L}`:`${s.name}: all placed`;
+    const name=document.createElement("div"); name.className="susp-name";
+    name.textContent=s.name.replace(/^The\s+/i,"");        // "The Colonel" -> "Colonel"
+    const disc=document.createElement("div"); disc.className="disc";
+    disc.appendChild(makeToken(v,"tray"));
+    const badge=document.createElement("span"); badge.className="count";
+    badge.textContent = counts[v]>0?counts[v]:'✓';
+    disc.appendChild(badge);
+    el.appendChild(name); el.appendChild(disc);
+    el.addEventListener("click",()=>selectSuspect(v));
+    trayEl.appendChild(el);
+  }
+}
+function renderCase(){
+  $("caseTitle").textContent=story.title;
+  $("caseVictim").classList.add("img-missing");
+  if(story.victimSlug) loadOptionalImg($("caseVictim"), tAsset('victims','victim-'+story.victimSlug+'.png'));
+  else { $("caseVictim").removeAttribute("src"); }
+  $("caseVictim").title=story.victimDisplay;
+  $("caseStory").textContent=story.narrative;
+  const so=Skin.weaponBySlug(THEME,story.sceneObject);
+  $("caseSub").innerHTML=`Case No. ${story.caseNo} · <b>${TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label}</b> · ${THEME.place}`+
+    ` · Found beside victim: <img class="wicon" src="${tAsset('weapons','weapon-'+story.sceneObject+'.png')}" alt="">${so.n}.`;
+  // evidence list — each clue prefixed with a TYPE TAG chip (★ = key; every clue is true)
+  const list=$("clueList"); list.innerHTML="";
+  story.evidence.forEach((ev,idx)=>{
+    const li=document.createElement("li"); li.dataset.n=(idx+1);
+    if(ev.key) li.classList.add("key");
+    const star=ev.key?`<span class="keymark" title="key evidence">★</span>`:"";
+    li.innerHTML=`<span class="ev-tag tag-${ev.tag.toLowerCase()}">${ev.tag}</span>${star}${ev.text}`;
+    li.addEventListener("click",()=>{ li.classList.toggle("used"); if(li.classList.contains("used"))cluesUsed.add(idx); else cluesUsed.delete(idx); });
+    list.appendChild(li);
+  });
+  if($("sceneObjInfo")) $("sceneObjInfo").innerHTML=`<span class="soi-label">Found beside the body</span>`+
+    `<img class="wicon" src="${tAsset('weapons','weapon-'+story.sceneObject+'.png')}" alt="">${so.n} — but is it the real weapon? Weigh it against the <span class="tag-weapon ev-tag" style="margin:0">WEAPON</span> evidence.`;
+  renderPossibleWeapons();
+  // current-evidence stepper + tactical progress readout
+  clueStep=0; renderEvCurrent();
+  $("evProgress").innerHTML=`<b>${C.completionsWithout}</b> arrangements fit the sudoku alone — the evidence finds the one. `+
+    `The culprit waits in the <span class="scene-word">dashed scene</span>.`;
+  // roster
+  const ros=$("roster"); ros.innerHTML="";
+  for(let v=1;v<=cfg.N;v++){ const s=Skin.sName(THEME,v); const d=document.createElement("div"); d.className="ros";
+    d.innerHTML=`<span class="dot" style="background:${s.color}">${s.L}</span>`+
+      `<span><span class="nm">${s.name}</span> — <span class="mo">${s.motive}</span></span>`;
+    ros.appendChild(d); }
+}
+function renderEvCurrent(){
+  const ev=story&&story.evidence||[]; const n=ev.length; if(!n){ $("evClue").textContent="—"; $("evStep").textContent=""; return; }
+  clueStep=((clueStep%n)+n)%n;
+  const e=ev[clueStep];
+  const star=e.key?`<span class="keymark" title="key evidence">★</span>`:"";
+  $("evClue").innerHTML=`<span class="ev-tag tag-${e.tag.toLowerCase()}">${e.tag}</span>${star}${e.text}`;
+  $("evStep").textContent=`${clueStep+1} / ${n}`;
+}
+/* Possible Weapons: the 3 candidates; tap a chip to cycle the player's mark possible -> doubtful -> cleared */
+const WMARK_NEXT={possible:"doubtful", doubtful:"cleared", cleared:"possible"};
+function renderPossibleWeapons(){
+  const host=$("possibleWeapons"); if(!host||!story) return; host.innerHTML="";
+  story.weaponCandidates.forEach(slug=>{
+    const w=Skin.weaponBySlug(THEME,slug), mark=story.weaponMarks[slug]||"possible";
+    const chip=document.createElement("button"); chip.className="wcand mark-"+mark; chip.dataset.slug=slug;
+    chip.title="Tap to mark: possible → doubtful → cleared";
+    chip.innerHTML=`<img class="wicon" src="${tAsset('weapons','weapon-'+slug+'.png')}" alt="">`+
+      `<span class="wcand-name">${w.n.replace(/^(the|a|an)\s+/i,"")}</span><span class="wcand-mark">${mark}</span>`;
+    chip.onclick=()=>{ story.weaponMarks[slug]=WMARK_NEXT[story.weaponMarks[slug]||"possible"]; renderPossibleWeapons(); };
+    host.appendChild(chip);
+  });
+}
+
+/* ---- interactions (cell-first: tap a cell to select, then tap a suspect to place) ---- */
+function onCell(i){ if(solved)return; sel=i; refresh(); renderTray(); fxPulse(boardEl.children[i]); }   // select only — never auto-places
+function selectSuspect(v){ if(solved)return;
+  if(sel<0){ setStatus("Tap a cell on the board first — then tap a suspect to place them there.",""); return; }
+  if(given[sel]){ fxShake(boardEl.children[sel]); sfx("buzz"); setStatus("That cell is fixed by the evidence — pick an open cell.",""); return; }
+  if(notesMode) toggleNote(sel,v); else place(sel,v);
+}
+/* ---- undo/redo capture board value AND candidate set for every cell an action touches ---- */
+function snapCells(cells){ return [...new Set(cells)].map(c=>({c, v:board[c], cand:[...candidates[c]]})); }
+function restoreSnap(snap){ for(const s of snap){ board[s.c]=s.v; candidates[s.c]=new Set(s.cand); paint(s.c); } }
+function applyAction(cells, mutate){
+  const list=[...new Set(cells)];
+  const before=snapCells(list); mutate(); const after=snapCells(list);
+  undoStack.push({before, after}); redoStack=[];
+  for(const c of list) paint(c);
+}
+function toggleNote(i,v){ if(board[i]!==0) return;       // notes only on empty cells
+  applyAction([i], ()=>{ if(candidates[i].has(v)) candidates[i].delete(v); else candidates[i].add(v); });
+  refresh(); }
+function place(i,v){ if(given[i]||board[i]===v)return;
+  // every cell this action changes: the target + peers holding this suspect as a pencil mark
+  const cells=[i];
+  for(let j=0;j<cfg.N*cfg.N;j++) if(j!==i && candidates[j] && candidates[j].has(v) && isPeer(j,i)) cells.push(j);
+  applyAction(cells, ()=>{ board[i]=v; candidates[i].clear();
+    for(const j of cells) if(j!==i) candidates[j].delete(v); });   // tidy: clear this suspect's notes from peers
+  clearHints(); refresh(); renderTray(); updateBtns();
+  if(conflicts().has(i)){ fxShake(boardEl.children[i]); fxFlash(boardEl.children[i]); sfx("buzz"); }  // duplicate -> shake + red flash
+  else sfx("place");
+  checkWin(); }
+function erase(){ if(solved||sel<0||given[sel])return;
+  if(board[sel]===0 && (!candidates[sel]||!candidates[sel].size)) return;
+  applyAction([sel], ()=>{ board[sel]=0; candidates[sel].clear(); });
+  clearHints(); refresh(); renderTray(); updateBtns(); }
+/* Clear: reset the CURRENT puzzle to its starting givens (same case/seed). Confirmed so it
+   isn't triggered by accident, and undoable (one snapshot of every cell). */
+function clearPuzzle(){ if(solved)return;
+  const dirty = board.some((v,i)=>!given[i] && v!==0) || candidates.some(s=>s&&s.size);
+  if(!dirty){ setStatus("The board is already at its starting givens.",""); return; }
+  if(!confirm("Clear the puzzle? This removes every suspect you've placed and all your notes, returning to the starting givens. (You can Undo this.)")) return;
+  const all=[]; for(let i=0;i<cfg.N*cfg.N;i++) all.push(i);
+  applyAction(all, ()=>{ for(let i=0;i<all.length;i++){ if(!given[i]) board[i]=0; candidates[i]=new Set(); } });
+  sel=-1; clearHints(); refresh(); renderTray(); updateBtns();
+  setStatus("Board cleared back to the starting givens.","");
+  sfx("place"); }
+function undo(){ if(!undoStack.length)return; const e=undoStack.pop(); restoreSnap(e.before); redoStack.push(e);
+  clearHints(); refresh(); renderTray(); updateBtns(); }
+function redo(){ if(!redoStack.length)return; const e=redoStack.pop(); restoreSnap(e.after); undoStack.push(e);
+  clearHints(); refresh(); renderTray(); updateBtns(); }
+function candGrid(i){
+  const g=document.createElement("div"); g.className="cand-grid";
+  candidates[i].forEach(v=>{ const s=Skin.sName(THEME,v), idx=v-1;
+    const slot=document.createElement("div"); slot.className="cand";
+    slot.style.gridRow=Math.floor(idx/3)+1; slot.style.gridColumn=(idx%3)+1;   // fixed, learnable sub-position
+    const dot=document.createElement("i"); dot.style.background=RING[v-1]||s.color; dot.textContent=s.L;
+    slot.appendChild(dot); g.appendChild(slot); });
+  return g;
+}
+function paint(i){ const cell=boardEl.children[i];
+  const t=cell.querySelector(".token"); if(t)t.remove();
+  const g=cell.querySelector(".cand-grid"); if(g)g.remove();
+  cell.classList.toggle("empty", board[i]===0);
+  if(board[i]!==0){ cell.appendChild(tokenEl(board[i])); fxPop(cell); }   // pop the token in on (re)placement
+  else if(candidates[i] && candidates[i].size) cell.appendChild(candGrid(i)); }
+
+/* ---- Case Assistant: escalating investigation help (P7) ---- */
+function assist(html){ const a=$("assistant"); if(!a) return; a.hidden=false; $("assistantText").innerHTML=html; }
+function clearHints(){ for(const cell of boardEl.children) cell.classList.remove("hint-room","hint-cell"); }
+function cellCandidates(i){
+  const N=cfg.N, r=Math.floor(i/N), c=i%N, used=new Set();
+  for(let k=0;k<N;k++){ if(board[r*N+k])used.add(board[r*N+k]); if(board[k*N+c])used.add(board[k*N+c]); }
+  const {r0,c0}=E.rcOfBox(cfg,E.boxOf(cfg,r,c));
+  for(let a=0;a<cfg.bh;a++)for(let b=0;b<cfg.bw;b++){ const v=board[(r0+a)*N+(c0+b)]; if(v)used.add(v); }
+  const out=[]; for(let v=1;v<=N;v++) if(!used.has(v)) out.push(v); return out;
+}
+function hint(){ if(solved)return;
+  if(hintLevel===0 || hintTarget<0 || board[hintTarget]!==0){
+    let t=(sel>=0 && !given[sel] && board[sel]===0)?sel:-1;
+    if(t<0){
+      const empties=[]; for(let i=0;i<cfg.N*cfg.N;i++) if(board[i]===0) empties.push(i);
+      if(!empties.length) return;
+      if(board[C.murderCell]===0) t=C.murderCell;                 // the scene is the dramatic pick
+      else { empties.sort((a,b)=>cellCandidates(a).length-cellCandidates(b).length); t=empties[0]; }
+    }
+    hintTarget=t; hintLevel=0;
+  }
+  hintLevel++; hintsUsed++; clearHints();
+  const i=hintTarget, N=cfg.N;
+  const room=Skin.roomName(THEME, E.boxOf(cfg,Math.floor(i/N),i%N));
+  const correct=Skin.sName(THEME,C.solution[i]);
+  if(hintLevel===1){
+    const cands=cellCandidates(i).map(v=>Skin.sName(THEME,v).name);
+    assist(`I check the ledger… in <b>${room}</b>, the guests already seated and the room itself leave `+
+      (cands.length<=1?`only one possibility for this spot.`:`just ${cands.length}: ${cands.join(", ")}.`)+
+      (i===C.murderCell?` And this — this is the scene.`:""));
+  } else if(hintLevel===2){
+    const {r0,c0}=E.rcOfBox(cfg,E.boxOf(cfg,Math.floor(i/N),i%N));
+    for(let a=0;a<cfg.bh;a++)for(let b=0;b<cfg.bw;b++) boardEl.children[(r0+a)*N+(c0+b)].classList.add("hint-room");
+    assist(`Turn your attention to <b>${room}</b> (highlighted). Cross-reference its evidence with who is already placed.`);
+  } else if(hintLevel===3){
+    boardEl.children[i].classList.add("hint-cell"); sel=i; refresh();
+    assist(`This exact spot (highlighted) is the one to settle next. The evidence and elimination decide it.`);
+  } else {
+    sel=i; place(i, C.solution[i]);    // routed through the undoable placement (also tidies peer notes)
+    assist(`Confirmed — <b>${correct.name}</b> belongs here. One more piece of the file in place.`);
+    hintLevel=0; hintTarget=-1; clearHints(); checkWin();
+  }
+}
+
+function check(){ if(solved)return;
+  if(gridComplete()){ openAccusation(); return; }   // complete & correct -> straight to the accusation
+  let wrong=0, empty=0;
+  for(let i=0;i<cfg.N*cfg.N;i++){ const cell=boardEl.children[i]; const tok=cell.querySelector(".token"); if(tok)tok.classList.remove("bad");
+    if(board[i]===0){empty++;continue;} if(board[i]!==C.solution[i]){ wrong++; if(tok)tok.classList.add("bad"); } }
+  if(wrong===0 && empty>0){
+    // also surface whether the *evidence* is already contradicted (teaches that clues bind)
+    setStatus(`No misplacements yet. ${empty} position${empty>1?"s":""} left — lean on the evidence to fix them.`,"good");
+  } else if(wrong>0){
+    setStatus(`${wrong} suspect${wrong>1?"s are":" is"} in the wrong place (circled red).`,"bad");
+  }
+  setTimeout(()=>{ for(let i=0;i<cfg.N*cfg.N;i++){ const t=boardEl.children[i].querySelector(".token"); if(t)t.classList.remove("bad"); } },2200);
+}
+
+/* ---- highlight + conflicts ---- */
+function conflicts(){ const N=cfg.N, bad=new Set();
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){ const i=r*N+c, v=board[i]; if(!v)continue;
+    for(let k=0;k<N;k++){ const ri=r*N+k, ci=k*N+c; if(ri!==i&&board[ri]===v){bad.add(i);bad.add(ri);} if(ci!==i&&board[ci]===v){bad.add(i);bad.add(ci);} }
+    const {r0,c0}=E.rcOfBox(cfg,E.boxOf(cfg,r,c));
+    for(let a=0;a<cfg.bh;a++)for(let b=0;b<cfg.bw;b++){ const j=(r0+a)*N+(c0+b); if(j!==i&&board[j]===v){bad.add(i);bad.add(j);} } }
+  return bad; }
+function isPeer(a,b){ const N=cfg.N; const ra=Math.floor(a/N),ca=a%N,rb=Math.floor(b/N),cb=b%N;
+  return ra===rb||ca===cb||E.boxOf(cfg,ra,ca)===E.boxOf(cfg,rb,cb); }
+/* selection shoe-print trail: muted-red shoe SOLES; broader for a male suspect, narrower for
+   female, neutral when the selected cell is empty. Two soles per repeating tile read as walking. */
+function _shoeURI(orient, hw, op){
+  const f="fill='%237a2a2c' fill-opacity='"+(op||".6")+"'";
+  if(orient==="v")  // vertical tile 22x40, soles walk up the column (left sole upper, right sole lower)
+    return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 40' "+f+"%3E"+
+      "%3Crect x='"+(7-hw)+"' y='3' width='"+(2*hw)+"' height='15' rx='"+hw+"'/%3E"+
+      "%3Crect x='"+(15-hw)+"' y='22' width='"+(2*hw)+"' height='15' rx='"+hw+"'/%3E%3C/svg%3E";
+  return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 22' "+f+"%3E"+  // horizontal tile 40x22, soles walk along the row
+      "%3Crect x='3' y='"+(7-hw)+"' width='15' height='"+(2*hw)+"' rx='"+hw+"'/%3E"+
+      "%3Crect x='22' y='"+(15-hw)+"' width='15' height='"+(2*hw)+"' rx='"+hw+"'/%3E%3C/svg%3E";
+}
+function _mkShoe(hwmap, op){ const o={}; for(const g in hwmap) o[g]={ h:'url("'+_shoeURI('h',hwmap[g],op)+'")', v:'url("'+_shoeURI('v',hwmap[g],op)+'")' }; return o; }
+const SHOE     =_mkShoe({male:5, female:3, neutral:4}, ".74");   // desktop: a little more visible than before (.6 -> .74)
+const SHOE_BOLD=_mkShoe({male:5, female:3, neutral:4}, ".85");   // mobile: ORIGINAL size (reverted from the too-big bump); just a modest opacity boost
+function setShoeTrail(){ let g="neutral";
+  if(sel>=0 && board[sel]>0){ const su=Skin.sName(THEME,board[sel]); if(su&&su.gender) g=(su.gender==="female"?"female":"male"); }
+  const set = document.body.classList.contains("phone") ? SHOE_BOLD : SHOE;
+  boardEl.style.setProperty("--shoe-h", set[g].h); boardEl.style.setProperty("--shoe-v", set[g].v); }
+function refresh(){ const bad=conflicts(); const N=cfg.N;
+  const selVal=sel>=0?board[sel]:0; setShoeTrail();
+  const sr=sel>=0?Math.floor(sel/N):-1, sc=sel>=0?sel%N:-1, sb=sel>=0?E.boxOf(cfg,sr,sc):-1;
+  for(let i=0;i<N*N;i++){ const cell=boardEl.children[i];
+    cell.classList.remove("sel","peer-row","peer-col","match","room-hl");
+    if(sel>=0 && i!==sel){ const r=Math.floor(i/N),c=i%N, b=E.boxOf(cfg,r,c);
+      if(r===sr){ cell.classList.add("peer-row"); cell.style.setProperty("--trail-d", Math.abs(c-sc)); }   // distance -> step delay (walk outward along the row)
+      if(c===sc){ cell.classList.add("peer-col"); cell.style.setProperty("--trail-d", Math.abs(r-sr)); }   // distance -> step delay (walk down/up the column)
+      if(b===sb && r!==sr && c!==sc) cell.classList.add("room-hl");     // room cells off the cross
+    }
+    if(i===sel)cell.classList.add("sel");
+    if(selVal>0 && board[i]===selVal)cell.classList.add("match");       // same suspect elsewhere
+    const t=cell.querySelector(".token"); if(t)t.classList.toggle("bad",bad.has(i)); } }
+
+/* ---- grid complete -> player makes the accusation -> payoff ---- */
+function gridComplete(){ for(let i=0;i<cfg.N*cfg.N;i++) if(board[i]!==C.solution[i]) return false; return true; }
+function checkWin(){ if(solved) return; if(gridComplete() && !$("accuseModal").classList.contains("show")) openAccusation(); }
+function updateGuessPill(){ const p=$("guessPill"); if(!p)return; p.textContent=`Guesses: ${guessesLeft}`;
+  p.style.color = guessesLeft<=1 ? "var(--bad)" : (guessesLeft<=2 ? "var(--amber-soft)" : ""); }
+
+function openAccusation(){
+  // (1) culprit — clickable suspect tokens
+  const sp=$("accuseSuspects"); sp.innerHTML=""; accuseCulprit=-1;
+  for(let v=1;v<=cfg.N;v++){
+    const s=Skin.sName(THEME,v), b=document.createElement("button");
+    b.className="accuse-suspect"; b.dataset.v=v;
+    b.appendChild(makeToken(v,"tray"));
+    const nm=document.createElement("span"); nm.className="as-name"; nm.textContent=s.name.replace(/^The\s+/i,"");
+    b.appendChild(nm);
+    b.onclick=()=>{ accuseCulprit=v; [...sp.children].forEach(c=>c.classList.toggle("on", +c.dataset.v===v)); };
+    sp.appendChild(b);
+  }
+  // (2) TRUE weapon — the 3 candidates (clickable); correct = story.trueWeapon
+  const wp=$("accuseWeapons"); wp.innerHTML=""; accuseWeapon="";
+  story.weaponCandidates.forEach(slug=>{ const w=Skin.weaponBySlug(THEME,slug);
+    const b=document.createElement("button"); b.className="accuse-weapon"; b.dataset.slug=slug;
+    b.innerHTML=`<img class="wicon" src="${tAsset('weapons','weapon-'+slug+'.png')}" alt=""><span>${w.n.replace(/^(the|a|an)\s+/i,"")}</span>`;
+    b.onclick=()=>{ accuseWeapon=slug; [...wp.children].forEach(c=>c.classList.toggle("on", c.dataset.slug===slug)); };
+    wp.appendChild(b); });
+  // (3) motive — exactly 3 options (killer's + 2 distinct-tag distractors), narrowable by [MOTIVE] clues
+  const mo=$("accuseMotive"); mo.innerHTML='<option value="-1">— choose the motive —</option>';
+  story.motiveOptions.forEach((opt,i)=>{ const o=document.createElement("option"); o.value=i; o.textContent=cap(opt.motive); mo.appendChild(o); });
+  // (4) evidence — the displayed clues; correct = a position proof clue
+  const ev=$("accuseEvidence"); ev.innerHTML='<option value="-1">— choose the decisive clue —</option>';
+  story.evidence.forEach((e,idx)=>{ const o=document.createElement("option"); o.value=idx;
+    o.textContent=`#${idx+1} [${e.tag}]: ${stripTags(e.text)}`; ev.appendChild(o); });
+  const placed=board.filter(v=>v).length, total=cfg.N*cfg.N;
+  $("accuseGuesses").innerHTML=`<b>${guessesLeft}</b> guess${guessesLeft===1?"":"es"} left`+
+    (placed<total?` · board ${placed}/${total} placed (you can still accuse)`:` · grid complete`);
+  setAccuseFeedback("",""); $("accuseModal").classList.add("show");
+}
+function setAccuseFeedback(msg,kind){ const f=$("accuseFeedback"); f.textContent=msg; f.className="accuse-feedback"+(kind?" "+kind:""); }
+function submitAccusation(){
+  if(accuseCulprit<1){ setAccuseFeedback("Name a culprit first.",""); return; }
+  if(accuseCulprit!==C.killer){
+    guessesLeft--; addPenalty(60000); updateGuessPill();      // wrong: lose a guess, +1:00 penalty
+    fxFlash(); fxShake($("accuseModal").querySelector(".modal")); fxFloat("+1:00"); sfx("buzz");  // screen shake + red flash + floating penalty
+    if(guessesLeft<=0){                                       // out of guesses -> case fails
+      $("accuseModal").classList.remove("show");
+      payoff(null, false);
+      return;
+    }
+    setAccuseFeedback(`Wrong accusation. +1:00 added to your time. ${guessesLeft} guess${guessesLeft===1?"":"es"} left.`,"bad");
+    return;
+  }
+  // correct culprit — now grade weapon, motive, and proof too
+  const evPick=+$("accuseEvidence").value, moPick=+$("accuseMotive").value;
+  const grade={ weaponRight: accuseWeapon!=="" && accuseWeapon===story.trueWeapon,           // Q2: true weapon
+                motiveRight: moPick>=0 && !!(story.motiveOptions[moPick]&&story.motiveOptions[moPick].correct),  // Q3: killer's motive
+                evidenceRight: evPick>=0 && !!(story.evidence[evPick]&&story.evidence[evPick].proof),            // Q4: a position proof clue
+                evPick };
+  $("accuseModal").classList.remove("show");
+  payoff(grade, true);
+}
+
+function payoff(grade, won){
+  solved=true; freezeTimer();
+  let isPerfect=false;
+  const k=Skin.sName(THEME,C.killer), modal=$("winModal").querySelector(".modal");
+  modal.classList.toggle("failed", !won);
+  $("revealWrap").classList.toggle("jailed", !!won);   // bars only when the killer is caught
+  // reveal the true culprit either way, so the player learns
+  const rt=$("revealToken"); rt.innerHTML=""; rt.appendChild(makeToken(C.killer,"big"));
+  $("killerName").textContent=k.name;
+  $("killerMotive").textContent=`Motive: ${k.motive}.`;
+  const proofIdx0=story.evidence.findIndex(e=>e.proof);
+  const correctProof=proofIdx0>=0?stripTags(story.evidence[proofIdx0].text):"the arrangement of the house";
+  const tw=Skin.weaponBySlug(THEME,story.trueWeapon);
+  const showIdx=(won && grade.evidenceRight && grade.evPick>=0)?grade.evPick:proofIdx0;
+  $("poEvidence").innerHTML=showIdx>=0?story.evidence[showIdx].text:"the arrangement of the house";
+  const totalTime=fmtTime(elapsedMs()), guessesUsed=MAX_GUESSES-guessesLeft;
+  const penaltyStr=penaltyMs?` · penalty +${fmtTime(penaltyMs)}`:"";
+  if(won){
+    $("newsHeadline").textContent=makeHeadline(k.name);
+    $("poTrophy").innerHTML=`<img class="wicon" src="${tAsset('weapons','weapon-'+story.trueWeapon+'.png')}" alt="">${cap(tw.n.replace(/^(the|a|an)\s+/i,""))}`;
+    const acc=1+(grade.weaponRight?1:0)+(grade.motiveRight?1:0)+(grade.evidenceRight?1:0), perfect=acc===4; isPerfect=perfect;
+    const plantNote=story.weaponPlanted?` (the ${Skin.weaponBySlug(THEME,story.sceneObject).n} by the body was planted)`:"";
+    $("accuseScore").innerHTML=
+      `<div class="acc-stars">${"★".repeat(acc)}${"☆".repeat(4-acc)} <span class="acc-num">Accuracy ${acc}/4</span></div>`+
+      `<div class="acc-bits">Culprit ✓ · Weapon ${grade.weaponRight?"✓":"✗"} · Motive ${grade.motiveRight?"✓":"✗"} · Proof ${grade.evidenceRight?"✓":"✗"} · ⏱ ${totalTime}${penaltyStr} · ${guessesUsed+1}/${MAX_GUESSES} guesses</div>`+
+      (perfect ? `<div class="acc-correct good">Flawless deduction.${plantNote}</div>`
+               : `<div class="acc-correct">`+(grade.weaponRight?"":`The weapon was <b>${tw.n}</b>${plantNote}. `)+(grade.motiveRight?"":`The motive was ${cap(k.motive)}. `)+(grade.evidenceRight?"":`The proof was “${correctProof}”.`)+`</div>`);
+    recordSolved(makeHeadline(k.name), perfect);
+    setStatus(`Case closed — ${k.name} arrested.`,"good");
+  } else {
+    $("newsHeadline").textContent=failHeadline();
+    $("poTrophy").innerHTML=`<span class="muted">none — case unsolved</span>`;
+    $("accuseScore").innerHTML=
+      `<div class="acc-stars" style="color:var(--bad)">CASE UNSOLVED</div>`+
+      `<div class="acc-bits">Out of guesses — the killer walked free. ⏱ ${totalTime}${penaltyStr} · ${MAX_GUESSES}/${MAX_GUESSES} guesses used</div>`+
+      `<div class="acc-correct">The culprit was <b>${k.name}</b>. The proof: “${correctProof}”. Motive: ${cap(k.motive)}.</div>`;
+    setStatus(`Case unsolved — ${k.name} got away.`,"bad");
+  }
+  buildChain();
+  onDemoPayoff(won);            // DEMO: mark completion + show the call-to-action block
+  $("winModal").classList.add("show");
+  playReveal(won, isPerfect);   // flashbulb -> bars slam -> stamp thunk + dust -> confetti (3/3); tap to skip
+}
+function failHeadline(){
+  const opts=["THE KILLER WALKS FREE — CASE GOES COLD","NO ARREST AT {PLACE}: KILLER ESCAPES","{PLACE} MURDER LEFT UNSOLVED"];
+  const rng=E.makeRNG((C.seed^E.hashStr("fail"))>>>0);
+  return opts[Math.floor(rng()*opts.length)].replace(/\{PLACE\}/g,(THEME.place||"the manor").toUpperCase());
+}
+function makeHeadline(killerName){
+  const S=THEME.story; if(!S||!S.headlines) return "CASE CLOSED";
+  const rng=E.makeRNG((C.seed^E.hashStr("headline"))>>>0);
+  const t=S.headlines[Math.floor(rng()*S.headlines.length)];
+  const up=s=>String(s).replace(/^the\s+/i,"").toUpperCase();
+  return t.replace(/\{KILLER\}/g,up(killerName)).replace(/\{VICTIM\}/g,up(story.victim))
+          .replace(/\{PLACE\}/g,(THEME.place||"the manor").toUpperCase());
+}
+function buildChain(){
+  const k=Skin.sName(THEME,C.killer), chain=$("chain"); chain.innerHTML="";
+  const scene=spotText(C.murderCell);
+  const head=document.createElement("li");
+  head.innerHTML=`The body lay at <b>${scene.spot} of ${scene.room}</b>. Sudoku logic alone allowed `+
+    `<b>${C.sceneCandidates.length}</b> different guests to have stood there: `+
+    C.sceneCandidates.map(v=>Skin.sName(THEME,v).name).join(", ")+".";
+  chain.appendChild(head);
+  C.reasoning.forEach(step=>{ const li=document.createElement("li");
+    const who=Skin.sName(THEME,step.ruledOut).name;
+    const clueHtml=step.clue>=0?Skin.renderClue(cfg,THEME,C.clues[step.clue]):"the sudoku constraints";
+    li.innerHTML=`<span class="x">✗</span> It could not have been <b>${who}</b> — that would contradict evidence #${step.clue+1}: “${clueHtml}”`;
+    chain.appendChild(li); });
+  const tail=document.createElement("li");
+  tail.innerHTML=`That leaves exactly one figure at the scene: <b>${k.name}</b>.`;
+  chain.appendChild(tail);
+  $("winStory").innerHTML=`${k.name} had sworn they spent the evening in ${story.alibiRoom} — `+
+    `but the evidence places them at the scene in ${story.sceneRoom}, `+
+    `<img class="wicon" src="${tAsset('weapons','weapon-'+story.trueWeapon+'.png')}" alt="">${Skin.weaponBySlug(THEME,story.trueWeapon).n} in hand.`;
+}
+function spotText(cell){ return Skin.spotName(cfg,THEME,cell); }
+
+/* ---- evidence archive + trophies (persisted) ---- */
+function recordSolved(headline, perfect){
+  const archive=LS.get("archive",[]);
+  if(!archive.some(a=>a.code===C.code)){
+    archive.unshift({ code:C.code, no:story.caseNo, tier:C.tier, title:story.title,
+      culprit:Skin.sName(THEME,C.killer).name, weapon:story.trueWeapon, headline, perfect:!!perfect, date:nowStr() });
+    LS.set("archive", archive.slice(0,200));
+  }
+  const trophies=LS.get("trophies",[]);
+  if(!trophies.includes(story.trueWeapon)){ trophies.push(story.trueWeapon); LS.set("trophies", trophies); }
+}
+function openArchive(){
+  const archive=LS.get("archive",[]), trophies=LS.get("trophies",[]);
+  const shelf=$("trophyShelf"); shelf.innerHTML="";
+  $("trophyCount").textContent=trophies.length?`${trophies.length}`:"";
+  if(!trophies.length) shelf.innerHTML='<span class="muted">No trophies yet — solve a case to claim its weapon as evidence.</span>';
+  trophies.forEach(slug=>{ const d=document.createElement("div"); d.className="trophy"; d.title=slug;
+    d.innerHTML=`<img src="${tAsset('weapons','weapon-'+slug+'.png')}" alt="${slug}">`; shelf.appendChild(d); });
+  $("archiveCount").textContent=archive.length?`${archive.length} closed`:"";
+  const list=$("archiveList"); list.innerHTML="";
+  if(!archive.length) list.innerHTML='<div class="muted">No solved cases yet. Close a case to start your archive.</div>';
+  archive.forEach(a=>{ const row=document.createElement("div"); row.className="arch-row";
+    row.innerHTML=`<b>${a.title}</b><span class="arch-meta">Culprit: ${a.culprit} · ${TIER_FLAVOR[a.tier]||a.tier} · No. ${a.no} · ${a.date}${a.perfect?" · ★ flawless":""}</span>`;
+    list.appendChild(row); });
+  $("archiveModal").classList.add("show");
+}
+
+/* ---- buttons / keys ---- */
+function setStatus(m,k){ const s=$("status"); s.textContent=m; s.className="status"+(k?" "+k:""); }
+function updateBtns(){ $("undoBtn").disabled=!undoStack.length; $("redoBtn").disabled=!redoStack.length; }
+$("undoBtn").onclick=undo; $("redoBtn").onclick=redo; $("eraseBtn").onclick=erase; $("hintBtn").onclick=hint; $("checkBtn").onclick=check;
+$("clearBtn").onclick=clearPuzzle;
+// DEMO: the header "Cases" button + the post-win button both return to the Case Select screen.
+$("newBtn").onclick=()=>showCaseSelect();
+$("winClose").onclick=()=>$("winModal").classList.remove("show");
+$("winNew").onclick=()=>{ $("winModal").classList.remove("show"); showCaseSelect(); };
+$("accuseClose").onclick=()=>{ $("accuseModal").classList.remove("show"); setStatus("Ready to accuse — press Check when you're sure.",""); };
+$("accuseSubmit").onclick=submitAccusation;
+$("accuseBtn").onclick=()=>{ if(solved)return; openAccusation(); };   // accuse any time, full board not required
+$("archiveBtn").onclick=openArchive;
+$("howtoBtn").onclick=()=>$("howtoModal").classList.add("show");
+$("howtoClose").onclick=()=>$("howtoModal").classList.remove("show");
+$("howtoGo").onclick=()=>{ $("howtoModal").classList.remove("show"); LS.set("seenHowTo",true);
+  if(!C) showCaseSelect(); };   // after the intro, land on the case files (no case auto-started)
+// first-time intro is opened from boot() once the case-select is up
+$("archiveClose").onclick=()=>$("archiveModal").classList.remove("show");
+$("winArchive").onclick=openArchive;
+$("evPrev").onclick=()=>{ clueStep--; renderEvCurrent(); };
+$("evNext").onclick=()=>{ clueStep++; renderEvCurrent(); };
+// current-evidence card and the full list are mutually exclusive (only one open)
+// current-evidence card and the full list are mutually exclusive ON DESKTOP only (on phones
+// they live in different places: the stepper by the board, the full list in the overlay tab).
+$("evBlock").addEventListener("toggle",()=>{ if(!isPhone() && $("evBlock").open && $("allEv").open) $("allEv").open=false; });
+$("allEv").addEventListener("toggle",()=>{ if(!isPhone() && $("allEv").open && $("evBlock").open) $("evBlock").open=false; });
+function isPhone(){ return document.body.classList.contains("phone"); }
+
+/* ---- mobile case-file overlay: reparent the cf-group blocks into tabs (one source of truth) ---- */
+function placeCaseFile(){
+  const mobile=isPhone();
+  const groups=[["grpCase","coPanel-case","homeCase"],["grpEvidence","coPanel-evidence","homeEvidence"],
+                ["grpWeapons","coPanel-weapons","homeWeapons"],["grpPeople","coPanel-people","homePeople"]];
+  for(const [g,p,h] of groups){ const grp=$(g),panel=$(p),home=$(h); if(!grp||!panel||!home) continue;
+    if(mobile){ if(grp.parentNode!==panel) panel.appendChild(grp); }
+    else { if(grp.previousElementSibling!==home || grp.parentNode!==home.parentNode) home.after(grp); } }
+  // status: near the board on mobile so feedback stays visible; back in the case file on desktop
+  const st=$("status"), sh=$("statusHome"), sm=$("statusMount");
+  if(st&&sh&&sm){ if(mobile){ if(st.parentNode!==sm) sm.appendChild(st); }
+                  else if(st.previousElementSibling!==sh||st.parentNode!==sh.parentNode){ sh.after(st); } }
+  if(!mobile){ const ov=$("caseOverlay"); if(ov){ ov.hidden=true; } document.body.classList.remove("co-open"); }   // never overlay on desktop
+  // on mobile the full evidence list and roster read as always-open inside their tab
+  if(mobile){ if($("allEv")) $("allEv").open=true; if($("poiDetails")) $("poiDetails").open=true; }
+}
+function coTab(name){ document.querySelectorAll(".co-tab").forEach(t=>t.classList.toggle("on",t.dataset.tab===name));
+  document.querySelectorAll(".co-panel").forEach(p=>p.hidden = p.id!=="coPanel-"+name);
+  const sc=document.querySelector(".co-scroll"); if(sc) sc.scrollTop=0; }
+function openCaseFile(){ placeCaseFile(); const ov=$("caseOverlay"); if(!ov) return; ov.hidden=false; document.body.classList.add("co-open"); coTab("evidence"); }
+function closeCaseFile(){ const ov=$("caseOverlay"); if(ov) ov.hidden=true; document.body.classList.remove("co-open"); }
+if($("caseFileBtn")) $("caseFileBtn").onclick=openCaseFile;
+if($("coClose")) $("coClose").onclick=closeCaseFile;
+document.querySelectorAll(".co-tab").forEach(t=>t.onclick=()=>coTab(t.dataset.tab));
+
+/* ===== DEMO is DESKTOP-ONLY: phone mode is disabled entirely (no body.phone, no force-phone).
+   The case file always lives in the desktop side panel. On a small / touch screen we show a
+   polite "best on desktop" notice instead of collapsing to the phone layout. ===== */
+function updatePhone(){
+  document.body.classList.remove("phone","force-phone");   // never enter phone mode in the demo
+  placeCaseFile();                                         // keep the case file in the desktop side panel
+  maybeShowDesktopNotice();
+}
+function maybeShowDesktopNotice(){
+  const note=$("desktopNotice"); if(!note) return;
+  if(note.dataset.dismissed==="1"){ note.classList.remove("show"); return; }
+  const small = (window.innerWidth||9999) < 860;
+  let touch=false; try{ touch=matchMedia("(pointer:coarse)").matches; }catch(e){}
+  note.classList.toggle("show", small || touch);
+}
+if($("desktopNoticeOk")) $("desktopNoticeOk").onclick=()=>{ const n=$("desktopNotice"); n.dataset.dismissed="1"; n.classList.remove("show"); };
+window.addEventListener("resize",updatePhone);
+updatePhone();
+function applyAtmosphere(){
+  const focus = settings.atmosphere!=="high";
+  document.body.classList.toggle("focus", focus);
+  $("atmoBtn").textContent = focus ? "Atmosphere: Focus" : "Atmosphere: High";
+}
+function applyNotesMode(){ document.body.classList.toggle("notes", notesMode);
+  const b=$("notesBtn"); if(b) b.classList.toggle("on", notesMode); }
+$("notesBtn").onclick=()=>{ notesMode=!notesMode; applyNotesMode();
+  setStatus(notesMode?"Notes ON — select a cell, then tap suspects to pencil in candidates.":"Notes off — tap a suspect to place them.",""); };
+$("atmoBtn").onclick=()=>{ settings.atmosphere = settings.atmosphere==="high"?"low":"high";
+  LS.set("settings",settings); applyAtmosphere(); if(C) renderBoard(); };
+// first-time sudoku rule callout (once per browser)
+if(!LS.get("seenRule",false)){ const ft=$("firstTip"); if(ft) ft.hidden=false; }
+$("firstTipOk").onclick=()=>{ $("firstTip").hidden=true; LS.set("seenRule",true); placeEvidence(); };
+// On narrow/stacked viewports, host the Current Evidence stepper up by the board once the
+// tip is gone, so the active clue is readable without scrolling to the case panel. The SAME
+// node is relocated (never duplicated); on desktop — or while the tip still shows — it stays
+// in the case file, so the desktop layout is unchanged. Stepper + mutual-exclusivity keep
+// working since they are bound by id, not by position.
+const evStackMQ = window.matchMedia("(max-width:1040px)");
+function placeEvidence(){
+  const ev=$("evBlock"), mount=$("evMount"), home=$("evHome"); if(!ev||!mount||!home) return;
+  if(evStackMQ.matches && $("firstTip").hidden){           // mobile + tip dismissed -> by the board
+    if(ev.parentNode!==mount) mount.appendChild(ev);
+    mount.hidden=false; ev.open=true; if($("allEv").open) $("allEv").open=false;
+  } else {                                                  // desktop, or tip still up -> case file
+    if(ev.previousElementSibling!==home || ev.parentNode!==home.parentNode) home.after(ev);
+    mount.hidden=true;
+  }
+}
+if(evStackMQ.addEventListener) evStackMQ.addEventListener("change",placeEvidence); else evStackMQ.addListener(placeEvidence);
+window.addEventListener("resize",placeEvidence);   // fallback: re-home on any width change (placeEvidence is idempotent)
+placeEvidence();
+$("codePill").onclick=()=>{ try{ navigator.clipboard.writeText(C.code); setStatus(`Case code ${C.code} copied.`,"good"); }catch(e){} };
+
+// DEMO: random / daily / load-code case generation is intentionally removed — the only cases
+// are the four fixed ones launched from the Case Select screen (see the DEMO block below).
+
+document.addEventListener("keydown",e=>{
+  if(solved || !C || caseSelectOpen())return;
+  const k=e.key.toUpperCase(), code=k.charCodeAt(0)-64;
+  if(k==="N"&&cfg.N<14){ notesMode=!notesMode; applyNotesMode(); e.preventDefault(); return; }   // 'N' toggles notes
+  if(k>="A"&&k<="Z"&&code>=1&&code<=cfg.N){ selectSuspect(code); e.preventDefault(); return; }
+  if(e.key>="1"&&e.key<="9"&&(+e.key)<=cfg.N){ selectSuspect(+e.key); e.preventDefault(); return; }
+  if(e.key==="Backspace"||e.key==="Delete"){ erase(); e.preventDefault(); return; }
+  if(sel<0)return; const N=cfg.N, r=Math.floor(sel/N), c=sel%N;
+  if(e.key==="ArrowUp"&&r>0){sel-=N;refresh();e.preventDefault();}
+  if(e.key==="ArrowDown"&&r<N-1){sel+=N;refresh();e.preventDefault();}
+  if(e.key==="ArrowLeft"&&c>0){sel-=1;refresh();e.preventDefault();}
+  if(e.key==="ArrowRight"&&c<N-1){sel+=1;refresh();e.preventDefault();}
+});
+
+/* brand header: prefer the combined wordmark+subtitle image; fall back to logo.png,
+   then to a CSS text wordmark if no image is present. */
+function setupBrand(){
+  const img=$("brandLogo"), txt=$("brandText");
+  const show=src=>{ img.src=src; img.hidden=false; txt.hidden=true; };
+  const fail=()=>{ img.hidden=true; txt.hidden=false; };
+  const probe=(src,next)=>{ const t=new Image(); t.onload=()=>show(src); t.onerror=next; t.src=src; };
+  probe(uiAsset('logo-subtitle.png'), ()=> probe(uiAsset('logo.png'), fail));
+}
+/* assistant portrait: show ../assets/ui/assistant.png if present, else keep the notebook icon */
+function setupAssistant(){
+  const p=$("assistPortrait"), n=$("assistNote"); if(!p) return;
+  const t=new Image();
+  t.onload=()=>{ p.src=uiAsset("assistant.png"); p.hidden=false; if(n) n.hidden=true; };
+  t.onerror=()=>{ p.hidden=true; };   // file absent -> notebook icon remains
+  t.src=uiAsset("assistant.png");
+}
+/* behind-bars reveal: if ../assets/ui/frame-bars.png exists, overlay it; else CSS bars (the fallback) */
+function setupBars(){
+  const el=$("revealBars"); if(!el) return;
+  const t=new Image();
+  t.onload=()=>{ el.style.background=`url("${uiAsset("frame-bars.png")}") center/contain no-repeat`; };
+  t.src=uiAsset("frame-bars.png");   // on error, the CSS bars (in the stylesheet) remain
+}
+/* ===================== JUICE: motion + sound (first juice pass) =====================
+   Motion ON by default, Sound OFF by default (both persisted). prefers-reduced-motion is
+   ALWAYS honored (motionOK() returns false), independent of the Motion toggle. Effects only
+   animate transform/opacity and never block input (all overlays are pointer-events:none). */
+const reduceMQ = window.matchMedia("(prefers-reduced-motion: reduce)");
+function motionOK(){ return !!settings.motion && !reduceMQ.matches; }
+function applyMotion(){ document.body.classList.toggle("no-motion", !settings.motion); }
+const _revealTimers=[];
+function clearRevealTimers(){ while(_revealTimers.length) clearTimeout(_revealTimers.pop()); }
+function _autorem(el){ el.addEventListener("animationend",()=>el.remove(),{once:true}); return el; }
+function restartAnim(el,cls){ if(!el)return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+
+function fxPop(cell){ if(!motionOK()||!cell)return; const t=cell.querySelector(".token"); if(t) restartAnim(t,"j-pop"); }
+function fxPulse(cell){ if(!motionOK()||!cell)return; const r=_autorem(document.createElement("div")); r.className="j-ring"; cell.appendChild(r); }
+function fxShake(el){ if(!motionOK()||!el)return; restartAnim(el,"j-shake"); el.addEventListener("animationend",()=>el.classList.remove("j-shake"),{once:true}); }
+function fxFlash(el){ if(!motionOK())return; const f=_autorem(document.createElement("div")); f.className="j-flash"+(el?"":" screen"); (el||document.body).appendChild(f); }
+function fxBulb(){ if(!motionOK())return; const b=_autorem(document.createElement("div")); b.className="j-bulb"; document.body.appendChild(b); }
+function fxFloat(text){ if(!motionOK())return; const pill=$("timerPill"); if(!pill)return; const r=pill.getBoundingClientRect();
+  const f=_autorem(document.createElement("div")); f.className="j-float"; f.textContent=text;
+  f.style.left=(r.left+r.width/2)+"px"; f.style.top=r.top+"px"; document.body.appendChild(f); }
+function fxPuff(anchor){ if(!motionOK()||!anchor)return; const r=anchor.getBoundingClientRect();
+  const p=_autorem(document.createElement("div")); p.className="j-puff"; p.style.position="fixed";
+  p.style.left=(r.left+r.width/2-30)+"px"; p.style.top=(r.top+r.height/2-30)+"px"; document.body.appendChild(p); }
+function fxConfetti(){ if(!motionOK())return; const cols=["#e7b94d","#c1272d","#4caf7d","#f0d98c","#e8dcc0"];
+  const cx=window.innerWidth/2, cy=window.innerHeight*0.30, n=26;
+  for(let i=0;i<n;i++){ const p=_autorem(document.createElement("div")); p.className="j-confetti";
+    p.style.background=cols[i%cols.length]; if(i%2) p.style.borderRadius="50%";
+    p.style.left=cx+"px"; p.style.top=cy+"px";
+    const a=Math.random()*6.283, d=70+Math.random()*170;
+    p.style.setProperty("--cx",(Math.cos(a)*d).toFixed(0)+"px");
+    p.style.setProperty("--cy",(Math.sin(a)*d+240).toFixed(0)+"px");
+    p.style.setProperty("--cr",(Math.random()*720-360).toFixed(0)+"deg");
+    p.style.setProperty("--cd",(0.9+Math.random()*0.7).toFixed(2)+"s");
+    document.body.appendChild(p); } }
+
+/* ---- lightweight synthesized SFX (no audio files); silent unless Sound is ON ---- */
+let _actx=null;   // null = not created, false = unavailable
+function audioCtx(){ if(_actx===false) return null;
+  if(!_actx){ try{ _actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ _actx=false; return null; } }
+  if(_actx.state==="suspended"){ try{ _actx.resume(); }catch(e){} } return _actx; }
+function _tone(freq,dur,type,gain,delay){ const a=audioCtx(); if(!a)return; const t0=a.currentTime+(delay||0);
+  const o=a.createOscillator(), g=a.createGain(); o.type=type||"sine"; o.frequency.setValueAtTime(freq,t0);
+  g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(gain||0.16,t0+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+dur); o.connect(g).connect(a.destination); o.start(t0); o.stop(t0+dur+0.03); }
+function _noise(dur,gain){ const a=audioCtx(); if(!a)return; const len=Math.max(1,(a.sampleRate*dur)|0);
+  const buf=a.createBuffer(1,len,a.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*(1-i/len);
+  const s=a.createBufferSource(); s.buffer=buf; const g=a.createGain(); g.gain.value=gain||0.12;
+  s.connect(g).connect(a.destination); s.start(); }
+function sfx(name){ if(!settings.sound) return; if(!audioCtx()) return;
+  if(name==="place") _tone(620,0.09,"triangle",0.12);
+  else if(name==="thunk"){ _tone(120,0.2,"sine",0.22); _noise(0.08,0.1); }
+  else if(name==="buzz"){ _tone(150,0.22,"sawtooth",0.14); _tone(146,0.22,"sawtooth",0.1); }
+  else if(name==="win"){ [523.25,659.25,783.99].forEach((f,i)=>_tone(f,0.22,"sine",0.14,i*0.11)); } }
+
+/* the big solved-case reveal: flashbulb -> bars slam -> stamp thunk + dust -> confetti (3/3).
+   Final state is the CSS resting state, so skip / Motion-off just shows the end immediately. */
+function playReveal(won, perfect){
+  const wrap=$("revealWrap"), stamp=document.querySelector("#winModal .news-stamp"), paper=document.querySelector("#winModal .newspaper");
+  clearRevealTimers();
+  if(wrap)wrap.classList.remove("j-slam"); if(stamp)stamp.classList.remove("j-thunk"); if(paper)paper.classList.remove("j-spin");
+  if(!motionOK()) return;                          // reduced motion / Motion off -> static final state
+  sfx(won?"win":"buzz");
+  if(paper) restartAnim(paper,"j-spin");
+  fxBulb();
+  if(won && wrap) _revealTimers.push(setTimeout(()=>wrap.classList.add("j-slam"),150));
+  _revealTimers.push(setTimeout(()=>{ if(stamp){ restartAnim(stamp,"j-thunk"); fxPuff(stamp); } sfx("thunk"); },440));
+  if(won && perfect) _revealTimers.push(setTimeout(fxConfetti,640));
+}
+function skipReveal(){ clearRevealTimers();
+  const wrap=$("revealWrap"), stamp=document.querySelector("#winModal .news-stamp"), paper=document.querySelector("#winModal .newspaper");
+  if(wrap)wrap.classList.remove("j-slam"); if(stamp)stamp.classList.remove("j-thunk"); if(paper)paper.classList.remove("j-spin");
+  document.querySelectorAll(".j-confetti,.j-bulb,.j-puff").forEach(e=>e.remove()); }
+
+function applyJuiceButtons(){ const m=$("motionBtn"), s=$("soundBtn"), mu=$("musicBtn");
+  if(m){ m.textContent="✨ Motion: "+(settings.motion?"On":"Off"); m.classList.toggle("on",!!settings.motion); }
+  if(s){ s.textContent="♪ Sound: "+(settings.sound?"On":"Off"); s.classList.toggle("on",!!settings.sound); }
+  if(mu){ mu.textContent="🎵 Music: "+(settings.music?"On":"Off"); mu.classList.toggle("on",!!settings.music); } }
+if($("motionBtn")) $("motionBtn").onclick=()=>{ settings.motion=!settings.motion; LS.set("settings",settings); applyMotion(); applyJuiceButtons(); };
+if($("soundBtn")) $("soundBtn").onclick=()=>{ settings.sound=!settings.sound; LS.set("settings",settings); applyJuiceButtons(); if(settings.sound){ audioCtx(); sfx("place"); } };
+/* ---- looping background music: own toggle, default ON, separate from the SFX "Sound" toggle ---- */
+let bgMusic=null;
+function ensureBgMusic(){ if(!bgMusic){ bgMusic=new Audio("../assets/music/Final%20Accusation.mp3"); bgMusic.loop=true; bgMusic.volume=0.4; bgMusic.preload="auto"; } return bgMusic; }
+function applyMusic(){ const a=ensureBgMusic(); if(settings.music){ const p=a.play(); if(p&&p.catch) p.catch(()=>{}); } else { a.pause(); } }  // attempt; first-gesture handler retries if blocked
+function startMusicIfOn(){ if(settings.music){ const a=ensureBgMusic(); if(a.paused){ const p=a.play(); if(p&&p.catch) p.catch(()=>{}); } } }
+if($("musicBtn")) $("musicBtn").onclick=()=>{ settings.music=!settings.music; LS.set("settings",settings); applyJuiceButtons(); applyMusic(); };
+// first user gesture: unlock SFX audio AND start the music if autoplay was blocked (while Music is ON)
+["pointerdown","keydown","touchstart"].forEach(ev=>window.addEventListener(ev,()=>{ if(settings.sound) audioCtx(); startMusicIfOn(); },{passive:true}));
+if($("winModal")) $("winModal").addEventListener("pointerdown",skipReveal);   // tap to skip the reveal to its final state
+applyMotion(); applyJuiceButtons(); applyMusic();   // try to start music immediately (retried on first gesture if blocked)
+
+setupBrand();
+setupAssistant();
+setupBars();
+applyAtmosphere();        // sets body.focus + button label before first render
+
+/* ============================================================================
+   DEMO: fixed four-case Case Select + completion tracking + Steam/Kickstarter/
+   socials call-to-action. These are the ONLY cases — no random/daily/load-code.
+   ============================================================================ */
+const DEMO_CASES=[
+  {key:"easy",    seed:135, desc:"A gentle 6×6 warm-up — learn how the evidence and the grid crack each other open."},
+  {key:"medium",  seed:156, desc:"The full 9×9 manor: a balanced spread of every kind of clue. The classic whodunit."},
+  {key:"hard",    seed:99,  desc:"A knotted 9×9 — and the weapon found by the body may well have been planted."},
+  {key:"extreme", seed:119, desc:"The coldest case: barely any givens, so only the evidence can name the killer."},
+];
+const DEMO_DONE_KEY="demo.done";
+function demoDone(){ return LS.get(DEMO_DONE_KEY,{})||{}; }
+function isDoneKey(key){ return !!demoDone()[key]; }
+function markDone(key){ const d=demoDone(); d[key]=true; LS.set(DEMO_DONE_KEY,d); }
+function allDone(){ return DEMO_CASES.every(c=>isDoneKey(c.key)); }
+function demoCaseNo(seed){ return 100+(seed%900); }   // mirrors story.caseNo
+
+let activeDemoKey=null;
+function caseSelectOpen(){ const cs=$("caseSelect"); return !!cs && !cs.hidden; }
+function hideCaseSelect(){ const cs=$("caseSelect"); if(cs) cs.hidden=true; }
+function showCaseSelect(){ renderCaseSelect(); const cs=$("caseSelect"); if(cs) cs.hidden=false; }
+function launchDemoCase(c){ activeDemoKey=c.key; hideCaseSelect(); startCase({difficulty:c.key, seed:c.seed}); }
+
+function renderCaseSelect(){
+  const grid=$("csGrid"); if(!grid) return; grid.innerHTML="";
+  DEMO_CASES.forEach(c=>{
+    const N=E.TIERS[c.key].cfg.N, size=N+"×"+N, done=isDoneKey(c.key);
+    const card=document.createElement("button");
+    card.className="cs-card"+(done?" done":"");
+    card.innerHTML=
+      `<div class="cs-card-head">`+
+        `<img class="cs-badge img-missing" alt="">`+
+        `<div><span class="cs-flavor">${TIER_FLAVOR[c.key]}</span>`+
+        `<span class="cs-size">${size} grid</span></div>`+
+      `</div>`+
+      `<div class="cs-desc">${c.desc}</div>`+
+      `<div class="cs-foot"><span class="cs-no">Case No. ${demoCaseNo(c.seed)}</span><span class="cs-open">Open file ▸</span></div>`+
+      `<span class="cs-stamp">✓ Solved</span>`;
+    card.onclick=()=>launchDemoCase(c);
+    grid.appendChild(card);
+    loadOptionalImg(card.querySelector(".cs-badge"), uiAsset("badge-"+c.key+".png"));
+  });
+  const n=DEMO_CASES.filter(c=>isDoneKey(c.key)).length, prog=$("csProgress");
+  if(prog) prog.innerHTML = allDone()
+    ? `<b>All four cases solved.</b> Thank you for playing the Casedoku demo.`
+    : `Cases solved: <b>${n}</b> / ${DEMO_CASES.length}`;
+}
+
+/* ---- call-to-action block (shared by the win payoff and the Demo Complete screen) ---- */
+function demoLink(which, btn){
+  const L=window.DEMO_LINKS||{};
+  const url = which==="steam"?L.STEAM_URL : which==="kick"?L.KICKSTARTER_URL : L.SOCIALS;
+  if(url && url!=="#"){ try{ window.open(url,"_blank","noopener"); }catch(e){ location.href=url; } return; }
+  if(btn){ const o=btn.innerHTML; btn.innerHTML='<span class="cta-ico">⏳</span> Link coming soon';
+    setTimeout(()=>{ btn.innerHTML=o; },1400); }
+}
+function ctaHtml(){
+  return `<p class="demo-cta-lead">Enjoying the demo? <b>Support Casedoku</b> and follow the full game.</p>`+
+    `<div class="demo-cta-actions">`+
+      `<button class="cta-btn cta-steam"  data-cta="steam"><span class="cta-ico">🎮</span> Wishlist on Steam</button>`+
+      `<button class="cta-btn cta-social" data-cta="social"><span class="cta-ico">★</span> Visit our socials</button>`+
+      `<button class="cta-btn cta-kick"   data-cta="kick"><span class="cta-ico">🚀</span> Back us on Kickstarter</button>`+
+    `</div>`;
+}
+function fillCta(container, show){ if(!container) return;
+  if(show){ container.innerHTML=ctaHtml();
+    container.querySelectorAll("[data-cta]").forEach(b=>b.onclick=()=>demoLink(b.dataset.cta,b));
+    container.style.display=""; }
+  else { container.innerHTML=""; container.style.display="none"; }
+}
+function onDemoPayoff(won){
+  if(won && activeDemoKey) markDone(activeDemoKey);
+  fillCta($("winCta"), !!won);   // the CTA appears on a solved case
+}
+function showDemoComplete(){ fillCta($("demoCompleteCta"),true); $("demoCompleteModal").classList.add("show"); }
+
+/* the post-win button: all four solved -> Demo Complete finale; otherwise back to the case files */
+$("winNew").onclick=()=>{ $("winModal").classList.remove("show");
+  if(allDone()) showDemoComplete(); else showCaseSelect(); };
+if($("demoCompleteClose")) $("demoCompleteClose").onclick=()=>{ $("demoCompleteModal").classList.remove("show"); showCaseSelect(); };
+if($("demoCompleteBack"))  $("demoCompleteBack").onclick =()=>{ $("demoCompleteModal").classList.remove("show"); showCaseSelect(); };
+if($("csHowto")) $("csHowto").onclick=()=>$("howtoModal").classList.add("show");
+
+/* case-select brand: reuse the header logo probe (wordmark fallback if the image is absent) */
+function setupDemoBrand(){
+  const logo=$("csLogo"), word=$("csWordmark");
+  const show=src=>{ if(logo){ logo.src=src; logo.hidden=false; } if(word) word.hidden=true; };
+  const fail=()=>{ if(logo) logo.hidden=true; if(word) word.hidden=false; };
+  const probe=(src,next)=>{ const t=new Image(); t.onload=()=>show(src); t.onerror=next; t.src=src; };
+  probe(uiAsset('logo-subtitle.png'), ()=>probe(uiAsset('logo.png'), fail));
+}
+setupDemoBrand();
+
+// Entry point: the Case Select screen (NO case auto-started). First-timers get How to Play first.
+showCaseSelect();
+if(!LS.get("seenHowTo",false)) $("howtoModal").classList.add("show");
+})();
+</script>
+</body>
+</html>
