@@ -254,6 +254,34 @@
   .ev-note{font-size:12px;color:var(--ink-dim);line-height:1.45;margin:8px 0 2px;font-style:italic;}
   .scene-word{color:var(--blood);font-weight:700;font-style:normal;}
   .all-ev{margin:2px 0;} .poi{margin:8px 0 2px;}
+  /* evidence TYPE TAG chips — tell the player which clue solves WHO / WHAT / WHY */
+  .ev-tag{display:inline-block;font-family:"Courier New",monospace;font-size:8.5px;font-weight:700;letter-spacing:.5px;
+    padding:1px 5px;border-radius:4px;margin-right:6px;vertical-align:1px;border:1px solid transparent;white-space:nowrap;}
+  .tag-sighting{background:rgba(36,113,163,.22);color:#7fb6e0;border-color:rgba(36,113,163,.5);}
+  .tag-position{background:rgba(120,108,79,.28);color:#cbb98a;border-color:rgba(120,108,79,.55);}
+  .tag-relative{background:rgba(155,90,182,.22);color:#cf9fe6;border-color:rgba(155,90,182,.5);}
+  .tag-weapon{background:rgba(193,39,45,.22);color:#e88a8e;border-color:rgba(193,39,45,.5);}
+  .tag-motive{background:rgba(76,175,125,.2);color:#7fd0a6;border-color:rgba(76,175,125,.5);}
+  /* Possible Weapons marking row (per-case, tap to cycle) */
+  .possible-weapons-sec{margin:9px 0 2px;border-top:1px dashed var(--line);padding-top:8px;}
+  .pw-label{font-family:"Courier New",monospace;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);margin-bottom:6px;}
+  .pw-hint{text-transform:none;letter-spacing:0;font-style:italic;color:var(--ink-dim);font-size:11px;}
+  .possible-weapons{display:flex;gap:8px;flex-wrap:wrap;}
+  .wcand{display:flex;align-items:center;gap:6px;background:#171a22;border:1px solid var(--line);border-radius:9px;
+    padding:6px 9px;cursor:pointer;color:var(--ink);font-family:inherit;font-size:13px;transition:.12s;}
+  .wcand .wicon{width:24px;height:24px;}
+  .wcand-name{font-weight:700;}
+  .wcand-mark{font-family:"Courier New",monospace;font-size:8.5px;letter-spacing:1px;text-transform:uppercase;padding:1px 5px;border-radius:4px;}
+  .wcand.mark-possible{border-color:rgba(231,185,77,.5);} .wcand.mark-possible .wcand-mark{background:rgba(231,185,77,.18);color:var(--amber-soft);}
+  .wcand.mark-doubtful{border-color:rgba(225,150,40,.65);} .wcand.mark-doubtful .wcand-mark{background:rgba(225,150,40,.22);color:#e6a04a;}
+  .wcand.mark-cleared{opacity:.5;filter:grayscale(.6);} .wcand.mark-cleared .wcand-name{text-decoration:line-through;} .wcand.mark-cleared .wcand-mark{background:rgba(120,120,120,.22);color:#9aa0ae;}
+  /* accusation weapon picker */
+  .accuse-weapons{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:2px;}
+  .accuse-weapon{display:flex;align-items:center;gap:6px;background:#171a22;border:1px solid var(--line);border-radius:9px;padding:7px 10px;cursor:pointer;color:var(--ink);font-size:13px;}
+  .accuse-weapon .wicon{width:22px;height:22px;}
+  .accuse-weapon:hover{border-color:var(--amber);}
+  .accuse-weapon.on{border-color:var(--amber);background:#2c2718;box-shadow:0 0 0 1px var(--amber);}
+  .accuse-q-hint{font-weight:400;font-size:11px;color:var(--ink-dim);font-style:italic;}
   /* tray label + first-time tip + stronger selection (P6) */
   .tray-label{font-family:"Courier New",monospace;font-size:11px;letter-spacing:1px;color:var(--amber);
     text-transform:uppercase;text-align:center;margin-top:2px;}
@@ -614,6 +642,10 @@
         <summary>All evidence <span class="req">★ = key</span></summary>
         <ul class="clues" id="clueList"></ul>
       </details>
+      <div class="possible-weapons-sec">
+        <div class="pw-label">Possible Weapons <span class="pw-hint">— tap to mark: possible → doubtful → cleared</span></div>
+        <div class="possible-weapons" id="possibleWeapons"></div>
+      </div>
       <p class="star-legend"><span class="keymark">★</span> <b>Key evidence</b> — required to crack the case. The rest corroborate. <b>Every clue is true.</b></p>
       <p class="ev-note" id="evProgress"></p>
 
@@ -680,12 +712,14 @@
       <h2 style="text-align:center">Final Deduction</h2>
       <p class="accuse-intro">Name the killer. You don't have to finish the grid first — but you get only <b>3 guesses</b>, and a wrong accusation adds <b>+1:00</b> to your time.</p>
       <div class="accuse-guesses" id="accuseGuesses"></div>
-      <div class="accuse-q">1 · Who is the culprit?</div>
+      <div class="accuse-q">1 · Who is the culprit? <span class="accuse-q-hint">(decides the case)</span></div>
       <div class="accuse-suspects" id="accuseSuspects"></div>
-      <div class="accuse-q">2 · What proves it?</div>
-      <select id="accuseEvidence" class="accuse-select"></select>
-      <div class="accuse-q">3 · What was the motive?</div>
+      <div class="accuse-q">2 · What was the <b>true</b> weapon? <span class="accuse-q-hint">([WEAPON] clues)</span></div>
+      <div class="accuse-weapons" id="accuseWeapons"></div>
+      <div class="accuse-q">3 · What was the motive? <span class="accuse-q-hint">([MOTIVE] clues)</span></div>
       <select id="accuseMotive" class="accuse-select"></select>
+      <div class="accuse-q">4 · Which evidence proves it? <span class="accuse-q-hint">(the decisive clue)</span></div>
+      <select id="accuseEvidence" class="accuse-select"></select>
       <div class="accuse-feedback" id="accuseFeedback"></div>
       <button class="btn primary" id="accuseSubmit" style="margin-top:8px;width:100%">J'accuse — name the killer</button>
     </div>
@@ -1190,6 +1224,23 @@ function selfTest(o){
       // 9. case code round-trips
       const ps=parseSeed(C.code);
       if(ps.tier!==tier || ps.seed!==C.seed) fails.push("case code does not round-trip");
+      // 10. WEAPON deduction: 3 candidates incl scene+true; clues true of true weapon; narrows to 1 on Medium+
+      const WT=[{slug:"a",traits:["sharp","narrow"]},{slug:"b",traits:["heavy","blunt"]},{slug:"c",traits:["firearm"]},
+                {slug:"d",traits:["heavy","metal"]},{slug:"e",traits:["poison"]},{slug:"f",traits:["ligature"]},{slug:"g",traits:["sharp","metal"]}];
+      const W=generateCase===generateCase?buildWeaponCase(C.seed,tier,WT):null;
+      const wmap=Object.fromEntries(WT.map(w=>[w.slug,new Set(w.traits)]));
+      if(W.candidates.length!==3) fails.push("weapon: candidates != 3");
+      if(!W.candidates.includes(W.trueWeapon)) fails.push("weapon: true weapon not a candidate");
+      if(!W.candidates.includes(W.sceneObject)) fails.push("weapon: scene object not a candidate");
+      for(const cl of W.clues){ if(wmap[W.trueWeapon].has(cl.trait)!==cl.has){ fails.push("weapon: a clue is false of the true weapon"); break; } }
+      if(tier==="easy"){ if(W.sceneObject!==W.trueWeapon) fails.push("weapon: Easy scene object must BE the true weapon"); }
+      else { const surv=W.candidates.filter(s=>W.clues.every(cl=>wmap[s].has(cl.trait)===cl.has));
+             if(!(surv.length===1 && surv[0]===W.trueWeapon)) fails.push("weapon: clues do not narrow to exactly the true weapon (got "+surv.length+")"); }
+      // 11. MOTIVE clues: true of the killer's tag, and narrow 3 distinct-tag options to 1
+      const mtags=["money","secret","revenge"], kt=mtags[C.seed%3], mc=buildMotiveClues(C.seed,kt,tier);
+      if(!mc.length || !mc.every(cl=>cl.tag===kt)) fails.push("motive: a clue is not true of the killer's motive");
+      const mSurv=mtags.filter(t=>mc.every(cl=>cl.tag===t));
+      if(!(mSurv.length===1 && mSurv[0]===kt)) fails.push("motive: clues do not narrow to exactly one motive");
 
       if(fails.length){ report.fail++; report.fails.push({tier,seed,fails}); }
       else { report.pass++; if(!report.examples[tier]) report.examples[tier]={code:C.code, givens:C.givens.filter(x=>x).length, completionsWithout:C.completionsWithout, clues:C.clues.length, sceneCandidates:C.sceneCandidates.length}; }
@@ -1199,9 +1250,48 @@ function selfTest(o){
   return report;
 }
 
+/* ---------- weapon deduction layer (independent of the sudoku; seeded per case) ----------
+   weapons: [{slug, traits:[...]}]. Returns the TRUE weapon, the SCENE OBJECT found by the body
+   (may be PLANTED on Hard/Extreme), exactly 3 CANDIDATES (scene + true always included), and
+   WEAPON clues that are TRUE of the true weapon and (Medium+) narrow the 3 candidates to 1. */
+function buildWeaponCase(seed, tier, weapons){
+  const rng=makeRNG((seed ^ hashStr("weapon"))>>>0);
+  const pick=arr=>arr[Math.floor(rng()*arr.length)];
+  const tset=w=>new Set(w.traits);
+  const distinct=(a,b)=>{ const A=tset(a),B=tset(b); if(A.size!==B.size) return true; for(const t of A) if(!B.has(t)) return true; return false; };
+  const trueW=pick(weapons);
+  const plantChance = tier==="extreme"?0.7 : tier==="hard"?0.45 : 0;
+  const planted = rng() < plantChance;
+  let scene=trueW;
+  if(planted){ const decoys=weapons.filter(w=>w.slug!==trueW.slug && distinct(w,trueW)); if(decoys.length) scene=pick(decoys); }
+  const cand=[trueW]; if(scene.slug!==trueW.slug) cand.push(scene);
+  const pool=shuffle(rng, weapons.filter(w=>!cand.some(c=>c.slug===w.slug) && distinct(w,trueW)));
+  for(const w of pool){ if(cand.length>=3) break; cand.push(w); }
+  shuffle(rng,cand);
+  const clues=[];
+  if(tier!=="easy"){
+    for(const c of cand){ if(c.slug===trueW.slug) continue;
+      if(clues.some(cl=> tset(c).has(cl.trait)!==cl.has )) continue;     // already rejected by an existing clue
+      const tT=tset(trueW), tC=tset(c); let chosen=null;
+      for(const t of tT) if(!tC.has(t)){ chosen={trait:t, has:true}; break; }   // confirm a trait the true weapon has, c lacks
+      if(!chosen) for(const t of tC) if(!tT.has(t)){ chosen={trait:t, has:false}; break; }   // reject a trait c has, the true weapon lacks
+      if(chosen) clues.push(chosen);
+    }
+  }
+  return { trueWeapon:trueW.slug, sceneObject:scene.slug, candidates:cand.map(w=>w.slug), clues, planted };
+}
+/* MOTIVE clues: assert the killer's motive tag (1, or 2 on Hard/Extreme). With 3 distinct-tag
+   motive options presented, these TRUE clues narrow the options to exactly the killer's. */
+function buildMotiveClues(seed, killerTag, tier){
+  const n=(tier==="hard"||tier==="extreme")?2:1, out=[];
+  for(let i=0;i<n;i++) out.push({tag:killerTag, idx:i});
+  return out;
+}
+
 GLOBAL.CludokuEngine = {
   makeRNG, hashStr, TIERS, generateCase, parseSeed, caseCode,
   isValidFull, completionsOf, makePred, boxOf, rcOfBox, cellOfValInBox, selfTest,
+  buildWeaponCase, buildMotiveClues,
 };
 })(typeof window!=="undefined" ? window : globalThis);
 </script>
@@ -1219,33 +1309,63 @@ const MANOR = {
   id:"manor", name:"Blackwood Manor (Classic Whodunit)", place:"Blackwood Manor",
   // each suspect carries a `role` slug -> assets/themes/manor/suspects/suspect-<role>.png
   suspects:[
-    {role:"colonel",     L:"A", name:"The Colonel",     color:"#D4A017", gender:"male",   motive:"a buried war secret"},
-    {role:"widow",       L:"B", name:"The Widow",       color:"#7D3C98", gender:"female", motive:"a contested inheritance"},
-    {role:"butler",      L:"C", name:"The Butler",      color:"#5D6D7E", gender:"male",   motive:"years of unpaid loyalty"},
-    {role:"chef",        L:"D", name:"The Chef",        color:"#C0392B", gender:"male",   motive:"a stolen recipe"},
-    {role:"professor",   L:"E", name:"The Professor",   color:"#1E8449", gender:"male",   motive:"a discredited theory"},
-    {role:"heiress",     L:"F", name:"The Heiress",     color:"#C2407A", gender:"female", motive:"a cut from the will"},
-    {role:"gardener",    L:"G", name:"The Gardener",    color:"#D86A1E", gender:"female", motive:"a dismissed grievance"},
-    {role:"captain",     L:"H", name:"The Captain",     color:"#2471A3", gender:"male",   motive:"a mutinous grudge"},
-    {role:"doctor",      L:"I", name:"The Doctor",      color:"#17A2A2", gender:"female", motive:"a malpractice cover-up"},
-    {role:"actress",     L:"J", name:"The Actress",     color:"#B03060", gender:"female", motive:"a ruined reputation"},
-    {role:"inspector",   L:"K", name:"The Inspector",   color:"#3A4250", gender:"male",   motive:"a case gone wrong"},
-    {role:"maid",        L:"L", name:"The Maid",        color:"#4FA3D1", gender:"female", motive:"a withheld wage"},
-    {role:"heir",        L:"M", name:"The Heir",        color:"#7A8B3C", gender:"male",   motive:"an impatient fortune"},
-    {role:"magician",    L:"N", name:"The Magician",    color:"#3D348B", gender:"male",   motive:"an exposed trick"},
-    {role:"antiquarian", L:"O", name:"The Antiquarian", color:"#9C6B30", gender:"male",   motive:"a priceless forgery"},
-    {role:"nurse",       L:"P", name:"The Nurse",       color:"#D98C9A", gender:"female", motive:"a fatal prescription"},
+    {role:"colonel",     L:"A", name:"The Colonel",     color:"#D4A017", gender:"male",   mtag:"secret",      motive:"a buried war secret"},
+    {role:"widow",       L:"B", name:"The Widow",       color:"#7D3C98", gender:"female", mtag:"inheritance", motive:"a contested inheritance"},
+    {role:"butler",      L:"C", name:"The Butler",      color:"#5D6D7E", gender:"male",   mtag:"revenge",     motive:"years of unpaid loyalty"},
+    {role:"chef",        L:"D", name:"The Chef",        color:"#C0392B", gender:"male",   mtag:"reputation",  motive:"a stolen recipe"},
+    {role:"professor",   L:"E", name:"The Professor",   color:"#1E8449", gender:"male",   mtag:"reputation",  motive:"a discredited theory"},
+    {role:"heiress",     L:"F", name:"The Heiress",     color:"#C2407A", gender:"female", mtag:"inheritance", motive:"a cut from the will"},
+    {role:"gardener",    L:"G", name:"The Gardener",    color:"#D86A1E", gender:"female", mtag:"revenge",     motive:"a dismissed grievance"},
+    {role:"captain",     L:"H", name:"The Captain",     color:"#2471A3", gender:"male",   mtag:"revenge",     motive:"a mutinous grudge"},
+    {role:"doctor",      L:"I", name:"The Doctor",      color:"#17A2A2", gender:"female", mtag:"secret",      motive:"a malpractice cover-up"},
+    {role:"actress",     L:"J", name:"The Actress",     color:"#B03060", gender:"female", mtag:"reputation",  motive:"a ruined reputation"},
+    {role:"inspector",   L:"K", name:"The Inspector",   color:"#3A4250", gender:"male",   mtag:"secret",      motive:"a case gone wrong"},
+    {role:"maid",        L:"L", name:"The Maid",        color:"#4FA3D1", gender:"female", mtag:"money",       motive:"a withheld wage"},
+    {role:"heir",        L:"M", name:"The Heir",        color:"#7A8B3C", gender:"male",   mtag:"inheritance", motive:"an impatient fortune"},
+    {role:"magician",    L:"N", name:"The Magician",    color:"#3D348B", gender:"male",   mtag:"reputation",  motive:"an exposed trick"},
+    {role:"antiquarian", L:"O", name:"The Antiquarian", color:"#9C6B30", gender:"male",   mtag:"money",       motive:"a priceless forgery"},
+    {role:"nurse",       L:"P", name:"The Nurse",       color:"#D98C9A", gender:"female", mtag:"secret",      motive:"a fatal prescription"},
   ],
   victims:["Lord Blackwood","the Dowager Countess","Sir Hugh Pennington","the family solicitor","old Mr. Ashford"],
-  // each weapon carries a `slug` -> assets/themes/manor/weapons/weapon-<slug>.png
+  // each weapon: `slug` -> assets/themes/manor/weapons/weapon-<slug>.png; `traits` drive the
+  // [WEAPON] confirm/reject clues. Trait sets are kept distinct so any pair is distinguishable.
   weapons:[
-    {n:"the kitchen knife", slug:"knife"},   {n:"the candlestick", slug:"candlestick"},
-    {n:"the revolver", slug:"revolver"},     {n:"the heavy rope", slug:"rope"},
-    {n:"the wrench", slug:"wrench"},          {n:"a vial of poison", slug:"poison"},
-    {n:"the lead pipe", slug:"pipe"},         {n:"the fireplace poker", slug:"poker"},
-    {n:"the cast-iron pan", slug:"pan"},      {n:"the letter opener", slug:"letteropener"},
-    {n:"the rolling pin", slug:"rollingpin"}, {n:"the garden shears", slug:"shears"},
+    {n:"the kitchen knife", slug:"knife",      traits:["sharp","narrow"]},
+    {n:"the candlestick",   slug:"candlestick",traits:["heavy","blunt"]},
+    {n:"the revolver",      slug:"revolver",   traits:["firearm"]},
+    {n:"the heavy rope",    slug:"rope",       traits:["ligature"]},
+    {n:"the wrench",        slug:"wrench",      traits:["heavy","metal"]},
+    {n:"a vial of poison",  slug:"poison",     traits:["poison"]},
+    {n:"the lead pipe",     slug:"pipe",       traits:["heavy","metal","long"]},
+    {n:"the fireplace poker",slug:"poker",     traits:["sharp","metal","long"]},
+    {n:"the cast-iron pan", slug:"pan",        traits:["heavy","broad"]},
+    {n:"the letter opener", slug:"letteropener",traits:["sharp","narrow","small"]},
+    {n:"the rolling pin",   slug:"rollingpin", traits:["heavy","wood"]},
+    {n:"the garden shears", slug:"shears",     traits:["sharp","metal"]},
   ],
+  // [WEAPON] clue templates per trait: confirm (weapon HAD the trait) / reject (it did NOT)
+  weaponClues:{
+    sharp:{yes:"The fatal wound was clean and sharp-edged.", no:"It was no cutting blade — the skin wasn't sliced."},
+    narrow:{yes:"The wound was narrow and deep.", no:"The wound was far too broad for any slender blade."},
+    small:{yes:"Only a small, slim implement could have left that mark.", no:"No small pocket-sized object did this."},
+    heavy:{yes:"The blow fell with the weight of something heavy.", no:"There was little force — nothing heavy was swung."},
+    blunt:{yes:"It was unmistakable blunt-force trauma.", no:"There was no blunt impact at all."},
+    metal:{yes:"Flecks of metal were left in the wound.", no:"No trace of metal was found on the body."},
+    long:{yes:"The angle suggests a long-handled object.", no:"The killer struck up close — nothing long-reached."},
+    broad:{yes:"A broad, flat surface delivered the blow.", no:"The bruise was not broad or flat."},
+    wood:{yes:"Splinters of wood were recovered from the scene.", no:"Not a single wood fragment was present."},
+    firearm:{yes:"A single gunshot rang out that night.", no:"No shot was fired — the house stayed silent."},
+    ligature:{yes:"There were ligature marks around the throat.", no:"There were no marks of strangulation."},
+    poison:{yes:"Toxicology confirms a dose of poison.", no:"The victim showed no signs of poison whatsoever."},
+  },
+  // [MOTIVE] clue templates per motive tag (each suspect carries an `mtag`)
+  motiveClues:{
+    money:["This killing was about money — someone stood to gain.","Follow the coin: greed was the only motive that fits."],
+    inheritance:["A name in a will was worth killing for here.","Someone's share of the estate drove this."],
+    secret:["The killer was burying a secret that would have ruined them.","This was done to keep a damning truth from coming out."],
+    revenge:["This was personal — an old grudge finally repaid.","Someone settled a long-nursed score."],
+    reputation:["Someone killed to protect their good name.","A reputation was on the line — and worth a life."],
+  },
   times:["just before midnight","at the stroke of nine","during the thunderstorm","at supper","as the clock struck two"],
   // victim cast — a SEPARATE roster from the playable suspects (never placeable, never a
   // candidate; only "the body" of a case). Eligible victims are those whose themes[]
@@ -1442,6 +1562,14 @@ function renderClue(cfg,theme,clue){
   return "An indecipherable note.";
 }
 const TYPE_LABEL={sighting:"sighting",exclusion:"exclusion",position:"position",relative:"relative",adjacency:"adjacency",count:"count"};
+/* evidence type chips: map each clue's logical type to a player-facing TAG */
+const EV_TAG={sighting:"SIGHTING", exclusion:"POSITION", position:"POSITION", relative:"RELATIVE",
+  adjacency:"RELATIVE", count:"POSITION", weapon:"WEAPON", motive:"MOTIVE"};
+function weaponBySlug(theme, slug){ return (theme.weapons||[]).find(w=>w.slug===slug) || {n:slug, slug, traits:[]}; }
+function renderWeaponClue(theme, clue){ const t=(theme.weaponClues||{})[clue.trait]; if(!t) return "The weapon left a telltale mark.";
+  return clue.has ? t.yes : t.no; }
+function renderMotiveClue(theme, clue){ const arr=(theme.motiveClues||{})[clue.tag]; if(!arr||!arr.length) return "The motive points one way only.";
+  return arr[(clue.idx||0)%arr.length]; }
 
 /* build a short cozy-mystery intro from the theme's story library + case facts.
    facts = {place, victim, room, time, weapon, n}. Deterministic given rng (seed). */
@@ -1458,6 +1586,7 @@ function renderStory(theme, facts, rng){
 
 GLOBAL.CLUDOKU_THEMES={manor:MANOR};
 GLOBAL.CludokuSkin={ renderClue, renderStory, roomName, spotName, sName, setCast, vocab, TYPE_LABEL,
+  EV_TAG, weaponBySlug, renderWeaponClue, renderMotiveClue,
   setCaseObjects, objName, pick:(rng,arr)=>arr[Math.floor(rng()*arr.length)] };
 })(typeof window!=="undefined" ? window : globalThis);
 </script>
@@ -1494,7 +1623,7 @@ const boardEl=$("board"), trayEl=$("tray");
 
 let C=null, cfg=null, board=null, given=null, sel=-1, selSuspect=-1;
 let undoStack=[], redoStack=[], hintsUsed=0, solved=false, story=null, cluesUsed=new Set();
-let accuseCulprit=-1, guessesLeft=3, clueStep=0, hintLevel=0, hintTarget=-1;
+let accuseCulprit=-1, accuseWeapon="", guessesLeft=3, clueStep=0, hintLevel=0, hintTarget=-1;
 const MAX_GUESSES=3;
 let notesMode=false, candidates=[];   // candidates[i] = Set of suspect values pencilled into cell i
 
@@ -1614,16 +1743,39 @@ function dressStory(){
   const seedKey=C.seed>>>0;
   const vsel=pickVictim(THEME, seedKey, rng, atmosphere) || (THEME.victims&&THEME.victims[0]) || {slug:"",name:"the victim",age:"",class:"",vibe:""};
   if(vsel.slug) recordVictim(vsel.slug, seedKey);
+  // --- WEAPON deduction (engine, seeded): true weapon, scene object (maybe planted), 3 candidates, [WEAPON] clues ---
+  const wcase=E.buildWeaponCase(C.seed, C.tier, THEME.weapons);
+  const wName=slug=>Skin.weaponBySlug(THEME,slug).n;
+  // --- MOTIVE: clue(s) of the killer's motive tag + 3 motive options (killer + 2 distinct-tag distractors) ---
+  const killerTag=killer.mtag||"secret";
+  const motiveClues=E.buildMotiveClues(C.seed, killerTag, C.tier);
+  const mrng=E.makeRNG((C.seed ^ E.hashStr("motiveopt"))>>>0);
+  const others=[]; for(let v=1;v<=cfg.N;v++){ if(v===C.killer) continue; const su=Skin.sName(THEME,v); others.push({mtag:su.mtag, motive:su.motive}); }
+  for(let i=others.length-1;i>0;i--){ const j=Math.floor(mrng()*(i+1)); [others[i],others[j]]=[others[j],others[i]]; }
+  const dist=[], usedTags=new Set([killerTag]);
+  for(const o of others){ if(dist.length>=2) break; if(!usedTags.has(o.mtag) && !dist.some(d=>d.motive===o.motive)){ dist.push(o); usedTags.add(o.mtag); } }
+  for(const o of others){ if(dist.length>=2) break; if(!dist.some(d=>d.motive===o.motive) && o.motive!==killer.motive) dist.push(o); }   // fallback fill
+  const motiveOptions=[{motive:killer.motive, correct:true}, ...dist.map(d=>({motive:d.motive, correct:false}))];
+  for(let i=motiveOptions.length-1;i>0;i--){ const j=Math.floor(mrng()*(i+1)); [motiveOptions[i],motiveOptions[j]]=[motiveOptions[j],motiveOptions[i]]; }
+
   story={ victim:vsel.name, victimDisplay:vsel.name, victimSlug:vsel.slug, victimTags:vsel,
-    weapon:pick(THEME.weapons), time:pick(THEME.times), atmosphere,
-    sceneRoom, alibiRoom, killer, caseNo:100+(C.seed%900) };
+    sceneObject:wcase.sceneObject, trueWeapon:wcase.trueWeapon, weaponCandidates:wcase.candidates,
+    weaponClues:wcase.clues, weaponPlanted:wcase.planted, weaponMarks:{},
+    motiveClues, motiveOptions, killerTag,
+    time:pick(THEME.times), atmosphere, sceneRoom, alibiRoom, killer, caseNo:100+(C.seed%900) };
+  wcase.candidates.forEach(s=>story.weaponMarks[s]="possible");   // per-case player marks (not persisted)
   story.title=`The Murder of ${vsel.name}`;
-  // cozy-mystery narrative intro woven from the procedural facts (own rng stream so
-  // adding/removing story text never shifts the rest of the dressing)
+  // unified evidence list: position clues (solve WHO) + [WEAPON] (solve WHAT) + [MOTIVE] (solve WHY), each tagged
+  story.evidence=[];
+  C.clues.forEach((cl,i)=>story.evidence.push({ tag:Skin.EV_TAG[cl.type]||cl.type.toUpperCase(),
+    text:Skin.renderClue(cfg,THEME,cl), key:cl.key, proof:C.proofClues.includes(i), kind:"pos" }));
+  story.weaponClues.forEach(wc=>story.evidence.push({ tag:"WEAPON", text:Skin.renderWeaponClue(THEME,wc), key:true, proof:false, kind:"weapon" }));
+  story.motiveClues.forEach(mc=>story.evidence.push({ tag:"MOTIVE", text:Skin.renderMotiveClue(THEME,mc), key:true, proof:false, kind:"motive" }));
+  // cozy-mystery narrative intro (own rng stream); names the SCENE object (what was found by the body)
   const srng=E.makeRNG((C.seed ^ E.hashStr("narrative"))>>>0);
   story.narrative=Skin.renderStory(THEME, {
     place:THEME.place||"the manor", victim:story.victim, victimDesc:vsel.slug?victimDescriptor(vsel):"",
-    room:story.sceneRoom, time:story.time, weapon:story.weapon.n, n:cfg.N, atmosphere }, srng);
+    room:story.sceneRoom, time:story.time, weapon:wName(wcase.sceneObject), n:cfg.N, atmosphere }, srng);
 }
 
 /* seeded playable cast: a random N-subset of the 16-role roster, deterministic from the case
@@ -1706,13 +1858,14 @@ function renderBoard(){
       o.src=tAsset('objects','object-'+room.icon+'.png'); o.alt=""; cell.appendChild(o); }
     if(board[i]!==0) cell.appendChild(tokenEl(board[i]));
     else if(candidates[i] && candidates[i].size) cell.appendChild(candGrid(i));
-    // crime-scene (dashed) cell: the victim's body + the murder weapon
+    // crime-scene (dashed) cell: the victim's body + the SCENE OBJECT found beside it (may be planted)
     if(i===C.murderCell && story){
       const b=document.createElement("img"); b.className="cell-victim img-missing";
       b.alt=""; b.title=`${story.victimDisplay||"the victim"} (deceased)`; cell.appendChild(b);
       if(story.victimSlug) loadOptionalImg(b, tAsset('victims','victim-'+story.victimSlug+'.png'));
+      const so=Skin.weaponBySlug(THEME,story.sceneObject);
       const w=document.createElement("img"); w.className="cell-weapon";
-      w.src=tAsset('weapons','weapon-'+story.weapon.slug+'.png'); w.alt=""; w.title=story.weapon.n; cell.appendChild(w);
+      w.src=tAsset('weapons','weapon-'+story.sceneObject+'.png'); w.alt=""; w.title=`Found beside the body: ${so.n}`; cell.appendChild(w);
     }
     cell.addEventListener("click",()=>onCell(i));
     boardEl.appendChild(cell);
@@ -1746,18 +1899,20 @@ function renderCase(){
   else { $("caseVictim").removeAttribute("src"); }
   $("caseVictim").title=story.victimDisplay;
   $("caseStory").textContent=story.narrative;
+  const so=Skin.weaponBySlug(THEME,story.sceneObject);
   $("caseSub").innerHTML=`Case No. ${story.caseNo} · <b>${TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label}</b> · ${THEME.place}`+
-    ` · weapon: <img class="wicon" src="${tAsset('weapons','weapon-'+story.weapon.slug+'.png')}" alt="">${story.weapon.n}.`;
-  // evidence (★ = key/load-bearing; the rest are true corroborating details)
+    ` · Found beside victim: <img class="wicon" src="${tAsset('weapons','weapon-'+story.sceneObject+'.png')}" alt="">${so.n}.`;
+  // evidence list — each clue prefixed with a TYPE TAG chip (★ = key; every clue is true)
   const list=$("clueList"); list.innerHTML="";
-  C.clues.forEach((cl,idx)=>{
+  story.evidence.forEach((ev,idx)=>{
     const li=document.createElement("li"); li.dataset.n=(idx+1);
-    if(cl.key) li.classList.add("key");
-    const star=cl.key?`<span class="keymark" title="key evidence — required to solve">★</span>`:"";
-    li.innerHTML=`${star}${Skin.renderClue(cfg,THEME,cl)} <span class="clue-type">[${Skin.TYPE_LABEL[cl.type]||cl.type}]</span>`;
+    if(ev.key) li.classList.add("key");
+    const star=ev.key?`<span class="keymark" title="key evidence">★</span>`:"";
+    li.innerHTML=`<span class="ev-tag tag-${ev.tag.toLowerCase()}">${ev.tag}</span>${star}${ev.text}`;
     li.addEventListener("click",()=>{ li.classList.toggle("used"); if(li.classList.contains("used"))cluesUsed.add(idx); else cluesUsed.delete(idx); });
     list.appendChild(li);
   });
+  renderPossibleWeapons();
   // current-evidence stepper + tactical progress readout
   clueStep=0; renderEvCurrent();
   $("evProgress").innerHTML=`<b>${C.completionsWithout}</b> arrangements fit the sudoku alone — the evidence finds the one. `+
@@ -1770,12 +1925,26 @@ function renderCase(){
     ros.appendChild(d); }
 }
 function renderEvCurrent(){
-  const n=C.clues.length; if(!n){ $("evClue").textContent="—"; $("evStep").textContent=""; return; }
+  const ev=story&&story.evidence||[]; const n=ev.length; if(!n){ $("evClue").textContent="—"; $("evStep").textContent=""; return; }
   clueStep=((clueStep%n)+n)%n;
-  const cl=C.clues[clueStep];
-  const star=cl.key?`<span class="keymark" title="key evidence — required to solve">★</span>`:"";
-  $("evClue").innerHTML=`${star}${Skin.renderClue(cfg,THEME,cl)}`;   // clean: clue text only
+  const e=ev[clueStep];
+  const star=e.key?`<span class="keymark" title="key evidence">★</span>`:"";
+  $("evClue").innerHTML=`<span class="ev-tag tag-${e.tag.toLowerCase()}">${e.tag}</span>${star}${e.text}`;
   $("evStep").textContent=`${clueStep+1} / ${n}`;
+}
+/* Possible Weapons: the 3 candidates; tap a chip to cycle the player's mark possible -> doubtful -> cleared */
+const WMARK_NEXT={possible:"doubtful", doubtful:"cleared", cleared:"possible"};
+function renderPossibleWeapons(){
+  const host=$("possibleWeapons"); if(!host||!story) return; host.innerHTML="";
+  story.weaponCandidates.forEach(slug=>{
+    const w=Skin.weaponBySlug(THEME,slug), mark=story.weaponMarks[slug]||"possible";
+    const chip=document.createElement("button"); chip.className="wcand mark-"+mark; chip.dataset.slug=slug;
+    chip.title="Tap to mark: possible → doubtful → cleared";
+    chip.innerHTML=`<img class="wicon" src="${tAsset('weapons','weapon-'+slug+'.png')}" alt="">`+
+      `<span class="wcand-name">${w.n.replace(/^(the|a|an)\s+/i,"")}</span><span class="wcand-mark">${mark}</span>`;
+    chip.onclick=()=>{ story.weaponMarks[slug]=WMARK_NEXT[story.weaponMarks[slug]||"possible"]; renderPossibleWeapons(); };
+    host.appendChild(chip);
+  });
 }
 
 /* ---- interactions (cell-first: tap a cell to select, then tap a suspect to place) ---- */
@@ -1958,16 +2127,20 @@ function openAccusation(){
     b.onclick=()=>{ accuseCulprit=v; [...sp.children].forEach(c=>c.classList.toggle("on", +c.dataset.v===v)); };
     sp.appendChild(b);
   }
-  // (2) evidence — the displayed clues
-  const ev=$("accuseEvidence"); ev.innerHTML='<option value="-1">— choose the decisive clue —</option>';
-  C.clues.forEach((cl,idx)=>{ const o=document.createElement("option"); o.value=idx;
-    o.textContent=`#${idx+1}: ${stripTags(Skin.renderClue(cfg,THEME,cl))}`; ev.appendChild(o); });
-  // (3) motive — each suspect's motive (correct = killer's), order seeded so it isn't positional
+  // (2) TRUE weapon — the 3 candidates (clickable); correct = story.trueWeapon
+  const wp=$("accuseWeapons"); wp.innerHTML=""; accuseWeapon="";
+  story.weaponCandidates.forEach(slug=>{ const w=Skin.weaponBySlug(THEME,slug);
+    const b=document.createElement("button"); b.className="accuse-weapon"; b.dataset.slug=slug;
+    b.innerHTML=`<img class="wicon" src="${tAsset('weapons','weapon-'+slug+'.png')}" alt=""><span>${w.n.replace(/^(the|a|an)\s+/i,"")}</span>`;
+    b.onclick=()=>{ accuseWeapon=slug; [...wp.children].forEach(c=>c.classList.toggle("on", c.dataset.slug===slug)); };
+    wp.appendChild(b); });
+  // (3) motive — exactly 3 options (killer's + 2 distinct-tag distractors), narrowable by [MOTIVE] clues
   const mo=$("accuseMotive"); mo.innerHTML='<option value="-1">— choose the motive —</option>';
-  const order=[]; for(let v=1;v<=cfg.N;v++) order.push(v);
-  const rng=E.makeRNG((C.seed^E.hashStr("accuse"))>>>0);
-  for(let i=order.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; }
-  order.forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=cap(Skin.sName(THEME,v).motive); mo.appendChild(o); });
+  story.motiveOptions.forEach((opt,i)=>{ const o=document.createElement("option"); o.value=i; o.textContent=cap(opt.motive); mo.appendChild(o); });
+  // (4) evidence — the displayed clues; correct = a position proof clue
+  const ev=$("accuseEvidence"); ev.innerHTML='<option value="-1">— choose the decisive clue —</option>';
+  story.evidence.forEach((e,idx)=>{ const o=document.createElement("option"); o.value=idx;
+    o.textContent=`#${idx+1} [${e.tag}]: ${stripTags(e.text)}`; ev.appendChild(o); });
   const placed=board.filter(v=>v).length, total=cfg.N*cfg.N;
   $("accuseGuesses").innerHTML=`<b>${guessesLeft}</b> guess${guessesLeft===1?"":"es"} left`+
     (placed<total?` · board ${placed}/${total} placed (you can still accuse)`:` · grid complete`);
@@ -1987,11 +2160,11 @@ function submitAccusation(){
     setAccuseFeedback(`Wrong accusation. +1:00 added to your time. ${guessesLeft} guess${guessesLeft===1?"":"es"} left.`,"bad");
     return;
   }
-  // correct culprit
+  // correct culprit — now grade weapon, motive, and proof too
   const evPick=+$("accuseEvidence").value, moPick=+$("accuseMotive").value;
-  const proving=new Set(C.proofClues);                                   // the KEY evidence tying culprit to scene
-  const grade={ evidenceRight: evPick>=0 && proving.has(evPick),         // Q2: real check
-                motiveRight: moPick>=1 && moPick===C.killer,             // Q3: real check vs culprit's motive
+  const grade={ weaponRight: accuseWeapon!=="" && accuseWeapon===story.trueWeapon,           // Q2: true weapon
+                motiveRight: moPick>=0 && !!(story.motiveOptions[moPick]&&story.motiveOptions[moPick].correct),  // Q3: killer's motive
+                evidenceRight: evPick>=0 && !!(story.evidence[evPick]&&story.evidence[evPick].proof),            // Q4: a position proof clue
                 evPick };
   $("accuseModal").classList.remove("show");
   payoff(grade, true);
@@ -2007,21 +2180,23 @@ function payoff(grade, won){
   const rt=$("revealToken"); rt.innerHTML=""; rt.appendChild(makeToken(C.killer,"big"));
   $("killerName").textContent=k.name;
   $("killerMotive").textContent=`Motive: ${k.motive}.`;
-  const correctProof=C.proofClues.length?stripTags(Skin.renderClue(cfg,THEME,C.clues[C.proofClues[0]])):"the arrangement of the house";
-  const proveIdx=(won && grade.evidenceRight && grade.evPick>=0)?grade.evPick:(C.proofClues.length?C.proofClues[0]:-1);
-  $("poEvidence").innerHTML=proveIdx>=0?Skin.renderClue(cfg,THEME,C.clues[proveIdx]):"the arrangement of the house";
+  const proofIdx0=story.evidence.findIndex(e=>e.proof);
+  const correctProof=proofIdx0>=0?stripTags(story.evidence[proofIdx0].text):"the arrangement of the house";
+  const tw=Skin.weaponBySlug(THEME,story.trueWeapon);
+  const showIdx=(won && grade.evidenceRight && grade.evPick>=0)?grade.evPick:proofIdx0;
+  $("poEvidence").innerHTML=showIdx>=0?story.evidence[showIdx].text:"the arrangement of the house";
   const totalTime=fmtTime(elapsedMs()), guessesUsed=MAX_GUESSES-guessesLeft;
   const penaltyStr=penaltyMs?` · penalty +${fmtTime(penaltyMs)}`:"";
   if(won){
     $("newsHeadline").textContent=makeHeadline(k.name);
-    const troName=cap(story.weapon.n.replace(/^(the|a|an)\s+/i,""));
-    $("poTrophy").innerHTML=`<img class="wicon" src="${tAsset('weapons','weapon-'+story.weapon.slug+'.png')}" alt="">${troName}`;
-    const acc=1+(grade.evidenceRight?1:0)+(grade.motiveRight?1:0), perfect=acc===3; isPerfect=perfect;
+    $("poTrophy").innerHTML=`<img class="wicon" src="${tAsset('weapons','weapon-'+story.trueWeapon+'.png')}" alt="">${cap(tw.n.replace(/^(the|a|an)\s+/i,""))}`;
+    const acc=1+(grade.weaponRight?1:0)+(grade.motiveRight?1:0)+(grade.evidenceRight?1:0), perfect=acc===4; isPerfect=perfect;
+    const plantNote=story.weaponPlanted?` (the ${Skin.weaponBySlug(THEME,story.sceneObject).n} by the body was planted)`:"";
     $("accuseScore").innerHTML=
-      `<div class="acc-stars">${"★".repeat(acc)}${"☆".repeat(3-acc)} <span class="acc-num">Accuracy ${acc}/3</span></div>`+
-      `<div class="acc-bits">Culprit ✓ · Proof ${grade.evidenceRight?"✓":"✗"} · Motive ${grade.motiveRight?"✓":"✗"} · ⏱ ${totalTime}${penaltyStr} · ${guessesUsed+1}/${MAX_GUESSES} guesses used</div>`+
-      (perfect ? `<div class="acc-correct good">Flawless deduction.</div>`
-               : `<div class="acc-correct">`+(grade.evidenceRight?"":`The proof was “${correctProof}”. `)+(grade.motiveRight?"":`The motive was ${cap(k.motive)}.`)+`</div>`);
+      `<div class="acc-stars">${"★".repeat(acc)}${"☆".repeat(4-acc)} <span class="acc-num">Accuracy ${acc}/4</span></div>`+
+      `<div class="acc-bits">Culprit ✓ · Weapon ${grade.weaponRight?"✓":"✗"} · Motive ${grade.motiveRight?"✓":"✗"} · Proof ${grade.evidenceRight?"✓":"✗"} · ⏱ ${totalTime}${penaltyStr} · ${guessesUsed+1}/${MAX_GUESSES} guesses</div>`+
+      (perfect ? `<div class="acc-correct good">Flawless deduction.${plantNote}</div>`
+               : `<div class="acc-correct">`+(grade.weaponRight?"":`The weapon was <b>${tw.n}</b>${plantNote}. `)+(grade.motiveRight?"":`The motive was ${cap(k.motive)}. `)+(grade.evidenceRight?"":`The proof was “${correctProof}”.`)+`</div>`);
     recordSolved(makeHeadline(k.name), perfect);
     setStatus(`Case closed — ${k.name} arrested.`,"good");
   } else {
@@ -2068,7 +2243,7 @@ function buildChain(){
   chain.appendChild(tail);
   $("winStory").innerHTML=`${k.name} had sworn they spent the evening in ${story.alibiRoom} — `+
     `but the evidence places them at the scene in ${story.sceneRoom}, `+
-    `<img class="wicon" src="${tAsset('weapons','weapon-'+story.weapon.slug+'.png')}" alt="">${story.weapon.n} in hand.`;
+    `<img class="wicon" src="${tAsset('weapons','weapon-'+story.trueWeapon+'.png')}" alt="">${Skin.weaponBySlug(THEME,story.trueWeapon).n} in hand.`;
 }
 function spotText(cell){ return Skin.spotName(cfg,THEME,cell); }
 
@@ -2077,11 +2252,11 @@ function recordSolved(headline, perfect){
   const archive=LS.get("archive",[]);
   if(!archive.some(a=>a.code===C.code)){
     archive.unshift({ code:C.code, no:story.caseNo, tier:C.tier, title:story.title,
-      culprit:Skin.sName(THEME,C.killer).name, weapon:story.weapon.slug, headline, perfect:!!perfect, date:nowStr() });
+      culprit:Skin.sName(THEME,C.killer).name, weapon:story.trueWeapon, headline, perfect:!!perfect, date:nowStr() });
     LS.set("archive", archive.slice(0,200));
   }
   const trophies=LS.get("trophies",[]);
-  if(!trophies.includes(story.weapon.slug)){ trophies.push(story.weapon.slug); LS.set("trophies", trophies); }
+  if(!trophies.includes(story.trueWeapon)){ trophies.push(story.trueWeapon); LS.set("trophies", trophies); }
 }
 function openArchive(){
   const archive=LS.get("archive",[]), trophies=LS.get("trophies",[]);
