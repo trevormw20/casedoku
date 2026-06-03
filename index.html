@@ -1846,8 +1846,8 @@ function renderBoard(){
     const box=E.boxOf(cfg,r,c), room=THEME.rooms[box%THEME.rooms.length];
     const sr=r%cfg.bh, sc=c%cfg.bw;                                  // sub-position within the room
     const fx=cfg.bw>1?(sc/(cfg.bw-1))*100:0, fy=cfg.bh>1?(sr/(cfg.bh-1))*100:0;
-    cell.style.backgroundColor=`hsla(${room.hue},38%,50%,0.12)`;      // fallback tint if floor png is missing
-    cell.style.backgroundImage=`linear-gradient(rgba(13,15,20,${dim}),rgba(13,15,20,${dim})),url("${tAsset('rooms','room-'+room.slug+'.png')}")`;
+    cell.style.backgroundColor=`hsla(${room.hue},38%,50%,0.12)`;      // fallback tint if the floor image is missing
+    cell.style.backgroundImage=`linear-gradient(rgba(13,15,20,${dim}),rgba(13,15,20,${dim})),url("${tAsset('rooms','room-'+room.slug+'.jpg')}")`;   // rooms are JPG (smaller than PNG)
     cell.style.backgroundSize=`${cfg.bw*100}% ${cfg.bh*100}%`;        // one floor image tiled across the room
     cell.style.backgroundPosition=`${fx}% ${fy}%`;
     cell.dataset.i=i;
