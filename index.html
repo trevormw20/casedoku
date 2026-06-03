@@ -1887,6 +1887,7 @@ function submitAccusation(){
   if(accuseCulprit<1){ setAccuseFeedback("Name a culprit first.",""); return; }
   if(accuseCulprit!==C.killer){
     guessesLeft--; addPenalty(60000); updateGuessPill();      // wrong: lose a guess, +1:00 penalty
+    fxFlash(); fxShake($("accuseModal").querySelector(".modal")); fxFloat("+1:00"); sfx("buzz");  // screen shake + red flash + floating penalty
     if(guessesLeft<=0){                                       // out of guesses -> case fails
       $("accuseModal").classList.remove("show");
       payoff(null, false);
@@ -1907,6 +1908,7 @@ function submitAccusation(){
 
 function payoff(grade, won){
   solved=true; freezeTimer();
+  let isPerfect=false;
   const k=Skin.sName(THEME,C.killer), modal=$("winModal").querySelector(".modal");
   modal.classList.toggle("failed", !won);
   $("revealWrap").classList.toggle("jailed", !!won);   // bars only when the killer is caught
@@ -1923,7 +1925,7 @@ function payoff(grade, won){
     $("newsHeadline").textContent=makeHeadline(k.name);
     const troName=cap(story.weapon.n.replace(/^(the|a|an)\s+/i,""));
     $("poTrophy").innerHTML=`<img class="wicon" src="${tAsset('weapons','weapon-'+story.weapon.slug+'.png')}" alt="">${troName}`;
-    const acc=1+(grade.evidenceRight?1:0)+(grade.motiveRight?1:0), perfect=acc===3;
+    const acc=1+(grade.evidenceRight?1:0)+(grade.motiveRight?1:0), perfect=acc===3; isPerfect=perfect;
     $("accuseScore").innerHTML=
       `<div class="acc-stars">${"★".repeat(acc)}${"☆".repeat(3-acc)} <span class="acc-num">Accuracy ${acc}/3</span></div>`+
       `<div class="acc-bits">Culprit ✓ · Proof ${grade.evidenceRight?"✓":"✗"} · Motive ${grade.motiveRight?"✓":"✗"} · ⏱ ${totalTime}${penaltyStr} · ${guessesUsed+1}/${MAX_GUESSES} guesses used</div>`+
@@ -1942,6 +1944,7 @@ function payoff(grade, won){
   }
   buildChain();
   $("winModal").classList.add("show");
+  playReveal(won, isPerfect);   // flashbulb -> bars slam -> stamp thunk + dust -> confetti (3/3); tap to skip
 }
 function failHeadline(){
   const opts=["THE KILLER WALKS FREE — CASE GOES COLD","NO ARREST AT {PLACE}: KILLER ESCAPES","{PLACE} MURDER LEFT UNSOLVED"];
