@@ -306,20 +306,67 @@
   .wstamp{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-13deg);
     font-family:"Courier New",monospace;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;
     padding:2px 8px;border:2px solid;border-radius:4px;pointer-events:none;white-space:nowrap;display:none;}
-  .wcand.just-set .wstamp{animation:wstampIn .34s cubic-bezier(.2,1.5,.4,1);}
+  /* shared mark visuals across weapon chips (.wcand) AND motive cards (.mcand) */
+  :is(.wcand,.mcand).just-set .wstamp{animation:wstampIn .34s cubic-bezier(.2,1.5,.4,1);}
   @keyframes wstampIn{0%{transform:translate(-50%,-50%) rotate(-13deg) scale(2.4);opacity:0;}55%{opacity:1;}100%{transform:translate(-50%,-50%) rotate(-13deg) scale(1);opacity:1;}}
-  /* SUSPECTED — faint red outline + tag */
+  /* SUSPECTED — red outline + tag */
+  :is(.wcand,.mcand).st-suspected .wcand-ico{outline:2px solid rgba(220,70,70,.85);outline-offset:1px;}
+  :is(.wcand,.mcand).st-suspected .wcand-mark{display:inline-block;background:rgba(220,70,70,.18);color:#e88a8a;}
   .wcand.st-suspected{border-color:rgba(220,70,70,.7);}
-  .wcand.st-suspected .wcand-ico{outline:2px solid rgba(220,70,70,.85);outline-offset:1px;}
-  .wcand.st-suspected .wcand-mark{display:inline-block;background:rgba(220,70,70,.18);color:#e88a8a;}
-  /* CLEARED — greyed out + diagonal stamp */
+  /* CLEARED — grey + diagonal stamp */
+  :is(.wcand,.mcand).st-cleared .wcand-name{text-decoration:line-through;text-decoration-color:rgba(170,170,180,.6);}
+  :is(.wcand,.mcand).st-cleared .wstamp{display:block;color:rgba(195,195,205,.95);border-color:rgba(175,175,185,.8);background:rgba(18,20,26,.6);}
   .wcand.st-cleared{opacity:.55;filter:grayscale(.7);}
-  .wcand.st-cleared .wcand-name{text-decoration:line-through;text-decoration-color:rgba(170,170,180,.6);}
-  .wcand.st-cleared .wstamp{display:block;color:rgba(195,195,205,.95);border-color:rgba(175,175,185,.8);background:rgba(18,20,26,.6);}
   /* CONFIRMED — gold outline + stamp + warm glow */
+  :is(.wcand,.mcand).st-confirmed .wcand-ico{outline:2px solid var(--amber);outline-offset:1px;}
+  :is(.wcand,.mcand).st-confirmed .wstamp{display:block;font-size:9.5px;color:var(--amber-soft);border-color:var(--amber);background:rgba(231,185,77,.1);}
   .wcand.st-confirmed{border-color:var(--amber);background:#221d10;box-shadow:0 0 0 1px var(--amber),0 0 14px rgba(231,185,77,.35);}
-  .wcand.st-confirmed .wcand-ico{outline:2px solid var(--amber);outline-offset:1px;}
-  .wcand.st-confirmed .wstamp{display:block;font-size:9.5px;color:var(--amber-soft);border-color:var(--amber);background:rgba(231,185,77,.1);}
+
+  /* ===== POSSIBLE MOTIVES — aged index cards that flip face-up on a MOTIVE clue, then mark like weapons ===== */
+  .possible-motives-sec{margin-top:11px;}
+  .possible-motives{display:flex;gap:9px;flex-wrap:wrap;}
+  .mcand{position:relative;width:108px;height:66px;padding:0;border:none;background:none;cursor:pointer;
+    perspective:760px;transform:rotate(var(--jit,0deg));font-family:inherit;}
+  .mcard-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .01s;}
+  .mcand.flipped .mcard-inner{transform:rotateY(180deg);}
+  .mcand.flipped.just-flip .mcard-inner{animation:mflipIn .55s cubic-bezier(.3,.7,.3,1);}
+  @keyframes mflipIn{from{transform:rotateY(0deg);}to{transform:rotateY(180deg);}}
+  .mface{position:absolute;inset:0;backface-visibility:hidden;border-radius:7px;box-shadow:0 3px 8px rgba(0,0,0,.45);display:flex;overflow:hidden;}
+  .mback{background:linear-gradient(160deg,#2a2d36,#1b1d24);border:1px solid var(--line);flex-direction:column;align-items:center;justify-content:center;gap:3px;}
+  .mback-q{font-family:Georgia,serif;font-weight:bold;font-size:22px;color:var(--ink-dim);line-height:1;}
+  .mback-conf{font-family:"Courier New",monospace;font-size:7.5px;letter-spacing:1.5px;text-transform:uppercase;
+    color:rgba(193,39,45,.75);border:1px solid rgba(193,39,45,.5);padding:1px 5px;border-radius:3px;transform:rotate(-5deg);}
+  .mfront{transform:rotateY(180deg);background:linear-gradient(165deg,#efe4c6,#dccca0);color:#2a2418;
+    border:1px solid #b8a268;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:6px 9px;}
+  .mglyph{display:inline-flex;color:#3a3020;}
+  .mglyph .gsvg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round;}
+  .mglyph .gsvg.gfill *{fill:currentColor;stroke:none;}
+  .mglyph .gsvg .gfilldot{fill:currentColor;stroke:none;}
+  .mcard-name{font-family:"Courier New",monospace;font-weight:700;font-size:10.5px;line-height:1.15;letter-spacing:.3px;color:#2a2418;text-transform:uppercase;}
+  .mcand .wcand-mark{position:absolute;top:4px;right:5px;}
+  .mcand .wstamp{font-size:10px;}
+  .mcand.st-cleared{filter:grayscale(.5);opacity:.78;}
+  .mcand.st-suspected .mfront{box-shadow:inset 0 0 0 2px rgba(200,55,55,.65);}
+  .mcand.st-confirmed .mfront{box-shadow:inset 0 0 0 2px var(--amber),0 0 12px rgba(231,185,77,.4);}
+
+  /* ===== payoff accusation trio: culprit + weapon + motive pinned side by side, proof beneath ===== */
+  .accuse-trio{display:flex;gap:12px;justify-content:center;align-items:flex-start;margin:8px 0 4px;flex-wrap:wrap;}
+  .trio-cell{display:flex;flex-direction:column;align-items:center;gap:3px;width:98px;text-align:center;animation:trioIn .4s ease both;}
+  .trio-cell:nth-child(2){animation-delay:.08s;} .trio-cell:nth-child(3){animation-delay:.16s;}
+  @keyframes trioIn{from{opacity:0;transform:translateY(9px);}to{opacity:1;transform:none;}}
+  .trio-art{width:62px;height:62px;display:flex;align-items:center;justify-content:center;background:rgba(10,12,18,.5);border:1px solid var(--line);border-radius:10px;}
+  .trio-art .trio-token{width:50px;height:50px;}
+  .trio-weapon{width:44px;height:44px;object-fit:contain;}
+  .trio-motive{color:var(--amber-soft);display:inline-flex;}
+  .trio-motive .gsvg{width:36px;height:36px;fill:none;stroke:currentColor;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round;}
+  .trio-motive .gsvg.gfill *{fill:currentColor;stroke:none;} .trio-motive .gsvg .gfilldot{fill:currentColor;stroke:none;}
+  .trio-label{font-family:"Courier New",monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-dim);}
+  .trio-cell.right .trio-label{color:var(--good);} .trio-cell.wrong .trio-label{color:var(--bad);}
+  .trio-val{font-size:12.5px;color:var(--ink);line-height:1.2;}
+  .trio-val .trio-actual{display:block;color:var(--amber-soft);font-size:11px;font-style:italic;}
+  .trio-proof{text-align:center;font-size:13px;font-style:italic;color:var(--ink);margin:4px auto 4px;max-width:430px;line-height:1.45;}
+  .trio-proof b{font-style:normal;}
+  .trio-proof-label{display:block;font-family:"Courier New",monospace;font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);font-style:normal;margin-bottom:2px;}
   /* accusation weapon picker */
   .accuse-weapons{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:2px;}
   .accuse-weapon{display:flex;align-items:center;gap:6px;background:#171a22;border:1px solid var(--line);border-radius:9px;padding:7px 10px;cursor:pointer;color:var(--ink);font-size:13px;}
@@ -880,8 +927,12 @@
       <div class="cf-group" id="grpWeapons">
         <div class="scene-obj-info" id="sceneObjInfo"></div>
         <div class="possible-weapons-sec">
-          <div class="pw-label">Possible Weapons <span class="pw-hint">— tap to mark: possible → doubtful → cleared</span></div>
+          <div class="pw-label">Possible Weapons <span class="pw-hint">— tap to mark: Suspected → Cleared → Confirmed</span></div>
           <div class="possible-weapons" id="possibleWeapons"></div>
+        </div>
+        <div class="possible-weapons-sec possible-motives-sec">
+          <div class="pw-label">Possible Motives <span class="pw-hint">— read a MOTIVE clue to reveal, then tap to mark</span></div>
+          <div class="possible-weapons possible-motives" id="possibleMotives"></div>
         </div>
       </div>
 
@@ -904,7 +955,7 @@
     <div class="co-bar">
       <div class="co-tabs" id="coTabs">
         <button class="co-tab on" data-tab="evidence">Evidence</button>
-        <button class="co-tab" data-tab="weapons">Weapons</button>
+        <button class="co-tab" data-tab="weapons">Leads</button>
         <button class="co-tab" data-tab="people">People</button>
         <button class="co-tab" data-tab="case">Case</button>
       </div>
@@ -2158,7 +2209,7 @@ function dressStory(){
   const dist=[], usedTags=new Set([killerTag]);
   for(const o of others){ if(dist.length>=2) break; if(!usedTags.has(o.mtag) && !dist.some(d=>d.motive===o.motive)){ dist.push(o); usedTags.add(o.mtag); } }
   for(const o of others){ if(dist.length>=2) break; if(!dist.some(d=>d.motive===o.motive) && o.motive!==killer.motive) dist.push(o); }   // fallback fill
-  const motiveOptions=[{motive:killer.motive, correct:true}, ...dist.map(d=>({motive:d.motive, correct:false}))];
+  const motiveOptions=[{motive:killer.motive, correct:true, tag:killerTag}, ...dist.map(d=>({motive:d.motive, correct:false, tag:d.mtag}))];
   for(let i=motiveOptions.length-1;i>0;i--){ const j=Math.floor(mrng()*(i+1)); [motiveOptions[i],motiveOptions[j]]=[motiveOptions[j],motiveOptions[i]]; }
 
   story={ victim:vsel.name, victimDisplay:vsel.name, victimSlug:vsel.slug, victimTags:vsel,
@@ -2166,6 +2217,7 @@ function dressStory(){
     weaponClues:wcase.clues, weaponPlanted:wcase.planted, weaponMarks:loadWeaponMarks(C.code),
     motiveClues, motiveOptions, killerTag,
     time:pick(THEME.times), atmosphere, sceneRoom, alibiRoom, killer, caseNo:100+(C.seed%900) };
+  { const ms=loadMotiveState(C.code); story.motiveRevealed=ms.revealed; story.motiveMarks=ms.marks; }   // per-case motive notebook + reveal flag
   story.title=`The Murder of ${vsel.name}`;
   // unified evidence list: position clues (solve WHO) + [WEAPON] (solve WHAT) + [MOTIVE] (solve WHY), each tagged
   story.evidence=[];
@@ -2323,6 +2375,7 @@ function renderCase(){
   if($("sceneObjInfo")) $("sceneObjInfo").innerHTML=`<span class="soi-label">Found beside the body</span>`+
     `<img class="wicon" src="${tAsset('weapons','weapon-'+story.sceneObject+'.png')}" alt="">${so.n} — but is it the real weapon? Weigh it against the <span class="tag-weapon ev-tag" style="margin:0">WEAPON</span> evidence.`;
   renderPossibleWeapons();
+  renderPossibleMotives();
   // current-evidence stepper + tactical progress readout
   clueStep=0; renderEvCurrent();
   $("evProgress").innerHTML=`<b>${C.completionsWithout}</b> arrangements fit the sudoku alone — the evidence finds the one. `+
@@ -2341,6 +2394,7 @@ function renderEvCurrent(){
   const star=e.key?`<span class="keymark" title="key evidence">★</span>`:"";
   $("evClue").innerHTML=`<span class="ev-tag tag-${e.tag.toLowerCase()}">${e.tag}</span>${star}${e.text}`;
   $("evStep").textContent=`${clueStep+1} / ${n}`;
+  revealMotivesIfMotiveClue(e);   // stepper landing on a MOTIVE clue flips the motive cards
 }
 /* Possible Weapons — the player's notebook. Tap a chip to cycle:
    none -> Suspected (red outline + magnifier sweep) -> Cleared (grey + diagonal stamp + thud)
@@ -2375,6 +2429,55 @@ function renderPossibleWeapons(){
     host.appendChild(chip);
   });
   _wmarkJustSet=null;                              // consumed -> later re-renders don't replay entrance animations
+}
+
+/* ===== Possible Motives — aged index cards. Face-DOWN until the player engages a [MOTIVE] clue,
+   then FLIP face-up (motion-gated). Markable like weapons (none/Suspected/Cleared/Confirmed).
+   Reveal flag + marks persist per case (localStorage). Player-only notebook, no validation. ===== */
+const MMARK_TAG={suspected:"Suspected"};
+const MMARK_STAMP={cleared:"Cleared", confirmed:"Confirmed"};
+const MOTIVE_GLYPH={money:"coin", inheritance:"scroll", revenge:"dagger", secret:"envelope", reputation:"mask"};
+const GLYPH_SVG={
+  coin:'<svg viewBox="0 0 18 18" class="gsvg"><circle cx="9" cy="9" r="6.4"/><path d="M9 5.2v7.6M7.3 6.7h3a1.4 1.4 0 0 1 0 2.8H8.2a1.4 1.4 0 0 0 0 2.8h3"/></svg>',
+  scroll:'<svg viewBox="0 0 18 18" class="gsvg"><rect x="4.2" y="3" width="9.6" height="12" rx="1.4"/><path d="M6.6 6h4.8M6.6 9h4.8M6.6 12h3"/></svg>',
+  dagger:'<svg viewBox="0 0 18 18" class="gsvg gfill"><path d="M9 2l1.3 8.4H7.7z"/><rect x="6" y="10.3" width="6" height="1.6" rx=".8"/><rect x="8.2" y="11.7" width="1.6" height="4.3" rx=".8"/></svg>',
+  envelope:'<svg viewBox="0 0 18 18" class="gsvg"><rect x="3" y="4.6" width="12" height="8.8" rx="1"/><path d="M3.6 5.6L9 10l5.4-4.4"/></svg>',
+  mask:'<svg viewBox="0 0 18 18" class="gsvg"><path d="M4 4.2c0 6.6 2.4 9.8 5 9.8s5-3.2 5-9.8c-3-1-7-1-10 0z"/><circle cx="7" cy="7.6" r="1" class="gfilldot"/><circle cx="11" cy="7.6" r="1" class="gfilldot"/></svg>',
+  file:'<svg viewBox="0 0 18 18" class="gsvg"><path d="M4.5 3h5l4 4v8h-9z"/><path d="M9.5 3v4h4M6.8 10.2h4.4M6.8 12.6h4.4"/></svg>'
+};
+function motiveGlyphSVG(tag){ return GLYPH_SVG[MOTIVE_GLYPH[tag]] || GLYPH_SVG.file; }
+function loadMotiveState(code){ const all=LS.get("motiveState",{})||{}; const s=all[code]||{}; return { revealed:!!s.revealed, marks:Object.assign({}, s.marks||{}) }; }
+function saveMotiveState(){ if(!C) return; const all=LS.get("motiveState",{})||{}; all[C.code]={ revealed:!!story.motiveRevealed, marks:story.motiveMarks||{} };
+  const ks=Object.keys(all); while(ks.length>40){ delete all[ks.shift()]; } LS.set("motiveState",all); }
+let _mmarkJustSet=null, _mflipNow=false;
+function renderPossibleMotives(){
+  const host=$("possibleMotives"); if(!host||!story) return; host.innerHTML="";
+  const revealed=!!story.motiveRevealed;
+  (story.motiveOptions||[]).forEach((opt,i)=>{
+    const st=(story.motiveMarks&&story.motiveMarks[i])||"none";
+    const card=document.createElement("button");
+    card.className="mcand st-"+st+(revealed?" flipped":"")+(_mmarkJustSet===i?" just-set":"")+(_mflipNow?" just-flip":"");
+    card.dataset.i=i; card.style.setProperty("--jit",(((i*37)%7)-3)+"deg");   // small deterministic rotation jitter
+    card.title=revealed?"Your notebook — tap to mark: Suspected → Cleared → Confirmed → clear":"Read a MOTIVE clue to reveal this lead";
+    card.innerHTML=`<span class="mcard-inner">`+
+      `<span class="mface mback"><span class="mback-q">?</span><span class="mback-conf">Confidential</span></span>`+
+      `<span class="mface mfront"><span class="wcand-ico mglyph">${motiveGlyphSVG(opt.tag)}</span>`+
+        `<span class="wcand-name mcard-name">${cap(opt.motive)}</span>`+
+        `<span class="wcand-mark">${MMARK_TAG[st]||""}</span><span class="wstamp">${MMARK_STAMP[st]||""}</span></span>`+
+    `</span>`;
+    if(revealed) card.onclick=()=>{
+      const next=WMARK_NEXT[(story.motiveMarks&&story.motiveMarks[i])||"none"];
+      story.motiveMarks[i]=next; saveMotiveState(); _mmarkJustSet=i;
+      if(next==="cleared") sfx("stamp"); else if(next==="confirmed") sfx("confirm");
+      renderPossibleMotives();
+    };
+    host.appendChild(card);
+  });
+  _mmarkJustSet=null; _mflipNow=false;   // consumed -> plain re-renders / reloads don't replay flip or stamp animations
+}
+function revealMotivesIfMotiveClue(ev){   // flip the cards face-up the FIRST time a [MOTIVE] clue is engaged
+  if(!ev || ev.kind!=="motive" || !story || story.motiveRevealed) return;
+  story.motiveRevealed=true; saveMotiveState(); _mflipNow=true; renderPossibleMotives();
 }
 
 /* ---- interactions (cell-first: tap a cell to select, then tap a suspect to place) ---- */
@@ -2481,6 +2584,7 @@ function applyClueHighlight(T){ const N=cfg.N;
   clueHlTimer=setTimeout(clearClueHighlight,1800);   // pulse ~1.6s, then clear (static when motion off)
 }
 function highlightClue(ev){ if(!ev||!C) return;
+  revealMotivesIfMotiveClue(ev);   // tapping a [MOTIVE] clue flips the motive cards face-up
   // on phones the case-file overlay covers the board — close it so the pulse is visible
   if(typeof closeCaseFile==="function" && document.body.classList.contains("co-open")) closeCaseFile();
   clearClueHighlight();
@@ -2643,11 +2747,38 @@ function submitAccusation(){
   const grade={ weaponRight: accuseWeapon!=="" && accuseWeapon===story.trueWeapon,           // Q2: true weapon
                 motiveRight: moPick>=0 && !!(story.motiveOptions[moPick]&&story.motiveOptions[moPick].correct),  // Q3: killer's motive
                 evidenceRight: evPick>=0 && !!(story.evidence[evPick]&&story.evidence[evPick].proof),            // Q4: a position proof clue
-                evPick };
+                evPick, weaponPick:accuseWeapon, motivePick:moPick };
   $("accuseModal").classList.remove("show");
   payoff(grade, true);
 }
 
+/* payoff accusation trio: culprit + weapon + motive pinned side by side (✓/✗ on a win; the truth on a fail) */
+function trioCell(label, ok, valHTML){
+  const cell=document.createElement("div"); cell.className="trio-cell"+(ok===true?" right":(ok===false?" wrong":""));
+  const mark=ok===true?" ✓":(ok===false?" ✗":"");
+  cell.innerHTML=`<div class="trio-art"></div><div class="trio-label">${label}${mark}</div><div class="trio-val">${valHTML}</div>`;
+  return cell;
+}
+function buildAccuseTrio(grade, won){
+  const k=Skin.sName(THEME,C.killer), wrap=document.createElement("div"); wrap.className="accuse-trio";
+  const wnm=s=>cap(Skin.weaponBySlug(THEME,s).n.replace(/^(the|a|an)\s+/i,""));
+  // CULPRIT (always the killer; on a win the player named them)
+  const c1=trioCell("Culprit", won?true:null, k.name.replace(/^The\s+/i,""));
+  const tok=makeToken(C.killer); tok.classList.add("trio-token"); c1.querySelector(".trio-art").appendChild(tok);
+  // WEAPON
+  const trueW=story.trueWeapon, pickW=(won && grade.weaponPick)?grade.weaponPick:trueW;
+  let wVal=wnm(pickW); if(won && !grade.weaponRight) wVal+=`<span class="trio-actual">actually ${wnm(trueW)}</span>`;
+  const c2=trioCell("Weapon", won?grade.weaponRight:null, wVal);
+  c2.querySelector(".trio-art").innerHTML=`<img class="trio-weapon" src="${tAsset('weapons','weapon-'+pickW+'.png')}" alt="">`;
+  // MOTIVE
+  const trueM=story.motiveOptions.find(o=>o.correct)||{motive:k.motive, tag:story.killerTag};
+  const pickM=(won && grade.motivePick>=0 && story.motiveOptions[grade.motivePick])?story.motiveOptions[grade.motivePick]:trueM;
+  let mVal=cap(pickM.motive); if(won && !grade.motiveRight) mVal+=`<span class="trio-actual">actually ${cap(trueM.motive)}</span>`;
+  const c3=trioCell("Motive", won?grade.motiveRight:null, mVal);
+  c3.querySelector(".trio-art").innerHTML=`<span class="trio-motive">${motiveGlyphSVG((won?pickM:trueM).tag)}</span>`;
+  wrap.appendChild(c1); wrap.appendChild(c2); wrap.appendChild(c3);
+  return wrap;
+}
 function payoff(grade, won){
   solved=true; freezeTimer();
   let isPerfect=false;
@@ -2670,20 +2801,20 @@ function payoff(grade, won){
     $("poTrophy").innerHTML=`<img class="wicon" src="${tAsset('weapons','weapon-'+story.trueWeapon+'.png')}" alt="">${cap(tw.n.replace(/^(the|a|an)\s+/i,""))}`;
     const acc=1+(grade.weaponRight?1:0)+(grade.motiveRight?1:0)+(grade.evidenceRight?1:0), perfect=acc===4; isPerfect=perfect;
     const plantNote=story.weaponPlanted?` (the ${Skin.weaponBySlug(THEME,story.sceneObject).n} by the body was planted)`:"";
-    $("accuseScore").innerHTML=
-      `<div class="acc-stars">${"★".repeat(acc)}${"☆".repeat(4-acc)} <span class="acc-num">Accuracy ${acc}/4</span></div>`+
-      `<div class="acc-bits">Culprit ✓ · Weapon ${grade.weaponRight?"✓":"✗"} · Motive ${grade.motiveRight?"✓":"✗"} · Proof ${grade.evidenceRight?"✓":"✗"} · ⏱ ${totalTime}${penaltyStr} · ${guessesUsed+1}/${MAX_GUESSES} guesses</div>`+
-      (perfect ? `<div class="acc-correct good">Flawless deduction.${plantNote}</div>`
-               : `<div class="acc-correct">`+(grade.weaponRight?"":`The weapon was <b>${tw.n}</b>${plantNote}. `)+(grade.motiveRight?"":`The motive was ${cap(k.motive)}. `)+(grade.evidenceRight?"":`The proof was “${correctProof}”.`)+`</div>`);
+    const sc=$("accuseScore"); sc.innerHTML=
+      `<div class="acc-stars">${"★".repeat(acc)}${"☆".repeat(4-acc)} <span class="acc-num">Accuracy ${acc}/4 · ⏱ ${totalTime}${penaltyStr} · ${guessesUsed+1}/${MAX_GUESSES} guesses</span></div>`+
+      (perfect?`<div class="acc-correct good">Flawless deduction.${plantNote}</div>`:``);
+    sc.appendChild(buildAccuseTrio(grade,true));
+    sc.insertAdjacentHTML("beforeend",`<div class="trio-proof"><span class="trio-proof-label">Proof</span>“${correctProof}”</div>`);
     recordSolved(makeHeadline(k.name), perfect);
     setStatus(`Case closed — ${k.name} arrested.`,"good");
   } else {
     setHeadline(failHeadline());
     $("poTrophy").innerHTML=`<span class="muted">none — case unsolved</span>`;
-    $("accuseScore").innerHTML=
-      `<div class="acc-stars" style="color:var(--bad)">CASE UNSOLVED</div>`+
-      `<div class="acc-bits">Out of guesses — the killer walked free. ⏱ ${totalTime}${penaltyStr} · ${MAX_GUESSES}/${MAX_GUESSES} guesses used</div>`+
-      `<div class="acc-correct">The culprit was <b>${k.name}</b>. The proof: “${correctProof}”. Motive: ${cap(k.motive)}.</div>`;
+    const sc=$("accuseScore"); sc.innerHTML=
+      `<div class="acc-stars" style="color:var(--bad)">CASE UNSOLVED <span class="acc-num" style="color:var(--ink-dim)">⏱ ${totalTime}${penaltyStr} · ${MAX_GUESSES}/${MAX_GUESSES} guesses used</span></div>`;
+    sc.appendChild(buildAccuseTrio(null,false));   // the truth, pinned up
+    sc.insertAdjacentHTML("beforeend",`<div class="trio-proof"><span class="trio-proof-label">The proof</span>“${correctProof}”</div>`);
     setStatus(`Case unsolved — ${k.name} got away.`,"bad");
   }
   setResolution(won);   // 2-3 sentence story closer (different flavor on a fail)
