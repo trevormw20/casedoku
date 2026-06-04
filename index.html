@@ -598,6 +598,52 @@
   .trophy{width:54px;height:54px;border-radius:9px;background:#171a22;border:1px solid var(--line);
     display:flex;align-items:center;justify-content:center;padding:5px;}
   .trophy img{max-width:100%;max-height:100%;}
+  /* ---- trophy collection: Archive gallery (tabs + grid) + post-case strip ---- */
+  .trophy-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 10px;}
+  .trophy-tab{padding:5px 10px;border-radius:7px;border:1px solid var(--line);background:#171a22;color:var(--ink-dim);
+    font-size:12px;font-family:"Courier New",monospace;letter-spacing:.5px;cursor:pointer;}
+  .trophy-tab.on{color:var(--amber-soft);border-color:var(--amber);background:#20232e;}
+  .tg-prog{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-dim);margin-bottom:9px;}
+  .tg-prog b{color:var(--ink);}
+  .tg-cards,.ts-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:8px;}
+  .tg-cards{max-height:360px;overflow:auto;padding-right:2px;}
+  .tcard{display:flex;gap:9px;background:#171a22;border:1px solid var(--line);border-radius:9px;padding:8px 9px;align-items:flex-start;position:relative;overflow:hidden;}
+  .tcard.unlocked{border-color:rgba(196,160,90,.4);}
+  .tcard.locked{opacity:.94;}
+  .tc-art{width:46px;height:46px;flex:none;border-radius:7px;background:#10131a;border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .tc-img{max-width:100%;max-height:100%;}
+  .tc-img.locked{filter:brightness(0);opacity:.42;}            /* locked weapon = dark silhouette */
+  .tc-emoji{font-size:24px;line-height:1;}
+  .tc-emoji.locked{font-family:Georgia,serif;font-weight:700;color:var(--ink-dim);opacity:.6;}   /* locked relic/perfect = "?" */
+  .tc-glyph{color:var(--amber-soft);display:inline-flex;}
+  .tc-glyph .gsvg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round;}
+  .tc-glyph .gsvg.gfill *{fill:currentColor;stroke:none;} .tc-glyph .gsvg .gfilldot{fill:currentColor;stroke:none;}
+  .tc-glyph.locked{color:var(--ink-dim);opacity:.6;}           /* locked motive = face-down confidential card */
+  .tc-body{min-width:0;flex:1;}
+  .tc-name{font-weight:700;font-size:12.5px;color:var(--ink);margin-bottom:2px;line-height:1.2;}
+  .tcard.locked .tc-name{color:var(--ink-dim);font-style:italic;font-weight:600;}
+  .tc-rar{display:inline-block;font-size:8.5px;letter-spacing:.6px;text-transform:uppercase;font-family:"Courier New",monospace;
+    border:1px solid currentColor;border-radius:4px;padding:1px 4px;margin-bottom:3px;}
+  .tcard.r-common .tc-rar{color:#9aa3b2;} .tcard.r-uncommon .tc-rar{color:#5fae74;}
+  .tcard.r-rare .tc-rar{color:#5b96e0;} .tcard.r-masterwork .tc-rar{color:#b884e0;} .tcard.r-legendary .tc-rar{color:#e0b24f;}
+  .tcard.unlocked.r-legendary{border-color:rgba(224,178,79,.55);box-shadow:inset 0 0 0 1px rgba(224,178,79,.18);}
+  .tc-desc{font-size:11.5px;color:var(--ink);line-height:1.4;}
+  .tc-hint{font-size:11.5px;color:var(--ink-dim);font-style:italic;line-height:1.4;}
+  .tc-src{font-size:10px;color:var(--ink-dim);margin-top:4px;font-family:"Courier New",monospace;}
+  .trophy-strip{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px;text-align:left;}
+  .ts-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-family:"Courier New",monospace;
+    font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-dim);}
+  .ts-prog{color:var(--amber-soft);white-space:nowrap;}
+  .ts-new{font-size:12.5px;color:var(--good);font-weight:700;margin:7px 0 5px;}
+  .ts-none{font-size:12px;color:var(--ink-dim);font-style:italic;margin-top:5px;}
+  .ts-tease{margin-top:9px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--amber-soft);}
+  .ts-card{animation:tsIn .5s both;animation-delay:var(--d,0ms);}
+  @keyframes tsIn{0%{opacity:0;transform:translateY(12px) scale(.96);}100%{opacity:1;transform:translateY(0) scale(1);}}
+  .ts-card::after{content:"";position:absolute;inset:0;border-radius:9px;pointer-events:none;
+    background:linear-gradient(105deg,transparent 32%,rgba(255,245,210,.22) 48%,transparent 64%);
+    background-size:250% 100%;background-position:120% 0;animation:tsShine .9s ease-out both;animation-delay:var(--d,0ms);}
+  @keyframes tsShine{0%{background-position:120% 0;}100%{background-position:-40% 0;}}
   .archive-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto;}
   .arch-row{background:#171a22;border:1px solid var(--line);border-radius:8px;padding:8px 11px;}
   .arch-row b{color:var(--amber-soft);} .arch-meta{display:block;font-size:12px;color:var(--ink-dim);margin-top:2px;}
@@ -1134,6 +1180,7 @@
         <div class="po-cell"><span class="po-label">Trophy unlocked</span><span class="po-val" id="poTrophy">—</span></div>
       </div>
       <div id="accuseScore" class="accuse-score"></div>
+      <div class="trophy-strip" id="trophyStrip" hidden></div>
       <details class="reasoning-details">
         <summary>The chain of reasoning</summary>
         <ul class="chain" id="chain"></ul>
@@ -1188,7 +1235,8 @@
       </div>
       <div class="rec-table" id="recTable"></div>
       <div class="sec">Trophies <span class="req" id="trophyCount"></span></div>
-      <div class="trophies" id="trophyShelf"></div>
+      <div class="trophy-tabs" id="trophyTabs"></div>
+      <div class="trophy-grid" id="trophyGrid"></div>
       <div class="sec">Solved Cases <span class="req" id="archiveCount"></span></div>
       <div class="archive-list" id="archiveList"></div>
     </div>
@@ -2056,7 +2104,7 @@ const boardEl=$("board"), trayEl=$("tray");
 const caseMQ=window.matchMedia("(max-width:700px)");   // "mobile" — game-first screen + case-file overlay + bolder footprints
 
 let C=null, cfg=null, board=null, given=null, sel=-1, selSuspect=-1;
-let undoStack=[], redoStack=[], hintsUsed=0, solved=false, story=null, cluesUsed=new Set();
+let undoStack=[], redoStack=[], hintsUsed=0, solved=false, story=null, cluesUsed=new Set(), mistakes=0;   // mistakes: incorrect placements this case (for the Clean Case trophy)
 let accuseCulprit=-1, accuseWeapon="", guessesLeft=3, clueStep=0, hintLevel=0, hintTarget=-1;
 const MAX_GUESSES=3;
 let notesMode=false, candidates=[];   // candidates[i] = Set of suspect values pencilled into cell i
@@ -2351,7 +2399,7 @@ function startCase(opts){
   C=E.generateCase(opts); cfg=C.cfg;
   Skin.setCast(pickCaseCast(C.seed, cfg.N));                // shuffle the playable cast for this case
   board=C.givens.slice(); given=C.givens.map(v=>v!==0);
-  sel=-1; selSuspect=-1; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false; cluesUsed=new Set();
+  sel=-1; selSuspect=-1; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false; cluesUsed=new Set(); mistakes=0;
   _sceneMsgShown=false; _nudged=false;   // reset Feature A per-case state
   _discQueue=[]; _discPlaying=false; _discCount=0; endDiscovery();   // reset Feature B transient ceremony state (_unitCredited is loaded per-case by dressStory)
   accuseCulprit=-1; guessesLeft=MAX_GUESSES; hintLevel=0; hintTarget=-1; updateGuessPill();
@@ -2723,6 +2771,7 @@ function place(i,v){ if(given[i]||board[i]===v||(C&&i===C.murderCell))return;   
   applyAction(cells, ()=>{ board[i]=v; candidates[i].clear();
     for(const j of cells) if(j!==i) candidates[j].delete(v); });   // tidy: clear this suspect's notes from peers
   clearHints(); refresh(); renderTray(); updateBtns();
+  if(C && C.solution && board[i]!==C.solution[i]) mistakes++;   // committing a wrong suspect to a cell = a "mistake" (Clean Case trophy)
   if(conflicts().has(i)){ fxShake(boardEl.children[i]); fxFlash(boardEl.children[i]); sfx("buzz"); }  // duplicate -> shake + red flash
   else sfx("place");
   checkWin(); }
@@ -3018,6 +3067,7 @@ function buildAccuseTrio(grade, won){
 }
 function payoff(grade, won){
   solved=true; freezeTimer();
+  if($("trophyStrip")){ $("trophyStrip").hidden=true; $("trophyStrip").innerHTML=""; }   // clear any prior trophy strip
   const an=$("accuseBtn"); if(an) an.classList.remove("nudge");   // clear the nudge glow
   placeKillerInScene(won);   // the accusation places the killer into the dashed scene (slam on a win; static on a fail)
   let isPerfect=false;
@@ -3047,8 +3097,11 @@ function payoff(grade, won){
     recordSolved(makeHeadline(k.name), perfect);
     recordLeaderboard({ tier:C.tier, ms:elapsedMs(), timeStr:totalTime, no:story.caseNo, code:C.code,
       attempts:guessesUsed+1, acc, perfect:acc===4, date:nowStr() });   // personal best (time incl. penalties)
+    const tr=evalTrophiesOnWin(grade); _payoffStrip={fresh:tr.fresh, ctx:tr.ctx, teases:missedTeases(grade)};   // claim trophies + queue the post-case strip
+    $("poTrophy").innerHTML=tr.fresh.length?`<b style="color:var(--amber-soft)">${tr.fresh.length}</b> new ${tr.fresh.length>1?"trophies":"trophy"} 🏆`:`<span class="muted">none new</span>`;
     setStatus(`Case closed — ${k.name} arrested.`,"good");
   } else {
+    _payoffStrip=null;
     $("poTrophy").innerHTML=`<span class="muted">none — case unsolved</span>`;
     const sc=$("accuseScore"); sc.innerHTML=
       `<div class="acc-stars" style="color:var(--bad)">CASE UNSOLVED <span class="acc-num" style="color:var(--ink-dim)">⏱ ${totalTime}${penaltyStr} · ${MAX_GUESSES}/${MAX_GUESSES} guesses used</span></div>`;
@@ -3104,8 +3157,7 @@ function recordSolved(headline, perfect){
       culprit:Skin.sName(THEME,C.killer).name, weapon:story.trueWeapon, headline, perfect:!!perfect, date:nowStr() });
     LS.set("archive", archive.slice(0,200));
   }
-  const trophies=LS.get("trophies",[]);
-  if(!trophies.includes(story.trueWeapon)){ trophies.push(story.trueWeapon); LS.set("trophies", trophies); }
+  // (weapon trophies are now claimed by the trophy system in evalTrophiesOnWin, with full source metadata)
 }
 /* personal leaderboard: per-tier fastest WON cases (time incl. penalties), kept to the top 10 */
 function recordLeaderboard(entry){
@@ -3130,12 +3182,8 @@ function renderRecords(tier){
 }
 function openArchive(){
   renderRecords((C&&C.tier&&REC_TIERS.includes(C.tier))?C.tier:"medium");   // leaderboard, defaulting to the current tier
-  const archive=LS.get("archive",[]), trophies=LS.get("trophies",[]);
-  const shelf=$("trophyShelf"); shelf.innerHTML="";
-  $("trophyCount").textContent=trophies.length?`${trophies.length}`:"";
-  if(!trophies.length) shelf.innerHTML='<span class="muted">No trophies yet — solve a case to claim its weapon as evidence.</span>';
-  trophies.forEach(slug=>{ const d=document.createElement("div"); d.className="trophy"; d.title=slug;
-    d.innerHTML=`<img src="${tAsset('weapons','weapon-'+slug+'.png')}" alt="${slug}">`; shelf.appendChild(d); });
+  renderTrophies(_trophyFilter||"all");                                     // tabbed trophy gallery
+  const archive=LS.get("archive",[]);
   $("archiveCount").textContent=archive.length?`${archive.length} closed`:"";
   const list=$("archiveList"); list.innerHTML="";
   if(!archive.length) list.innerHTML='<div class="muted">No solved cases yet. Close a case to start your archive.</div>';
@@ -3143,6 +3191,172 @@ function openArchive(){
     row.innerHTML=`<b>${a.title}</b><span class="arch-meta">Culprit: ${a.culprit} · ${TIER_FLAVOR[a.tier]||a.tier} · No. ${a.no} · ${a.date}${a.perfect?" · ★ flawless":""}</span>`;
     list.appendChild(row); });
   $("archiveModal").classList.add("show");
+}
+
+/* =====================================================================
+   TROPHY COLLECTION SYSTEM — a detective's archive of trophies.
+   Registry across categories (weapon / motive / relic / perfect / daily)
+   + a persisted unlock map  trophyUnlocks = { id:{date,no,code,title} }.
+   Adapted strictly to existing content: the 12 manor weapons (THEME.weapons)
+   and the existing motive tags/texts (THEME.motiveClues). Category metadata
+   carries a future "room" so categories can later map to manor rooms
+   (a Trophy Hall) — no manor features are built now. The DAILY category is
+   reserved for a future daily mode and is HIDDEN (no tab, never evaluated).
+   Rarity is display-only (no loot). "Mistake" (for Clean Case) is defined as
+   committing a suspect to a cell whose value isn't the unique solution for
+   that cell — see place(); a wrong accusation guess also counts.
+   ===================================================================== */
+const TROPHY_RARITY={
+  common:    {label:"Common",     cls:"r-common"},
+  uncommon:  {label:"Uncommon",   cls:"r-uncommon"},
+  rare:      {label:"Rare",       cls:"r-rare"},
+  masterwork:{label:"Masterwork", cls:"r-masterwork"},
+  legendary: {label:"Legendary",  cls:"r-legendary"},
+};
+const TROPHY_CATS=[                       // order drives the Archive tabs (Daily hidden)
+  {key:"weapon",  label:"Weapons", room:"The Armory"},
+  {key:"motive",  label:"Motives", room:"The Study"},
+  {key:"relic",   label:"Relics",  room:"The Evidence Room"},
+  {key:"perfect", label:"Perfect", room:"The Trophy Hall"},
+  {key:"daily",   label:"Daily",   room:"The Almanac", hidden:true},
+];
+const SWIFT_TARGET_MS={easy:180000, medium:420000, hard:900000, extreme:1800000};   // per-tier "Swift Justice" par
+const MOTIVE_TITLE={money:"Greed", inheritance:"Inheritance", secret:"A Buried Secret", revenge:"Revenge", reputation:"Reputation"};
+const MOTIVE_ORDER=["money","inheritance","secret","revenge","reputation"];
+/* ~10 noir case relics, each mapped to an achievable existing condition. ctx is built in evalTrophiesOnWin(). */
+const RELIC_DEFS=[
+  {id:"relic-note",     name:"Detective's Note",         glyph:"📝", hint:"Close your very first case.",                                     test:c=>c.won&&c.firstWin},
+  {id:"relic-diary",    name:"Torn Diary Page",          glyph:"📄", hint:"Win a Routine (Easy) case.",                                       test:c=>c.won&&c.tier==="easy"},
+  {id:"relic-will",     name:"Burned Will",              glyph:"📜", hint:"Win a Troubling (Medium) case.",                                   test:c=>c.won&&c.tier==="medium"},
+  {id:"relic-watch",    name:"Cracked Pocket Watch",     glyph:"⏱️", hint:"Win a Grim (Hard) case.",                                          test:c=>c.won&&c.tier==="hard"},
+  {id:"relic-locket",   name:"Broken Locket",            glyph:"💔", hint:"Win a Cold (Extreme) case.",                                       test:c=>c.won&&c.tier==="extreme"},
+  {id:"relic-key",      name:"Missing Key",              glyph:"🔑", hint:"Name the killer with the board less than four-fifths filled.",      test:c=>c.won&&c.fillFrac<0.8},
+  {id:"relic-hankie",   name:"Bloodless Handkerchief",   glyph:"🧣", hint:"Win a case without a single time penalty.",                        test:c=>c.won&&c.penaltyMs===0},
+  {id:"relic-letter",   name:"Sealed Letter",            glyph:"✉️", hint:"Solve a case where the weapon by the body was planted — and name the true one.", test:c=>c.won&&c.weaponPlanted&&c.weaponRight},
+  {id:"relic-news",     name:"Old Newspaper Clipping",   glyph:"📰", hint:"Uncover every corroborating clue in a case, then solve it.",        test:c=>c.won&&c.extrasAll},
+  {id:"relic-portrait", name:"Family Portrait Fragment", glyph:"🖼️", hint:"Win a 6×6 and a 9×9 case on the same day.",                         test:c=>c.won&&c.dayBothSizes},
+];
+const PERFECT_DEFS=[
+  {id:"perfect-case",    name:"Perfect Case",       rarity:"rare",       glyph:"🎯", desc:"A flawless 4-for-4 accusation: culprit, weapon, motive, and evidence.", hint:"Get all four parts of an accusation right.",            test:c=>c.won&&c.acc===4},
+  {id:"perfect-flawless",name:"Flawless Detective", rarity:"masterwork", glyph:"🔍", desc:"Solved without once asking the Clerk for a hint.",                       hint:"Win a case using no hints.",                            test:c=>c.won&&c.hintsUsed===0},
+  {id:"perfect-clean",   name:"Clean Case",         rarity:"masterwork", glyph:"🧼", desc:"No wrong accusations and no incorrect placements.",                      hint:"Win without a single mistake on the board or in the dock.", test:c=>c.won&&c.guessesUsed===0&&c.mistakes===0},
+  {id:"perfect-swift",   name:"Swift Justice",      rarity:"rare",       glyph:"⚡", desc:"Closed the case under the par time for its difficulty.",                 hint:"Win quickly — beat the par time for the tier.",         test:c=>c.won&&c.elapsedMs<(SWIFT_TARGET_MS[c.tier]||Infinity)},
+  {id:"perfect-fullset", name:"Full Set",           rarity:"legendary",  glyph:"👑", desc:"Closed a case at every difficulty — Routine, Troubling, Grim and Cold.", hint:"Win at least one case on all four difficulties.",       test:c=>c.allTiersWon},
+];
+let _trophyReg=null;
+function trophyRegistry(){
+  if(_trophyReg) return _trophyReg;
+  const reg=[];
+  (THEME.weapons||[]).forEach((w,i)=>reg.push({ id:"weapon-"+w.slug, cat:"weapon", rarity:"uncommon", slug:w.slug, num:i+1,
+    name:cap(w.n.replace(/^(the|a|an)\s+/i,"")), desc:"The murder weapon, claimed as evidence and locked in the case file.",
+    hint:"Identify the true weapon in a winning accusation to claim it.",
+    test:c=>c.won&&c.weaponRight&&c.trueWeapon===w.slug }));
+  MOTIVE_ORDER.forEach(tag=>{ if(!(THEME.motiveClues&&THEME.motiveClues[tag])) return;
+    reg.push({ id:"motive-"+tag, cat:"motive", rarity:"uncommon", tag, name:MOTIVE_TITLE[tag]||cap(tag),
+      desc:(THEME.motiveClues[tag]&&THEME.motiveClues[tag][0])||"A motive proven in the dock.",
+      hint:"Name this motive correctly in a winning accusation to claim it.",
+      test:c=>c.won&&c.motiveRight&&c.killerMotiveTag===tag }); });
+  RELIC_DEFS.forEach(r=>reg.push({ id:r.id, cat:"relic", rarity:"common", name:r.name, glyph:r.glyph,
+    desc:r.hint, hint:r.hint, test:r.test }));
+  PERFECT_DEFS.forEach(p=>reg.push({ id:p.id, cat:"perfect", rarity:p.rarity, name:p.name, glyph:p.glyph,
+    desc:p.desc, hint:p.hint, test:p.test }));
+  _trophyReg=reg; return reg;
+}
+function loadTrophyUnlocks(){
+  let map=LS.get("trophyUnlocks",null);
+  if(!map){ map={}; const old=LS.get("trophies",null);          // migrate the legacy weapon-slug array (keeps existing players' progress)
+    if(Array.isArray(old)) old.forEach(slug=>{ map["weapon-"+slug]={date:"",no:0,code:"",title:""}; });
+    LS.set("trophyUnlocks",map); }
+  return map;
+}
+function saveTrophyUnlocks(map){ LS.set("trophyUnlocks",map); }
+function noteDayWin(){ const day=nowStr(), size=(cfg.N===6)?6:9;   // track which grid sizes were won today (for the "one day" relic)
+  let d=LS.get("dayWins",{})||{}; if(d.day!==day) d={day, sizes:{}};
+  d.sizes[size]=true; LS.set("dayWins",d); return !!(d.sizes[6]&&d.sizes[9]); }
+/* Evaluate every trophy against this win, persist any newly-unlocked ones, return them + the ctx. */
+function evalTrophiesOnWin(grade){
+  const tw=LS.get("tierWins",{})||{}; const firstWin=!Object.keys(tw).length; tw[C.tier]=true; LS.set("tierWins",tw);
+  const allTiersWon=REC_TIERS.every(t=>tw[t]);
+  const dayBothSizes=noteDayWin();
+  let filled=0,total=0; for(let i=0;i<cfg.N*cfg.N;i++){ if(i===C.murderCell) continue; total++; if(board[i]!==0) filled++; }
+  const acc=1+(grade.weaponRight?1:0)+(grade.motiveRight?1:0)+(grade.evidenceRight?1:0);
+  const kt=(story.motiveOptions.find(o=>o.correct)||{}).tag;
+  const ctx={ won:true, firstWin, tier:C.tier, code:C.code, no:story.caseNo, title:story.title,
+    weaponRight:!!grade.weaponRight, motiveRight:!!grade.motiveRight, evidenceRight:!!grade.evidenceRight, acc,
+    trueWeapon:story.trueWeapon, killerMotiveTag:kt, weaponPlanted:!!story.weaponPlanted,
+    hintsUsed, guessesUsed:MAX_GUESSES-guessesLeft, mistakes, penaltyMs, fillFrac:(total?filled/total:1),
+    elapsedMs:elapsedMs(), extrasAll:!!(story.extraOrder&&story.extraOrder.length>0&&story.discoveredExtras>=story.extraOrder.length),
+    allTiersWon, dayBothSizes };
+  const map=loadTrophyUnlocks(), reg=trophyRegistry(), fresh=[];
+  reg.forEach(t=>{ if(t.cat==="daily"||map[t.id]) return; let ok=false; try{ ok=!!t.test(ctx); }catch(e){ ok=false; }
+    if(ok){ map[t.id]={date:nowStr(), no:story.caseNo, code:C.code, title:story.title}; fresh.push(t); } });
+  if(fresh.length) saveTrophyUnlocks(map);
+  return {fresh, ctx};
+}
+function missedTeases(grade){ const t=[];   // softly tease replayable misses (weapon/motive trophies can be claimed on a replay via the case code)
+  if(!grade.weaponRight) t.push(`Weapon trophy missed — replay this case (code ${C.code}) and name the true weapon to claim it.`);
+  if(!grade.motiveRight) t.push(`Motive trophy missed — replay this case and name the right motive to claim it.`);
+  return t;
+}
+/* ---- trophy card rendering (shared by the Archive grid + the post-case strip) ---- */
+function facedownSVG(){ return '<svg viewBox="0 0 18 18" class="gsvg"><rect x="3" y="2.4" width="12" height="13.2" rx="1.6"/><circle cx="9" cy="9" r="2.5"/><path d="M9 6.6v4.8"/></svg>'; }
+function trophyArtHTML(t, locked){
+  if(t.cat==="weapon") return `<img class="tc-img${locked?' locked':''}" src="${tAsset('weapons','weapon-'+t.slug+'.png')}" alt="">`;
+  if(t.cat==="motive") return `<span class="tc-glyph${locked?' locked':''}">${locked?facedownSVG():motiveGlyphSVG(t.tag)}</span>`;
+  return `<span class="tc-emoji${locked?' locked':''}">${locked?'?':(t.glyph||'🏆')}</span>`;
+}
+function lockedName(t){ if(t.cat==="weapon") return "Unknown Weapon #"+String(t.num).padStart(2,"0");
+  if(t.cat==="motive") return "Confidential Motive"; return "Locked Trophy"; }
+function trophyCardHTML(t, unlock, opts){
+  opts=opts||{}; const locked=!unlock, rar=TROPHY_RARITY[t.rarity]||TROPHY_RARITY.common;
+  const name=locked?lockedName(t):t.name;
+  const body=locked
+    ? `<div class="tc-hint">${t.hint}</div>`
+    : `<div class="tc-desc">${t.desc||""}</div>`+
+      (unlock.code||unlock.no?`<div class="tc-src">Unlocked from Case No. ${unlock.no||"—"}${unlock.title?" — "+unlock.title:(unlock.code?" — "+unlock.code:"")}${unlock.date?" · "+unlock.date:""}</div>`:`<div class="tc-src">Claimed from an earlier case.</div>`);
+  const style=opts.strip&&opts.idx!=null?` style="--d:${opts.idx*150}ms"`:"";
+  return `<div class="tcard ${rar.cls} ${locked?'locked':'unlocked'}${opts.strip?' ts-card':''}"${style}>`+
+    `<div class="tc-art">${trophyArtHTML(t,locked)}</div>`+
+    `<div class="tc-body"><div class="tc-name">${name}</div>`+
+    (locked?"":`<span class="tc-rar">${rar.label}</span>`)+body+`</div></div>`;
+}
+/* the post-case strip: collection progress, the newly-unlocked cards (motion-gated slide-in), soft teases */
+let _payoffStrip=null;
+function renderTrophyStrip(data){
+  const strip=$("trophyStrip"); if(!strip) return;
+  if(!data){ strip.hidden=true; strip.innerHTML=""; return; }
+  const reg=trophyRegistry(), map=loadTrophyUnlocks();
+  const pool=reg.filter(t=>t.cat!=="daily"); const have=pool.filter(t=>map[t.id]).length;
+  let html=`<div class="ts-head">Detective’s Archive <span class="ts-prog">${have}/${pool.length} trophies</span></div>`;
+  if(data.fresh.length){
+    html+=`<div class="ts-new">${data.fresh.length===1?"New trophy claimed":data.fresh.length+" new trophies claimed"}</div>`;
+    html+=`<div class="ts-cards">`+data.fresh.map((t,i)=>trophyCardHTML(t,map[t.id],{strip:true,idx:i})).join("")+`</div>`;
+    if(motionOK()) sfx("confirm");
+  } else {
+    html+=`<div class="ts-none">No new trophies this time — but the case file is closed.</div>`;
+  }
+  if(data.teases&&data.teases.length) html+=`<div class="ts-tease">`+data.teases.map(x=>`<div>🔓 ${x}</div>`).join("")+`</div>`;
+  strip.innerHTML=html; strip.hidden=false;
+}
+/* ---- Archive: tabbed trophy gallery ---- */
+let _trophyFilter="all";
+function renderTrophies(filter){
+  _trophyFilter=filter||_trophyFilter||"all";
+  const reg=trophyRegistry(), map=loadTrophyUnlocks();
+  const cats=TROPHY_CATS.filter(c=>!c.hidden);                   // Daily is hidden
+  const tabs=$("trophyTabs");
+  if(tabs){ const mk=(k,l)=>`<button class="trophy-tab${_trophyFilter===k?' on':''}" data-f="${k}">${l}</button>`;
+    tabs.innerHTML=mk("all","All")+cats.map(c=>mk(c.key,c.label)).join("");
+    tabs.querySelectorAll(".trophy-tab").forEach(b=>b.onclick=()=>renderTrophies(b.dataset.f)); }
+  const pool=reg.filter(t=>cats.some(c=>c.key===t.cat));
+  const have=pool.filter(t=>map[t.id]).length;
+  if($("trophyCount")) $("trophyCount").textContent=`${have}/${pool.length}`;
+  const grid=$("trophyGrid"); if(!grid) return;
+  const items=_trophyFilter==="all"?pool:pool.filter(t=>t.cat===_trophyFilter);
+  let head;
+  if(_trophyFilter==="all"){ head=`<div class="tg-prog">`+cats.map(c=>{ const s=pool.filter(t=>t.cat===c.key); return `<span>${c.label} <b>${s.filter(t=>map[t.id]).length}/${s.length}</b></span>`; }).join("")+`</div>`; }
+  else { const c=cats.find(x=>x.key===_trophyFilter); head=`<div class="tg-prog"><span>${c.label} <b>${items.filter(t=>map[t.id]).length}/${items.length}</b></span></div>`; }
+  grid.innerHTML=head+`<div class="tg-cards">`+items.map(t=>trophyCardHTML(t,map[t.id],{})).join("")+`</div>`;
 }
 
 /* ---- buttons / keys ---- */
@@ -3534,7 +3748,7 @@ function playPayoff(grade, won, perfect, headlineText){
   if(trio) trio.classList.remove("seq");
   document.querySelectorAll("#winModal .trio-cell").forEach(c=>c.classList.remove("in"));
   document.querySelectorAll("#winModal .payoff-stamp").forEach(s=>s.classList.remove("pre","slam"));
-  if(!motionOK()){ setHeadline(_payoffHeadline); return; }   // Motion off / reduced-motion -> everything static, headline instant
+  if(!motionOK()){ setHeadline(_payoffHeadline); renderTrophyStrip(_payoffStrip); return; }   // Motion off / reduced-motion -> everything static (strip shown, no slide-in)
   // motion on: run the sequence
   if(trio) trio.classList.add("seq");
   document.querySelectorAll("#winModal .payoff-stamp").forEach(s=>s.classList.add("pre"));
@@ -3553,6 +3767,7 @@ function playPayoff(grade, won, perfect, headlineText){
   T(2120,()=>{ if(stamp){ restartAnim(stamp,"j-thunk"); fxPuff(stamp); } sfx("thunk");
     fxShake($("winModal").querySelector(".modal")); if(perfect) fxConfetti(); });   // CASE CLOSED
   T(2460,()=> setHeadline(_payoffHeadline));                             // typewriter headline (existing)
+  T(2680,()=> renderTrophyStrip(_payoffStrip));                          // trophies strip slides in after the stamps
 }
 function skipPayoff(){ clearRevealTimers();
   const trio=document.querySelector("#accuseScore .accuse-trio"); if(trio) trio.classList.remove("seq");
@@ -3562,6 +3777,7 @@ function skipPayoff(){ clearRevealTimers();
   const stamp=document.querySelector("#winModal .news-stamp"); if(stamp) stamp.classList.remove("j-thunk");
   document.querySelectorAll(".j-confetti,.j-bulb,.j-puff").forEach(e=>e.remove());
   const el=$("newsHeadline"); if(el){ _clearHlTimers(); el.textContent=_payoffHeadline; el.classList.remove("typing"); }
+  renderTrophyStrip(_payoffStrip);   // jump the trophy strip to its final state too
 }
 
 function applyJuiceButtons(){ const m=$("motionBtn"), s=$("soundBtn"), mu=$("musicBtn");
