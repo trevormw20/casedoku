@@ -385,6 +385,16 @@
   .payoff-stamp.slam{animation:stampSlam .42s cubic-bezier(.3,1.3,.5,1);}
   @keyframes stampSlam{0%{scale:2.7;opacity:0;}52%{opacity:.95;}72%{scale:.9;}100%{scale:1;opacity:.95;}}
   .stamp-proof{top:5px;left:auto;right:8px;transform:translate(0,0) rotate(-7deg);}
+  /* ---- Feature B: discovered-extra marking + the discovery ceremony ---- */
+  .disc-mark{color:var(--good);font-size:12px;margin-right:3px;}
+  .ev-clue .disc-mark{opacity:.9;}
+  .clues li.discovered{background:rgba(76,175,125,.05);}
+  .disc-dim{position:fixed;inset:0;z-index:40;background:rgba(4,5,9,.32);opacity:0;pointer-events:none;transition:opacity .18s ease;}
+  .disc-dim.on{opacity:1;}
+  .ev-card{position:relative;}
+  .ev-card.disc-anim{z-index:45;animation:discAnim .5s cubic-bezier(.3,1.2,.4,1);}
+  @keyframes discAnim{0%{transform:translateY(14px) scale(.96);opacity:.5}55%{transform:translateY(-3px) scale(1.025)}100%{transform:translateY(0) scale(1);opacity:1}}
+  .disc-stamp{top:0;left:auto;right:6px;transform:translate(0,-45%) rotate(-9deg);font-size:8px;z-index:46;}
   /* accusation weapon picker */
   .accuse-weapons{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:2px;}
   .accuse-weapon{display:flex;align-items:center;gap:6px;background:#171a22;border:1px solid var(--line);border-radius:9px;padding:7px 10px;cursor:pointer;color:var(--ink);font-size:13px;}
@@ -914,6 +924,7 @@
         <button class="btn" id="introBtn" title="Show the case intro card at the start of each case">📖 Intro: On</button>
         <button class="btn" id="introSkipBtn" title="After you've read one intro, skip the rest automatically (still in the case file)">⏭ Auto-skip: Off</button>
         <button class="btn" id="caseTextBtn" title="Case briefing length: Short intro, or Full atmospheric text">📝 Case text: Short</button>
+        <button class="btn" id="evidenceBtn" title="Discover corroborating evidence as you complete rows/columns/rooms, or show it all up front">🔎 Evidence: Discover</button>
       </div>
       <!-- mobile-only: opens the tabbed case-file overlay (the side panel is hidden on phones) -->
       <button class="case-file-btn" id="caseFileBtn">📁 Case File <span class="cf-sub">Evidence · Weapons · People · Case</span></button>
@@ -1597,6 +1608,11 @@ function selfTest(o){
       const preds=C.clues.map(cl=>makePred(cfg,cl.type,cl.p));
       const withC=without.sols.filter(g=>preds.every(p=>p(g)));
       if(!(withC.length===1 && withC[0].every((v,i)=>v===C.solution[i]))) fails.push("givens+clues NOT uniquely the solution (got "+withC.length+")");
+      // 4b. the REQUIRED (★ key) clues ALONE force the solution — so the milestone-discovery UI can
+      //     safely gate the non-key corroborating extras without ever making a case unsolvable.
+      const keyPreds=C.clues.filter(cl=>cl.key).map(cl=>makePred(cfg,cl.type,cl.p));
+      const withKey=without.sols.filter(g=>keyPreds.every(p=>p(g)));
+      if(!(withKey.length===1 && withKey[0].every((v,i)=>v===C.solution[i]))) fails.push("required (key) clues alone do NOT force the solution (got "+withKey.length+") — extras must never be required");
       // 5. every clue is true of the solution
       if(!preds.every(p=>p(C.solution))) fails.push("a clue is false for the solution");
       // 6. killer provably forced: >=2 candidates at scene without clues, exactly killer with clues
@@ -2033,6 +2049,7 @@ if(settings.music===undefined) settings.music=true;     // background music ON b
 if(settings.intro===undefined) settings.intro=true;            // show the case intro card by default
 if(settings.introAutoskip===undefined) settings.introAutoskip=false;  // don't auto-skip until the player opts in
 if(settings.caseText===undefined) settings.caseText="short";   // tight intro in the case-file briefing by default
+if(settings.evidence===undefined) settings.evidence="discover";   // extras surface as you complete units (vs "all" up front)
 /* ---- flavor labels ---- */
 const TIER_FLAVOR={easy:"Routine Case",medium:"Troubling Case",hard:"Grim Case",extreme:"Cold Case"};
 function cap(s){ return s? s.charAt(0).toUpperCase()+s.slice(1) : s; }
@@ -2281,6 +2298,8 @@ function dressStory(){
     text:Skin.renderClue(cfg,THEME,cl), key:cl.key, proof:C.proofClues.includes(i), kind:"pos", clueIdx:i }));
   story.weaponClues.forEach(wc=>story.evidence.push({ tag:"WEAPON", text:Skin.renderWeaponClue(THEME,wc), key:true, proof:false, kind:"weapon" }));
   story.motiveClues.forEach(mc=>story.evidence.push({ tag:"MOTIVE", text:Skin.renderMotiveClue(THEME,mc), key:true, proof:false, kind:"motive" }));
+  story.extraOrder = story.evidence.map((e,i)=>e.key?-1:i).filter(i=>i>=0);   // discoverable corroborating extras, in their (seeded) order
+  story.discoveredExtras = loadEvidenceState(C.code).discovered;              // restored on reload; gated by the Evidence setting
   // cozy-mystery narrative intro (own rng stream); names the SCENE object (what was found by the body)
   const srng=E.makeRNG((C.seed ^ E.hashStr("narrative"))>>>0);
   story.narrative=Skin.renderStory(THEME, {
@@ -2309,6 +2328,7 @@ function startCase(opts){
   board=C.givens.slice(); given=C.givens.map(v=>v!==0);
   sel=-1; selSuspect=-1; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false; cluesUsed=new Set();
   _sceneMsgShown=false; _nudged=false;   // reset Feature A per-case state
+  _unitComplete=new Set(); _discQueue=0; _discPlaying=false; _discCount=0;   // reset Feature B per-case state
   accuseCulprit=-1; guessesLeft=MAX_GUESSES; hintLevel=0; hintTarget=-1; updateGuessPill();
   candidates=Array.from({length:cfg.N*cfg.N},()=>new Set());
   notesMode=false; applyNotesMode();
@@ -2417,18 +2437,8 @@ function renderCase(){
   const so=Skin.weaponBySlug(THEME,story.sceneObject);
   $("caseSub").innerHTML=`Case No. ${story.caseNo} · <b>${TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label}</b> · ${THEME.place}`+
     ` · Found beside victim: <img class="wicon" src="${tAsset('weapons','weapon-'+story.sceneObject+'.png')}" alt="">${so.n}.`;
-  // evidence list — each clue prefixed with a TYPE TAG chip (★ = key; every clue is true)
-  const list=$("clueList"); list.innerHTML="";
-  story.evidence.forEach((ev,idx)=>{
-    const li=document.createElement("li"); li.dataset.n=(idx+1);
-    if(ev.key) li.classList.add("key");
-    const star=ev.key?`<span class="keymark" title="key evidence">★</span>`:"";
-    li.innerHTML=`<span class="ev-tag tag-${ev.tag.toLowerCase()}">${ev.tag}</span>${star}${ev.text}`;
-    li.style.cursor="pointer"; li.title="Click: show it on the board · Double-click: mark as used";
-    li.addEventListener("click",()=>highlightClue(ev));   // pulse what this clue references
-    li.addEventListener("dblclick",()=>{ li.classList.toggle("used"); if(li.classList.contains("used"))cluesUsed.add(idx); else cluesUsed.delete(idx); });
-    list.appendChild(li);
-  });
+  // evidence list — each clue prefixed with a TYPE TAG chip (★ = key required; ✦ = discovered extra)
+  renderClueList();
   if($("sceneObjInfo")) $("sceneObjInfo").innerHTML=`<span class="soi-label">Found beside the body</span>`+
     `<img class="wicon" src="${tAsset('weapons','weapon-'+story.sceneObject+'.png')}" alt="">${so.n} — but is it the real weapon? Weigh it against the <span class="tag-weapon ev-tag" style="margin:0">WEAPON</span> evidence.`;
   renderPossibleWeapons();
@@ -2444,14 +2454,94 @@ function renderCase(){
       `<span><span class="nm">${s.name}</span> — <span class="mo">${s.motive}</span></span>`;
     ros.appendChild(d); }
 }
+/* ===== Feature B: milestone evidence discovery — ★ required clues are visible from the start;
+   the non-key corroborating extras stay hidden and surface one at a time as the player correctly
+   completes a row / column / room. Persisted per case; setting toggles to "all up front". ===== */
+function loadEvidenceState(code){ const all=LS.get("evidenceState",{})||{}; const s=all[code]||{}; return { discovered:s.discovered|0 }; }
+function saveEvidenceState(){ if(!C||!story) return; const all=LS.get("evidenceState",{})||{}; all[C.code]={ discovered:story.discoveredExtras|0 };
+  const ks=Object.keys(all); while(ks.length>40){ delete all[ks.shift()]; } LS.set("evidenceState",all); }
+function effectiveDiscovered(){ if(!story) return 0; return (settings.evidence==="all") ? story.extraOrder.length : (story.discoveredExtras|0); }
+function evidenceVisible(idx){ if(!story) return true; const e=story.evidence[idx]; if(!e) return false;
+  if(e.key) return true;                                  // ★ required clue — always visible
+  const pos=story.extraOrder.indexOf(idx); return pos>=0 && pos<effectiveDiscovered(); }   // extra — visible once discovered
+function visibleEv(){ return (story&&story.evidence||[]).map((e,i)=>({e,i})).filter(x=>evidenceVisible(x.i)); }
+function renderClueList(){
+  const list=$("clueList"); if(!list) return; list.innerHTML="";
+  (story&&story.evidence||[]).forEach((ev,idx)=>{
+    if(!evidenceVisible(idx)) return;
+    const li=document.createElement("li"); li.dataset.n=(idx+1);
+    if(ev.key) li.classList.add("key"); else li.classList.add("discovered");
+    const star=ev.key?`<span class="keymark" title="key evidence">★</span>`:`<span class="disc-mark" title="discovered during the investigation">✦</span>`;
+    li.innerHTML=`<span class="ev-tag tag-${ev.tag.toLowerCase()}">${ev.tag}</span>${star}${ev.text}`;
+    li.style.cursor="pointer"; li.title="Click: show it on the board · Double-click: mark as used";
+    li.addEventListener("click",()=>highlightClue(ev));
+    li.addEventListener("dblclick",()=>{ li.classList.toggle("used"); if(li.classList.contains("used"))cluesUsed.add(idx); else cluesUsed.delete(idx); });
+    list.appendChild(li);
+  });
+}
+function renderEvidenceUI(){ renderClueList(); renderEvCurrent(); }
 function renderEvCurrent(){
-  const ev=story&&story.evidence||[]; const n=ev.length; if(!n){ $("evClue").textContent="—"; $("evStep").textContent=""; return; }
+  const vis=visibleEv(); const n=vis.length; if(!n){ $("evClue").textContent="—"; $("evStep").textContent=""; return; }
   clueStep=((clueStep%n)+n)%n;
-  const e=ev[clueStep];
-  const star=e.key?`<span class="keymark" title="key evidence">★</span>`:"";
+  const e=vis[clueStep].e;
+  const star=e.key?`<span class="keymark" title="key evidence">★</span>`:`<span class="disc-mark">✦</span>`;
   $("evClue").innerHTML=`<span class="ev-tag tag-${e.tag.toLowerCase()}">${e.tag}</span>${star}${e.text}`;
   $("evStep").textContent=`${clueStep+1} / ${n}`;
   revealMotivesIfMotiveClue(e);   // stepper landing on a MOTIVE clue flips the motive cards
+}
+/* unit milestones: each newly-completed (correct) row/column/room surfaces the next hidden extra */
+let _unitComplete=new Set(), _discQueue=0, _discPlaying=false, _discCount=0;
+function checkUnitMilestones(){
+  if(solved || !C || !story || settings.evidence==="all") return;
+  const N=cfg.N;
+  const test=(key,idxs)=>{ const ok=idxs.every(i=>board[i]===C.solution[i]);
+    if(ok && !_unitComplete.has(key)){ _unitComplete.add(key); if(story.discoveredExtras<story.extraOrder.length) discoverNextExtra(); }
+    else if(!ok && _unitComplete.has(key)) _unitComplete.delete(key); };
+  for(let r=0;r<N;r++){ const a=[]; for(let c=0;c<N;c++)a.push(r*N+c); test("r"+r,a); }
+  for(let c=0;c<N;c++){ const a=[]; for(let r=0;r<N;r++)a.push(r*N+c); test("c"+c,a); }
+  for(let b=0;b<N;b++){ const {r0,c0}=E.rcOfBox(cfg,b); const a=[]; for(let i=0;i<cfg.bh;i++)for(let j=0;j<cfg.bw;j++)a.push((r0+i)*N+(c0+j)); test("b"+b,a); }
+}
+function syncUnitsSilently(){ if(!C||!story) return; _unitComplete=new Set(); const N=cfg.N;   // mark currently-complete units done WITHOUT discovering (avoids re-credit on mode toggle)
+  const mark=(key,idxs)=>{ if(idxs.every(i=>board[i]===C.solution[i])) _unitComplete.add(key); };
+  for(let r=0;r<N;r++){ const a=[]; for(let c=0;c<N;c++)a.push(r*N+c); mark("r"+r,a); }
+  for(let c=0;c<N;c++){ const a=[]; for(let r=0;r<N;r++)a.push(r*N+c); mark("c"+c,a); }
+  for(let b=0;b<N;b++){ const {r0,c0}=E.rcOfBox(cfg,b); const a=[]; for(let i=0;i<cfg.bh;i++)for(let j=0;j<cfg.bw;j++)a.push((r0+i)*N+(c0+j)); mark("b"+b,a); }
+}
+function discoverNextExtra(){
+  if(!story || story.discoveredExtras>=story.extraOrder.length) return;
+  story.discoveredExtras++; saveEvidenceState();
+  const newIdx=story.extraOrder[story.discoveredExtras-1];           // the evidence index just revealed
+  renderEvidenceUI();
+  const vis=visibleEv().findIndex(x=>x.i===newIdx); if(vis>=0){ clueStep=vis; renderEvCurrent(); }   // step to the new clue
+  const eb=$("evBlock"); if(eb) eb.open=true;   // surface the stepper so the new clue is in view
+  queueDiscovery();
+}
+/* discovery ceremony (~0.8s): brief dim + the evidence card slides/bounces in + a NEW EVIDENCE stamp
+   slams on it + soft paper. Queued, tap-to-skip, motion/sound gated, lighter after the first couple. */
+let _discTimer=null, _discSkip=null;
+function queueDiscovery(){ _discQueue++; runDiscoveryQueue(); }
+function runDiscoveryQueue(){
+  if(_discPlaying || _discQueue<=0) return;
+  _discPlaying=true; _discQueue--; _discCount++;
+  sfx("paper");                                  // soft paper rustle (Sound-gated inside sfx)
+  if(!motionOK()){ _discPlaying=false; runDiscoveryQueue(); return; }   // Motion off: instant reveal, no ceremony
+  const light=_discCount>2;                       // lighter after the first couple in a case
+  let dim=$("discDim"); if(!dim){ dim=document.createElement("div"); dim.id="discDim"; dim.className="disc-dim"; document.body.appendChild(dim); }
+  if(!light) dim.classList.add("on");
+  const card=document.querySelector("#evBlock .ev-card");
+  if(card){ restartAnim(card,"disc-anim");
+    let stamp=card.querySelector(".disc-stamp"); if(!stamp){ stamp=document.createElement("span"); stamp.className="payoff-stamp disc-stamp"; stamp.style.setProperty("--st-rot","-9deg"); stamp.textContent="New Evidence"; card.appendChild(stamp); }
+    restartAnim(stamp,"slam"); fxPuff(stamp); }
+  _discTimer=setTimeout(endDiscovery, light?520:800);
+  _discSkip=()=>endDiscovery(); setTimeout(()=>{ if(_discSkip) document.addEventListener("pointerdown",_discSkip,{once:true}); },60);   // tap anywhere to skip (defer so the triggering click doesn't insta-skip)
+}
+function endDiscovery(){
+  if(_discTimer){ clearTimeout(_discTimer); _discTimer=null; }
+  if(_discSkip){ document.removeEventListener("pointerdown",_discSkip); _discSkip=null; }
+  const dim=$("discDim"); if(dim) dim.classList.remove("on");
+  const card=document.querySelector("#evBlock .ev-card"); if(card) card.classList.remove("disc-anim");
+  const stamp=card&&card.querySelector(".disc-stamp"); if(stamp) stamp.remove();
+  _discPlaying=false; runDiscoveryQueue();        // play the next queued discovery, if any
 }
 /* Possible Weapons — the player's notebook. Tap a chip to cycle:
    none -> Suspected (red outline + magnifier sweep) -> Cleared (grey + diagonal stamp + thud)
@@ -2787,6 +2877,7 @@ function refresh(){ const bad=conflicts(); const N=cfg.N;
     if(selVal>0 && board[i]===selVal)cell.classList.add("match");       // same suspect elsewhere
     const t=cell.querySelector(".token"); if(t)t.classList.toggle("bad",bad.has(i)); }
   maybeNudge();   // keep the Accuse glow in sync with completion (handles erase/undo too)
+  checkUnitMilestones();   // surface a hidden extra when a row/column/room is newly completed
 }
 
 /* ---- grid complete -> player makes the accusation -> payoff ---- */
@@ -2819,7 +2910,8 @@ function openAccusation(){
   story.motiveOptions.forEach((opt,i)=>{ const o=document.createElement("option"); o.value=i; o.textContent=cap(opt.motive); mo.appendChild(o); });
   // (4) evidence — the displayed clues; correct = a position proof clue
   const ev=$("accuseEvidence"); ev.innerHTML='<option value="-1">— choose the decisive clue —</option>';
-  story.evidence.forEach((e,idx)=>{ const o=document.createElement("option"); o.value=idx;
+  story.evidence.forEach((e,idx)=>{ if(!evidenceVisible(idx)) return;   // only offer clues the player has actually seen
+    const o=document.createElement("option"); o.value=idx;
     o.textContent=`#${idx+1} [${e.tag}]: ${stripTags(e.text)}`; ev.appendChild(o); });
   const placed=board.filter(v=>v).length, total=cfg.N*cfg.N;
   $("accuseGuesses").innerHTML=`<b>${guessesLeft}</b> guess${guessesLeft===1?"":"es"} left`+
@@ -3432,13 +3524,16 @@ if($("musicBtn")) $("musicBtn").onclick=()=>{ settings.music=!settings.music; LS
 if($("winModal")) $("winModal").addEventListener("pointerdown",skipPayoff);   // tap to skip the whole payoff sequence to its final state
 applyMotion(); applyJuiceButtons(); applyMusic();   // try to start music immediately (retried on first gesture if blocked)
 /* ---- case intro / case-text settings (persisted) + intro card wiring ---- */
-function applyCaseButtons(){ const ib=$("introBtn"), sk=$("introSkipBtn"), ct=$("caseTextBtn");
+function applyCaseButtons(){ const ib=$("introBtn"), sk=$("introSkipBtn"), ct=$("caseTextBtn"), evb=$("evidenceBtn");
   if(ib){ ib.textContent="📖 Intro: "+(settings.intro?"On":"Off"); ib.classList.toggle("on",!!settings.intro); }
   if(sk){ sk.textContent="⏭ Auto-skip: "+(settings.introAutoskip?"On":"Off"); sk.classList.toggle("on",!!settings.introAutoskip); }
-  if(ct){ ct.textContent="📝 Case text: "+(settings.caseText==="full"?"Full":"Short"); ct.classList.toggle("on",settings.caseText==="full"); } }
+  if(ct){ ct.textContent="📝 Case text: "+(settings.caseText==="full"?"Full":"Short"); ct.classList.toggle("on",settings.caseText==="full"); }
+  if(evb){ evb.textContent="🔎 Evidence: "+(settings.evidence==="all"?"All up front":"Discover"); evb.classList.toggle("on",settings.evidence!=="all"); } }
 if($("introBtn")) $("introBtn").onclick=()=>{ settings.intro=!settings.intro; LS.set("settings",settings); applyCaseButtons(); };
 if($("introSkipBtn")) $("introSkipBtn").onclick=()=>{ settings.introAutoskip=!settings.introAutoskip; LS.set("settings",settings); applyCaseButtons(); };
 if($("caseTextBtn")) $("caseTextBtn").onclick=()=>{ settings.caseText=settings.caseText==="full"?"short":"full"; LS.set("settings",settings); applyCaseButtons(); renderCaseBriefing(); };
+if($("evidenceBtn")) $("evidenceBtn").onclick=()=>{ settings.evidence=settings.evidence==="all"?"discover":"all"; LS.set("settings",settings); applyCaseButtons();
+  if(story){ if(settings.evidence==="discover") syncUnitsSilently(); renderEvidenceUI(); } };   // back to Discover shows SAVED progress (no re-credit); All shows every clue
 // tap anywhere / X / Begin during the sequence -> jump to the fully-revealed card; once revealed -> close & play
 function introSkipOrClose(e){ if(e) e.stopPropagation(); if(introAnimating) introRevealAll(); else hideIntro(); }
 if($("introModal")) $("introModal").onclick=introSkipOrClose;
