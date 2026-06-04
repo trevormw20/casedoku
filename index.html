@@ -167,16 +167,22 @@
   /* selected suspect lights up: every matching token gets a bright full-colour ring + glow,
      a strong jump from the dim default so it's obvious even at mobile token size */
   .cell.match{z-index:3;}
+  /* matching placed suspects: a GENTLE breathing pulse of the lit ring/glow while selected.
+     The declared box-shadow below is the resting/static lit ring — shown as-is when Motion is off
+     (body.no-motion / reduced-motion disable the animation), so it degrades to a solid lit ring. */
   .cell.match .token{box-shadow:0 0 0 calc(var(--ring-w) + 2px) var(--ring,#fff),
     0 0 18px 5px var(--ring,#fff), 0 0 0 6px color-mix(in srgb, var(--ring,#fff) 48%, transparent), 0 2px 4px rgba(0,0,0,.55);
-    filter:brightness(1.06);}
+    filter:brightness(1.06);animation:matchPulse 1.8s ease-in-out infinite;}
+  @keyframes matchPulse{
+    0%,100%{box-shadow:0 0 0 calc(var(--ring-w) + 2px) var(--ring,#fff), 0 0 12px 3px var(--ring,#fff), 0 0 0 5px color-mix(in srgb, var(--ring,#fff) 40%, transparent), 0 2px 4px rgba(0,0,0,.55);}
+    50%{box-shadow:0 0 0 calc(var(--ring-w) + 2px) var(--ring,#fff), 0 0 24px 7px var(--ring,#fff), 0 0 0 7px color-mix(in srgb, var(--ring,#fff) 58%, transparent), 0 2px 4px rgba(0,0,0,.55);}}
   /* conflict: red ring layered OUTSIDE the colour ring so it never clashes with it */
   .token.bad{outline:2.5px solid var(--bad);outline-offset:2px;}
 
   /* tray uses the SAME token disc+ring so the picker matches the board; name above */
   .tray{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:100%;padding-top:4px;}
   .susp{display:flex;flex-direction:column;align-items:center;gap:4px;width:62px;cursor:pointer;
-    transition:transform .1s;}
+    transition:transform .16s ease;}   /* smooth lift up/down on select */
   .susp:hover{transform:translateY(-3px);}
   .susp-name{font-size:11px;font-weight:700;color:var(--ink);text-align:center;line-height:1;
     max-width:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -331,7 +337,7 @@
   .ev-mount{width:100%;max-width:calc(9 * var(--cell));}
   .ev-mount[hidden]{display:none;}
   .ev-mount .ev-block{width:100%;margin:0;}
-  .susp.sel{transform:translateY(-3px) scale(1.06);}
+  .susp.sel{transform:translateY(-8px) scale(1.06);}   /* selected suspect lifts higher and stays up while selected */
   .susp.sel .susp-name{color:var(--amber-soft);}
   .susp.sel .count{background:var(--amber);color:#1a1a22;border-color:var(--amber);}
   /* Focus / Atmosphere mode (P4) — reduce texture competition during play */
@@ -2328,7 +2334,7 @@ function renderPossibleWeapons(){
 }
 
 /* ---- interactions (cell-first: tap a cell to select, then tap a suspect to place) ---- */
-function onCell(i){ if(solved)return; sel=i; refresh(); renderTray(); fxPulse(boardEl.children[i]); }   // select only — never auto-places
+function onCell(i){ if(solved)return; sel=i; refresh(); renderTray(); fxPulse(boardEl.children[i]); playFootsteps(); }   // select only — never auto-places
 function selectSuspect(v){ if(solved)return;
   if(sel<0){ setStatus("Tap a cell on the board first — then tap a suspect to place them there.",""); return; }
   if(given[sel]){ fxShake(boardEl.children[sel]); sfx("buzz"); setStatus("That cell is fixed by the evidence — pick an open cell.",""); return; }
@@ -2994,6 +3000,26 @@ function sfx(name){ if(!settings.sound) return; if(!audioCtx()) return;
   else if(name==="buzz"){ _tone(150,0.22,"sawtooth",0.14); _tone(146,0.22,"sawtooth",0.1); }
   else if(name==="win"){ [523.25,659.25,783.99].forEach((f,i)=>_tone(f,0.22,"sine",0.14,i*0.11)); }
   else if(name==="paper"){ _noise(0.17,0.05); } }   // soft paper slide for the case-open sequence
+/* ---- very quiet footstep shuffle that rides the footprint walk-out trail (cell selection) ---- */
+let _lastSteps=-1e9;   // far in the past so the first footstep sequence is never rate-limited
+function _step(delay){ const a=audioCtx(); if(!a) return; const t0=a.currentTime+(delay||0);
+  const len=Math.max(1,(a.sampleRate*0.05)|0), buf=a.createBuffer(1,len,a.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*(1-i/len);                 // short decaying noise = soft scuff
+  const s=a.createBufferSource(); s.buffer=buf;
+  const lp=a.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=380+Math.random()*300;   // muffled, varied
+  const g=a.createGain(); g.gain.setValueAtTime(0.0001,t0);
+  g.gain.exponentialRampToValueAtTime(0.045+Math.random()*0.03,t0+0.005);    // VERY quiet
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+0.06);
+  s.connect(lp).connect(g).connect(a.destination); s.start(t0); s.stop(t0+0.09); }
+function playFootsteps(){
+  if(!settings.sound) return;                       // tied to the Sound toggle (off by default)
+  if(!motionOK()) return;                           // no walk animation -> no steps
+  const a=audioCtx(); if(!a) return;
+  if(a.currentTime - _lastSteps < 1.0) return;      // rate-limit: ignore rapid re-selection within ~1s
+  _lastSteps=a.currentTime;
+  const n=3+Math.floor(Math.random()*3);            // a short sequence of 3-5 soft steps
+  let t=0; for(let k=0;k<n;k++){ _step(t); t+=0.10+Math.random()*0.07; }   // slight timing randomization
+}
 
 /* the big solved-case reveal: flashbulb -> bars slam -> stamp thunk + dust -> confetti (3/3).
    Final state is the CSS resting state, so skip / Motion-off just shows the end immediately. */
