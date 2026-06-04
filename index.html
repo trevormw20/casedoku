@@ -125,6 +125,15 @@
   .cell-victim{position:absolute;bottom:1px;right:1px;width:50%;height:50%;max-width:30px;max-height:30px;z-index:5;
     padding:1px;border-radius:50%;background:rgba(11,13,18,.72);box-shadow:0 1px 3px rgba(0,0,0,.75);
     object-fit:cover;object-position:center top;pointer-events:none;filter:grayscale(.25);}
+  /* object ALWAYS visible: a decent floor landmark when the cell is empty; once a suspect token
+     occupies the cell it becomes a small always-on-top CORNER BADGE (top-left, dark chip, z above
+     the token) so object-anchored sighting clues stay verifiable. Clean swap via a quick size fade. */
+  .cell-object{transition:width .15s ease,height .15s ease,background .15s ease;}
+  .cell-object.badge{top:1px;left:1px;bottom:auto;width:40%;height:40%;max-width:25px;max-height:25px;
+    z-index:7;padding:2px;border-radius:6px;background:rgba(11,13,18,.82);
+    box-shadow:0 1px 3px rgba(0,0,0,.7),inset 0 0 0 1px rgba(231,185,77,.4);}
+  /* scene weapon: gains a dark chip backing while a token sits under it, so it stays legible */
+  .cell-weapon.chip{background:rgba(11,13,18,.72);border-radius:6px;padding:1px;}
   /* ---- suspect token: colored disc + per-case ring + portrait/letter ---- */
   .token{position:relative;width:82%;height:82%;border-radius:50%;z-index:2;  /* above the room object (z1), below scene weapon/victim */
     display:flex;align-items:center;justify-content:center;
@@ -350,6 +359,17 @@
   .cell.hint-cell{box-shadow:inset 0 0 0 3px var(--amber),0 0 16px rgba(231,185,77,.7);
     animation:hintpulse 1s ease-in-out infinite alternate;}
   @keyframes hintpulse{to{box-shadow:inset 0 0 0 3px var(--amber),0 0 24px rgba(231,185,77,.95);}}
+  /* clue -> board linking: clicking a clue briefly pulses what it references (room / line / cell /
+     object). JS removes the class after ~1.6s; body.no-motion (Motion off or reduced-motion) snaps
+     to the static highlight with no animation. */
+  .cell.clue-hl{box-shadow:inset 0 0 0 2px rgba(231,185,77,.45);z-index:4;animation:cluePulseRoom 1.6s ease-in-out;}
+  .cell.clue-cell,.cell.clue-object{box-shadow:inset 0 0 0 3px var(--amber),0 0 16px rgba(231,185,77,.75)!important;
+    z-index:6;animation:cluePulseCell 1.6s ease-in-out;}
+  .cell.clue-object .cell-object{animation:cluePulseObj 1.6s ease-in-out;}
+  @keyframes cluePulseRoom{0%,100%{box-shadow:inset 0 0 0 2px rgba(231,185,77,.3);}50%{box-shadow:inset 0 0 0 3px rgba(231,185,77,.72);}}
+  @keyframes cluePulseCell{0%,100%{box-shadow:inset 0 0 0 3px var(--amber),0 0 10px rgba(231,185,77,.55);}50%{box-shadow:inset 0 0 0 3px var(--amber),0 0 22px rgba(231,185,77,.95);}}
+  @keyframes cluePulseObj{0%,100%{transform:scale(1);}50%{transform:scale(1.3);}}
+  .ev-clue{cursor:pointer;}
   /* pencil-mark candidates (P3-notes): fixed 3x3 sub-grid of colored dots */
   .cand-grid{position:absolute;inset:5px;display:grid;grid-template-columns:repeat(3,1fr);
     grid-template-rows:repeat(3,1fr);gap:1px;pointer-events:none;}
@@ -1860,7 +1880,7 @@ function dressStory(){
   // unified evidence list: position clues (solve WHO) + [WEAPON] (solve WHAT) + [MOTIVE] (solve WHY), each tagged
   story.evidence=[];
   C.clues.forEach((cl,i)=>story.evidence.push({ tag:Skin.EV_TAG[cl.type]||cl.type.toUpperCase(),
-    text:Skin.renderClue(cfg,THEME,cl), key:cl.key, proof:C.proofClues.includes(i), kind:"pos" }));
+    text:Skin.renderClue(cfg,THEME,cl), key:cl.key, proof:C.proofClues.includes(i), kind:"pos", clueIdx:i }));
   story.weaponClues.forEach(wc=>story.evidence.push({ tag:"WEAPON", text:Skin.renderWeaponClue(THEME,wc), key:true, proof:false, kind:"weapon" }));
   story.motiveClues.forEach(mc=>story.evidence.push({ tag:"MOTIVE", text:Skin.renderMotiveClue(THEME,mc), key:true, proof:false, kind:"motive" }));
   // cozy-mystery narrative intro (own rng stream); names the SCENE object (what was found by the body)
@@ -1946,7 +1966,7 @@ function renderBoard(){
     if(r%cfg.bh===0 && c%cfg.bw===0){ const tag=document.createElement("span"); tag.className="room-tag";
       tag.innerHTML=`<img src="${tAsset('objects','object-'+room.icon+'.png')}" alt="">`+room.name.replace(/^the /i,""); cell.appendChild(tag); }
     // object landmark for this room (behind the token) — gives the furniture art a purpose
-    if(C.objectCells && C.objectCells[box]===i){ const o=document.createElement("img"); o.className="cell-object";
+    if(C.objectCells && C.objectCells[box]===i){ const o=document.createElement("img"); o.className="cell-object"+(board[i]!==0?" badge":"");
       o.src=tAsset('objects','object-'+room.icon+'.png'); o.alt=""; cell.appendChild(o); }
     if(board[i]!==0) cell.appendChild(tokenEl(board[i]));
     else if(candidates[i] && candidates[i].size) cell.appendChild(candGrid(i));
@@ -1956,7 +1976,7 @@ function renderBoard(){
       b.alt=""; b.title=`${story.victimDisplay||"the victim"} (deceased)`; cell.appendChild(b);
       if(story.victimSlug) loadOptionalImg(b, tAsset('victims','victim-'+story.victimSlug+'.png'));
       const so=Skin.weaponBySlug(THEME,story.sceneObject);
-      const w=document.createElement("img"); w.className="cell-weapon";
+      const w=document.createElement("img"); w.className="cell-weapon"+(board[i]!==0?" chip":"");
       w.src=tAsset('weapons','weapon-'+story.sceneObject+'.png'); w.alt=""; w.title=`Found beside the body: ${so.n}`; cell.appendChild(w);
     }
     cell.addEventListener("click",()=>onCell(i));
@@ -2001,7 +2021,9 @@ function renderCase(){
     if(ev.key) li.classList.add("key");
     const star=ev.key?`<span class="keymark" title="key evidence">★</span>`:"";
     li.innerHTML=`<span class="ev-tag tag-${ev.tag.toLowerCase()}">${ev.tag}</span>${star}${ev.text}`;
-    li.addEventListener("click",()=>{ li.classList.toggle("used"); if(li.classList.contains("used"))cluesUsed.add(idx); else cluesUsed.delete(idx); });
+    li.style.cursor="pointer"; li.title="Click: show it on the board · Double-click: mark as used";
+    li.addEventListener("click",()=>highlightClue(ev));   // pulse what this clue references
+    li.addEventListener("dblclick",()=>{ li.classList.toggle("used"); if(li.classList.contains("used"))cluesUsed.add(idx); else cluesUsed.delete(idx); });
     list.appendChild(li);
   });
   if($("sceneObjInfo")) $("sceneObjInfo").innerHTML=`<span class="soi-label">Found beside the body</span>`+
@@ -2101,13 +2123,59 @@ function candGrid(i){
 function paint(i){ const cell=boardEl.children[i];
   const t=cell.querySelector(".token"); if(t)t.remove();
   const g=cell.querySelector(".cand-grid"); if(g)g.remove();
-  cell.classList.toggle("empty", board[i]===0);
-  if(board[i]!==0){ cell.appendChild(tokenEl(board[i])); fxPop(cell); }   // pop the token in on (re)placement
+  const occ=board[i]!==0;
+  cell.classList.toggle("empty", !occ);
+  const ob=cell.querySelector(".cell-object"); if(ob) ob.classList.toggle("badge", occ);   // object -> corner badge when covered
+  const wp=cell.querySelector(".cell-weapon"); if(wp) wp.classList.toggle("chip", occ);     // scene weapon -> chip backing when covered
+  if(occ){ cell.appendChild(tokenEl(board[i])); fxPop(cell); }   // pop the token in on (re)placement
   else if(candidates[i] && candidates[i].size) cell.appendChild(candGrid(i)); }
 
 /* ---- Case Assistant: escalating investigation help (P7) ---- */
 function assist(html){ const a=$("assistant"); if(!a) return; a.hidden=false; $("assistantText").innerHTML=html; }
 function clearHints(){ for(const cell of boardEl.children) cell.classList.remove("hint-room","hint-cell"); }
+
+/* ---- clue -> board linking: clicking a clue briefly pulses what it references ---- */
+let clueHlTimer=null;
+function clearClueHighlight(){ if(clueHlTimer){ clearTimeout(clueHlTimer); clueHlTimer=null; }
+  for(const cell of boardEl.children) cell.classList.remove("clue-hl","clue-cell","clue-object"); }
+function clueBoardTargets(clue){
+  const N=cfg.N, p=clue.p, T={cells:[],boxes:[],object:null,line:null};
+  switch(clue.type){
+    case "sighting":{ T.cells.push(p.cell);
+      const box=E.boxOf(cfg,Math.floor(p.cell/N),p.cell%N), oc=C.objectCells&&C.objectCells[box];
+      if(oc!=null){ const dr=Math.floor(p.cell/N)-Math.floor(oc/N), dc=(p.cell%N)-(oc%N);
+        if(Math.abs(dr)+Math.abs(dc)===1) T.object=oc; }   // object-anchored sighting -> pulse the landmark too
+      break; }
+    case "exclusion": T.cells.push(p.cell); break;
+    case "position": T.boxes.push(p.box); T.line={box:p.box,axis:p.axis,band:p.band}; break;   // room + the line band
+    case "relative": case "adjacency":{ T.boxes.push(p.box);   // room + both suspects' cells (when placed)
+      const {r0,c0}=E.rcOfBox(cfg,p.box);
+      for(const v of [p.val,p.val2]) for(let a=0;a<cfg.bh;a++)for(let b=0;b<cfg.bw;b++){
+        const ci=(r0+a)*N+(c0+b); if(board[ci]===v) T.cells.push(ci); }
+      break; }
+  }
+  return T;
+}
+function applyClueHighlight(T){ const N=cfg.N;
+  for(const box of T.boxes){ const {r0,c0}=E.rcOfBox(cfg,box);
+    for(let a=0;a<cfg.bh;a++)for(let b=0;b<cfg.bw;b++) boardEl.children[(r0+a)*N+(c0+b)].classList.add("clue-hl"); }
+  if(T.line){ const {r0,c0}=E.rcOfBox(cfg,T.line.box);
+    if(T.line.axis==="row"){ const r=r0+T.line.band; for(let b=0;b<cfg.bw;b++) boardEl.children[r*N+(c0+b)].classList.add("clue-cell"); }
+    else { const c=c0+T.line.band; for(let a=0;a<cfg.bh;a++) boardEl.children[(r0+a)*N+c].classList.add("clue-cell"); } }
+  for(const ci of T.cells) if(ci>=0 && boardEl.children[ci]) boardEl.children[ci].classList.add("clue-cell");
+  if(T.object!=null && boardEl.children[T.object]) boardEl.children[T.object].classList.add("clue-object");
+  clueHlTimer=setTimeout(clearClueHighlight,1800);   // pulse ~1.6s, then clear (static when motion off)
+}
+function highlightClue(ev){ if(!ev||!C) return;
+  // on phones the case-file overlay covers the board — close it so the pulse is visible
+  if(typeof closeCaseFile==="function" && document.body.classList.contains("co-open")) closeCaseFile();
+  clearClueHighlight();
+  let T;
+  if(ev.kind==="pos" && ev.clueIdx!=null && C.clues[ev.clueIdx]) T=clueBoardTargets(C.clues[ev.clueIdx]);
+  else { const box=E.boxOf(cfg,Math.floor(C.murderCell/cfg.N),C.murderCell%cfg.N);   // weapon/motive -> the crime scene
+    T={cells:[C.murderCell],boxes:[box],object:null,line:null}; }
+  applyClueHighlight(T);
+}
 function cellCandidates(i){
   const N=cfg.N, r=Math.floor(i/N), c=i%N, used=new Set();
   for(let k=0;k<N;k++){ if(board[r*N+k])used.add(board[r*N+k]); if(board[k*N+c])used.add(board[k*N+c]); }
@@ -2396,6 +2464,9 @@ $("archiveClose").onclick=()=>$("archiveModal").classList.remove("show");
 $("winArchive").onclick=openArchive;
 $("evPrev").onclick=()=>{ clueStep--; renderEvCurrent(); };
 $("evNext").onclick=()=>{ clueStep++; renderEvCurrent(); };
+// tapping the current-evidence clue pulses what it references on the board
+if($("evClue")){ $("evClue").title="Click to show this clue on the board";
+  $("evClue").onclick=()=>highlightClue(story&&story.evidence&&story.evidence[clueStep]); }
 // current-evidence card and the full list are mutually exclusive (only one open)
 // current-evidence card and the full list are mutually exclusive ON DESKTOP only (on phones
 // they live in different places: the stepper by the board, the full list in the overlay tab).
