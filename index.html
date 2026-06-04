@@ -1789,23 +1789,27 @@ GLOBAL.CludokuEngine = {
 const MANOR = {
   id:"manor", name:"Blackwood Manor (Classic Whodunit)", place:"Blackwood Manor",
   // each suspect carries a `role` slug -> assets/themes/manor/suspects/suspect-<role>.png
+  // each suspect carries an `mtag` (one of the 12 motive tags) + a `motive` phrase (unique per
+  // suspect). The 12 tags are spread across the 16 roles so any case cast carries several distinct
+  // motives for the accusation's 3 options. Tags: money, inheritance, revenge, secret, reputation,
+  // jealousy, debt, blackmail, betrayal, forbidden, coverup, grudge.
   suspects:[
     {role:"colonel",     L:"A", name:"The Colonel",     color:"#D4A017", gender:"male",   mtag:"secret",      motive:"a buried war secret"},
     {role:"widow",       L:"B", name:"The Widow",       color:"#7D3C98", gender:"female", mtag:"inheritance", motive:"a contested inheritance"},
-    {role:"butler",      L:"C", name:"The Butler",      color:"#5D6D7E", gender:"male",   mtag:"revenge",     motive:"years of unpaid loyalty"},
+    {role:"butler",      L:"C", name:"The Butler",      color:"#5D6D7E", gender:"male",   mtag:"grudge",      motive:"years of unpaid loyalty soured to spite"},
     {role:"chef",        L:"D", name:"The Chef",        color:"#C0392B", gender:"male",   mtag:"reputation",  motive:"a stolen recipe"},
-    {role:"professor",   L:"E", name:"The Professor",   color:"#1E8449", gender:"male",   mtag:"reputation",  motive:"a discredited theory"},
+    {role:"professor",   L:"E", name:"The Professor",   color:"#1E8449", gender:"male",   mtag:"coverup",     motive:"a discredited theory he had to bury"},
     {role:"heiress",     L:"F", name:"The Heiress",     color:"#C2407A", gender:"female", mtag:"inheritance", motive:"a cut from the will"},
-    {role:"gardener",    L:"G", name:"The Gardener",    color:"#D86A1E", gender:"female", mtag:"revenge",     motive:"a dismissed grievance"},
-    {role:"captain",     L:"H", name:"The Captain",     color:"#2471A3", gender:"male",   mtag:"revenge",     motive:"a mutinous grudge"},
-    {role:"doctor",      L:"I", name:"The Doctor",      color:"#17A2A2", gender:"female", mtag:"secret",      motive:"a malpractice cover-up"},
-    {role:"actress",     L:"J", name:"The Actress",     color:"#B03060", gender:"female", mtag:"reputation",  motive:"a ruined reputation"},
-    {role:"inspector",   L:"K", name:"The Inspector",   color:"#3A4250", gender:"male",   mtag:"secret",      motive:"a case gone wrong"},
+    {role:"gardener",    L:"G", name:"The Gardener",    color:"#D86A1E", gender:"female", mtag:"revenge",     motive:"a dismissed grievance, repaid"},
+    {role:"captain",     L:"H", name:"The Captain",     color:"#2471A3", gender:"male",   mtag:"betrayal",    motive:"a mutinous betrayal"},
+    {role:"doctor",      L:"I", name:"The Doctor",      color:"#17A2A2", gender:"female", mtag:"coverup",     motive:"a malpractice cover-up"},
+    {role:"actress",     L:"J", name:"The Actress",     color:"#B03060", gender:"female", mtag:"jealousy",    motive:"a jealous rivalry"},
+    {role:"inspector",   L:"K", name:"The Inspector",   color:"#3A4250", gender:"male",   mtag:"blackmail",   motive:"a blackmailer's hold over him"},
     {role:"maid",        L:"L", name:"The Maid",        color:"#4FA3D1", gender:"female", mtag:"money",       motive:"a withheld wage"},
-    {role:"heir",        L:"M", name:"The Heir",        color:"#7A8B3C", gender:"male",   mtag:"inheritance", motive:"an impatient fortune"},
+    {role:"heir",        L:"M", name:"The Heir",        color:"#7A8B3C", gender:"male",   mtag:"debt",        motive:"gambling debts and an impatient fortune"},
     {role:"magician",    L:"N", name:"The Magician",    color:"#3D348B", gender:"male",   mtag:"reputation",  motive:"an exposed trick"},
     {role:"antiquarian", L:"O", name:"The Antiquarian", color:"#9C6B30", gender:"male",   mtag:"money",       motive:"a priceless forgery"},
-    {role:"nurse",       L:"P", name:"The Nurse",       color:"#D98C9A", gender:"female", mtag:"secret",      motive:"a fatal prescription"},
+    {role:"nurse",       L:"P", name:"The Nurse",       color:"#D98C9A", gender:"female", mtag:"forbidden",   motive:"a forbidden love affair"},
   ],
   victims:["Lord Blackwood","the Dowager Countess","Sir Hugh Pennington","the family solicitor","old Mr. Ashford"],
   // each weapon: `slug` -> assets/themes/manor/weapons/weapon-<slug>.png; `traits` drive the
@@ -1844,8 +1848,15 @@ const MANOR = {
     money:["This killing was about money — someone stood to gain.","Follow the coin: greed was the only motive that fits."],
     inheritance:["A name in a will was worth killing for here.","Someone's share of the estate drove this."],
     secret:["The killer was burying a secret that would have ruined them.","This was done to keep a damning truth from coming out."],
-    revenge:["This was personal — an old grudge finally repaid.","Someone settled a long-nursed score."],
+    revenge:["This was personal — a wrong avenged in kind.","Someone struck back to settle a score that had been done to them."],
     reputation:["Someone killed to protect their good name.","A reputation was on the line — and worth a life."],
+    jealousy:["This was the work of jealousy — someone could not bear to be passed over.","Green-eyed envy guided the killer's hand."],
+    debt:["A debt that could never be repaid is at the heart of this.","Someone was drowning in money owed — and killed to escape it."],
+    blackmail:["The killer was being bled dry by blackmail.","Someone murdered to break a blackmailer's grip."],
+    betrayal:["This was a betrayal repaid in blood.","Someone was double-crossed — and answered treachery with murder."],
+    forbidden:["A forbidden love lies behind this killing.","Someone killed to protect a love that was never allowed."],
+    coverup:["The killer was burying a blunder that would have ended them.","This was done to cover up a ruinous mistake."],
+    grudge:["A wrong suffered long ago was finally answered here.","An old grudge, nursed for years, at last boiled over."],
   },
   times:["just before midnight","at the stroke of nine","during the thunderstorm","at supper","as the clock struck two"],
   // victim cast — a SEPARATE roster from the playable suspects (never placeable, never a
@@ -2353,7 +2364,7 @@ function dressStory(){
   for(let i=others.length-1;i>0;i--){ const j=Math.floor(mrng()*(i+1)); [others[i],others[j]]=[others[j],others[i]]; }
   const dist=[], usedTags=new Set([killerTag]);
   for(const o of others){ if(dist.length>=2) break; if(!usedTags.has(o.mtag) && !dist.some(d=>d.motive===o.motive)){ dist.push(o); usedTags.add(o.mtag); } }
-  for(const o of others){ if(dist.length>=2) break; if(!dist.some(d=>d.motive===o.motive) && o.motive!==killer.motive) dist.push(o); }   // fallback fill
+  for(const o of others){ if(dist.length>=2) break; if(o.mtag!==killerTag && !dist.some(d=>d.motive===o.motive)) dist.push(o); }   // fallback fill — never a distractor sharing the killer's tag (keeps the motive unambiguous)
   const motiveOptions=[{motive:killer.motive, correct:true, tag:killerTag}, ...dist.map(d=>({motive:d.motive, correct:false, tag:d.mtag}))];
   for(let i=motiveOptions.length-1;i>0;i--){ const j=Math.floor(mrng()*(i+1)); [motiveOptions[i],motiveOptions[j]]=[motiveOptions[j],motiveOptions[i]]; }
 
@@ -2670,14 +2681,22 @@ function renderPossibleWeapons(){
    Reveal flag + marks persist per case (localStorage). Player-only notebook, no validation. ===== */
 const MMARK_TAG={suspected:"Suspected"};
 const MMARK_STAMP={cleared:"Cleared", confirmed:"Confirmed"};
-const MOTIVE_GLYPH={money:"coin", inheritance:"scroll", revenge:"dagger", secret:"envelope", reputation:"mask"};
+const MOTIVE_GLYPH={money:"coin", inheritance:"scroll", revenge:"dagger", secret:"envelope", reputation:"mask",
+  jealousy:"eye", debt:"ledger", blackmail:"lock", betrayal:"chainbreak", forbidden:"heart", coverup:"shroud", grudge:"fist"};
 const GLYPH_SVG={
   coin:'<svg viewBox="0 0 18 18" class="gsvg"><circle cx="9" cy="9" r="6.4"/><path d="M9 5.2v7.6M7.3 6.7h3a1.4 1.4 0 0 1 0 2.8H8.2a1.4 1.4 0 0 0 0 2.8h3"/></svg>',
   scroll:'<svg viewBox="0 0 18 18" class="gsvg"><rect x="4.2" y="3" width="9.6" height="12" rx="1.4"/><path d="M6.6 6h4.8M6.6 9h4.8M6.6 12h3"/></svg>',
   dagger:'<svg viewBox="0 0 18 18" class="gsvg gfill"><path d="M9 2l1.3 8.4H7.7z"/><rect x="6" y="10.3" width="6" height="1.6" rx=".8"/><rect x="8.2" y="11.7" width="1.6" height="4.3" rx=".8"/></svg>',
   envelope:'<svg viewBox="0 0 18 18" class="gsvg"><rect x="3" y="4.6" width="12" height="8.8" rx="1"/><path d="M3.6 5.6L9 10l5.4-4.4"/></svg>',
   mask:'<svg viewBox="0 0 18 18" class="gsvg"><path d="M4 4.2c0 6.6 2.4 9.8 5 9.8s5-3.2 5-9.8c-3-1-7-1-10 0z"/><circle cx="7" cy="7.6" r="1" class="gfilldot"/><circle cx="11" cy="7.6" r="1" class="gfilldot"/></svg>',
-  file:'<svg viewBox="0 0 18 18" class="gsvg"><path d="M4.5 3h5l4 4v8h-9z"/><path d="M9.5 3v4h4M6.8 10.2h4.4M6.8 12.6h4.4"/></svg>'
+  file:'<svg viewBox="0 0 18 18" class="gsvg"><path d="M4.5 3h5l4 4v8h-9z"/><path d="M9.5 3v4h4M6.8 10.2h4.4M6.8 12.6h4.4"/></svg>',
+  eye:'<svg viewBox="0 0 18 18" class="gsvg"><path d="M2.5 9S5.1 4.8 9 4.8 15.5 9 15.5 9 12.9 13.2 9 13.2 2.5 9 2.5 9z"/><circle cx="9" cy="9" r="2"/></svg>',
+  ledger:'<svg viewBox="0 0 18 18" class="gsvg"><rect x="4" y="3" width="10" height="12" rx="1"/><path d="M6.4 6h5.2M6.4 8.3h5.2M6.4 10.6h3"/><circle cx="11.2" cy="11.4" r="1.3"/></svg>',
+  lock:'<svg viewBox="0 0 18 18" class="gsvg"><rect x="4.6" y="8" width="8.8" height="6.4" rx="1.2"/><path d="M6.4 8V6.4a2.6 2.6 0 0 1 5.2 0V8"/><circle cx="9" cy="11.2" r=".9" class="gfilldot"/></svg>',
+  chainbreak:'<svg viewBox="0 0 18 18" class="gsvg"><path d="M7.4 6.6a2.3 2.3 0 0 0 0 4.6h.8M10.6 11.4a2.3 2.3 0 0 0 0-4.6h-.8"/><path d="M6.6 4.4l1 1.6M11.4 13.6l-1-1.6"/></svg>',
+  heart:'<svg viewBox="0 0 18 18" class="gsvg gfill"><path d="M9 14.6S3.2 11 3.2 6.9A2.85 2.85 0 0 1 9 5.5a2.85 2.85 0 0 1 5.8 1.4C14.8 11 9 14.6 9 14.6z"/></svg>',
+  shroud:'<svg viewBox="0 0 18 18" class="gsvg"><path d="M3.6 13.4C3.6 8.6 6 5 9 5s5.4 3.6 5.4 8.4"/><path d="M3.6 13.4h10.8"/><path d="M6 13.4v1.6M9 13.4v1.6M12 13.4v1.6"/></svg>',
+  fist:'<svg viewBox="0 0 18 18" class="gsvg"><rect x="5" y="7.6" width="8" height="5.6" rx="1.5"/><path d="M6.6 7.6V6.1a1 1 0 0 1 2 0v1.5M8.6 7.6V5.7a1 1 0 0 1 2 0v1.9M10.6 7.6V6.3a1 1 0 0 1 2 0v1.3"/></svg>'
 };
 function motiveGlyphSVG(tag){ return GLYPH_SVG[MOTIVE_GLYPH[tag]] || GLYPH_SVG.file; }
 function loadMotiveState(code){ const all=LS.get("motiveState",{})||{}; const s=all[code]||{}; return { revealed:!!s.revealed, marks:Object.assign({}, s.marks||{}) }; }
