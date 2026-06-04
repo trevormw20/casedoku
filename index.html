@@ -810,8 +810,8 @@
     background:radial-gradient(circle, rgba(233,223,198,.85), rgba(233,223,198,.3) 55%, transparent 72%);
     opacity:0;animation:ambMote linear infinite;}
   @keyframes ambMote{0%{opacity:0;transform:translate(0,0);}15%{opacity:.7;}85%{opacity:.55;}100%{opacity:0;transform:translate(var(--dx),var(--dy));}}
-  /* phone: lighter — keep at most 5 motes */
-  body.phone #amb .amb-dust .mote:nth-child(n+6){display:none;}
+  /* phone: lighter — keep at most 7 motes */
+  body.phone #amb .amb-dust .mote:nth-child(n+8){display:none;}
 </style>
 </head>
 <body>
@@ -2999,12 +2999,12 @@ function pickAmbient(s){
   return ["dust","candle","smoke","grain"];
 }
 function buildDust(){ const host=$("ambDust"); if(!host||host.childElementCount) return;
-  for(let i=0;i<12;i++){ const m=document.createElement("i"); m.className="mote";
+  for(let i=0;i<17;i++){ const m=document.createElement("i"); m.className="mote";   // a few more motes (phone caps to 7 via CSS)
     m.style.left=(Math.random()*100).toFixed(2)+"%"; m.style.top=(Math.random()*100).toFixed(2)+"%";
-    m.style.setProperty("--dx",(Math.random()*44-22).toFixed(0)+"px");
-    m.style.setProperty("--dy",(-30-Math.random()*55).toFixed(0)+"px");
-    m.style.animationDuration=(15+Math.random()*16).toFixed(1)+"s";
-    m.style.animationDelay=(-Math.random()*22).toFixed(1)+"s";
+    m.style.setProperty("--dx",(Math.random()*56-28).toFixed(0)+"px");   // a touch farther drift
+    m.style.setProperty("--dy",(-42-Math.random()*68).toFixed(0)+"px");
+    m.style.animationDuration=(12+Math.random()*13).toFixed(1)+"s";      // marginally faster float (still slow)
+    m.style.animationDelay=(-Math.random()*24).toFixed(1)+"s";
     host.appendChild(m); } }
 function buildRain(){ const host=$("ambRain"); if(!host||host.childElementCount) return;
   for(let i=0;i<26;i++){ const s=document.createElement("i"); s.className="streak";   // short, scattered, desynced
