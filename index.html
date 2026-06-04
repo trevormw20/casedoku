@@ -657,6 +657,7 @@
      ~0 main-thread cost). JS only toggles which layers are visible; pausing is animation-play-state. ===== */
   #amb{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;display:none;}
   #amb.amb-on{display:block;}
+  #amb.amb-focus{opacity:.82;}   /* Focus/Low: a touch lighter than High, but the effects still show */
   #amb .amb-layer{position:absolute;inset:0;display:none;}
   #amb.amb-paused .amb-layer,#amb.amb-paused .mote{animation-play-state:paused !important;}
   /* vignette breathing — constant base layer; transparent centre so the board stays clear */
@@ -666,32 +667,32 @@
   @keyframes ambVignette{from{opacity:.55;}to{opacity:1;}}
   /* faint rain streaks on the manor window (a tall gradient scrolled by transform) */
   #amb.fx-rain .amb-rain{display:block;top:-50%;height:200%;
-    background:repeating-linear-gradient(106deg, transparent 0 7px, rgba(176,198,230,.05) 7px 8px);
+    background:repeating-linear-gradient(106deg, transparent 0 6px, rgba(178,200,232,.16) 6px 8px);
     animation:ambRain 1.4s linear infinite;}
   @keyframes ambRain{from{transform:translateY(0);}to{transform:translateY(-80px);}}
   /* slow candle flicker — warm glow that breathes near a lamp corner */
   #amb.fx-candle .amb-candle{display:block;
-    background:radial-gradient(circle at 88% 24%, rgba(231,185,77,.12), transparent 42%);
+    background:radial-gradient(circle at 88% 22%, rgba(231,185,77,.26), transparent 48%);
     animation:ambCandle 6.5s ease-in-out infinite;}
   @keyframes ambCandle{0%{opacity:.55;}18%{opacity:.85;}33%{opacity:.62;}52%{opacity:.95;}68%{opacity:.7;}84%{opacity:.9;}100%{opacity:.58;}}
   /* one thin smoke wisp curling slowly upward */
-  #amb.fx-smoke .amb-smoke{display:block;inset:auto;left:13%;bottom:-60px;width:150px;height:320px;
-    background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(205,205,215,.055), transparent 70%);
+  #amb.fx-smoke .amb-smoke{display:block;inset:auto;left:12%;bottom:-60px;width:160px;height:340px;
+    background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(208,208,218,.15), transparent 70%);
     filter:blur(9px);animation:ambSmoke 24s ease-in-out infinite;}
   @keyframes ambSmoke{0%{transform:translateY(0) scale(1) rotate(0);opacity:0;}
     14%{opacity:.85;}50%{transform:translateY(-42vh) scale(1.4) rotate(7deg);opacity:.5;}
     86%{opacity:.18;}100%{transform:translateY(-82vh) scale(1.9) rotate(-5deg);opacity:0;}}
   /* barely-there paper grain that drifts (SVG turbulence data-URI — no asset file) */
-  #amb.fx-grain .amb-grain{display:block;opacity:.04;
+  #amb.fx-grain .amb-grain{display:block;opacity:.09;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     animation:ambGrain 7s steps(6) infinite;}
   @keyframes ambGrain{from{transform:translate(0,0);}to{transform:translate(-12px,9px);}}
   /* a few drifting dust motes (≤12; created in JS with per-mote drift) */
   #amb.fx-dust .amb-dust{display:block;}
-  #amb .amb-dust .mote{position:absolute;width:3px;height:3px;border-radius:50%;
-    background:radial-gradient(circle, rgba(231,220,192,.55), transparent 70%);
+  #amb .amb-dust .mote{position:absolute;width:4px;height:4px;border-radius:50%;
+    background:radial-gradient(circle, rgba(233,223,198,.85), rgba(233,223,198,.3) 55%, transparent 72%);
     opacity:0;animation:ambMote linear infinite;}
-  @keyframes ambMote{0%{opacity:0;transform:translate(0,0);}15%{opacity:.5;}85%{opacity:.4;}100%{opacity:0;transform:translate(var(--dx),var(--dy));}}
+  @keyframes ambMote{0%{opacity:0;transform:translate(0,0);}15%{opacity:.7;}85%{opacity:.55;}100%{opacity:0;transform:translate(var(--dx),var(--dy));}}
   /* phone: lighter — keep at most 5 motes */
   body.phone #amb .amb-dust .mote:nth-child(n+6){display:none;}
 </style>
@@ -2743,10 +2744,12 @@ function buildDust(){ const host=$("ambDust"); if(!host||host.childElementCount)
 function applyAmbient(){
   const amb=$("amb"); if(!amb) return;
   if(!motionOK()){ amb.className=""; return; }        // Motion off / reduced-motion -> nothing
-  const phone=document.body.classList.contains("phone"), high=settings.atmosphere==="high";
-  let fx = high ? ((story&&story.ambient)||["dust"]) : ["candle"];   // Focus/Low -> minimal (vignette + candle)
-  if(phone) fx=fx.slice(0,1);                         // phone -> vignette + at most one effect
-  amb.className=["amb-on","fx-vignette"].concat(fx.map(f=>"fx-"+f)).join(" ");
+  const phone=document.body.classList.contains("phone"), focus=settings.atmosphere!=="high";
+  let fx = (story&&story.ambient) || ["dust"];         // the case's ACTUAL effects (story cue OR full no-cue set) — shown on Focus too, not just High
+  if(phone) fx=fx.slice(0,2);                          // phone -> vignette + at most two light effects (battery)
+  const cls=["amb-on","fx-vignette"].concat(fx.map(f=>"fx-"+f));
+  if(focus) cls.push("amb-focus");                     // Focus is a touch lighter than High (global dim) but still shows the effects
+  amb.className=cls.join(" ");
   amb.classList.toggle("amb-paused", document.hidden);
 }
 function applyAtmosphere(){
