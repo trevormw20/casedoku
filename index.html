@@ -659,17 +659,21 @@
   #amb.amb-on{display:block;}
   #amb.amb-focus{opacity:.82;}   /* Focus/Low: a touch lighter than High, but the effects still show */
   #amb .amb-layer{position:absolute;inset:0;display:none;}
-  #amb.amb-paused .amb-layer,#amb.amb-paused .mote{animation-play-state:paused !important;}
+  #amb.amb-paused .amb-layer,#amb.amb-paused .mote,#amb.amb-paused .streak{animation-play-state:paused !important;}
   /* vignette breathing — constant base layer; transparent centre so the board stays clear */
   #amb.fx-vignette .amb-vignette{display:block;
     background:radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,.5) 100%);
     animation:ambVignette 13s ease-in-out infinite alternate;}
   @keyframes ambVignette{from{opacity:.55;}to{opacity:1;}}
-  /* faint rain streaks on the manor window (a tall gradient scrolled by transform) */
-  #amb.fx-rain .amb-rain{display:block;top:-50%;height:200%;
-    background:repeating-linear-gradient(106deg, transparent 0 6px, rgba(178,200,232,.16) 6px 8px);
-    animation:ambRain 1.4s linear infinite;}
-  @keyframes ambRain{from{transform:translateY(0);}to{transform:translateY(-80px);}}
+  /* faint falling rain — MANY short, thin, diagonal streaks, scattered & desynced (built in JS),
+     NOT full-width lines. Each streak ~12-22px long, ~1.2px wide; transform/opacity only. */
+  #amb.fx-rain .amb-rain{display:block;}
+  #amb .amb-rain .streak{position:absolute;top:-6%;width:1.2px;border-radius:1px;
+    background:linear-gradient(to bottom, transparent, rgba(190,206,232,.55), transparent);
+    opacity:0;animation:ambRainFall linear infinite;}
+  @keyframes ambRainFall{0%{opacity:0;transform:translateY(0) rotate(12deg);}
+    12%{opacity:.45;}88%{opacity:.45;}100%{opacity:0;transform:translateY(116vh) rotate(12deg);}}
+  body.phone #amb .amb-rain .streak:nth-child(n+14){display:none;}   /* phone: fewer streaks */
   /* slow candle flicker — warm glow that breathes near a lamp corner */
   #amb.fx-candle .amb-candle{display:block;
     background:radial-gradient(circle at 88% 22%, rgba(231,185,77,.26), transparent 48%);
@@ -701,7 +705,7 @@
   <!-- ambient background life (behind everything; pointer-events:none; toggled by applyAmbient) -->
   <div id="amb" aria-hidden="true">
     <div class="amb-layer amb-vignette"></div>
-    <div class="amb-layer amb-rain"></div>
+    <div class="amb-layer amb-rain" id="ambRain"></div>
     <div class="amb-layer amb-candle"></div>
     <div class="amb-layer amb-smoke"></div>
     <div class="amb-layer amb-grain"></div>
@@ -2741,6 +2745,13 @@ function buildDust(){ const host=$("ambDust"); if(!host||host.childElementCount)
     m.style.animationDuration=(15+Math.random()*16).toFixed(1)+"s";
     m.style.animationDelay=(-Math.random()*22).toFixed(1)+"s";
     host.appendChild(m); } }
+function buildRain(){ const host=$("ambRain"); if(!host||host.childElementCount) return;
+  for(let i=0;i<26;i++){ const s=document.createElement("i"); s.className="streak";   // short, scattered, desynced
+    s.style.left=(Math.random()*100).toFixed(2)+"%";
+    s.style.height=(12+Math.random()*10).toFixed(0)+"px";                 // 12-22px streaks
+    s.style.animationDuration=(0.7+Math.random()*0.8).toFixed(2)+"s";     // varied fall speed
+    s.style.animationDelay=(-Math.random()*2).toFixed(2)+"s";             // varied start -> a shower, not bars
+    host.appendChild(s); } }
 function applyAmbient(){
   const amb=$("amb"); if(!amb) return;
   if(!motionOK()){ amb.className=""; return; }        // Motion off / reduced-motion -> nothing
@@ -2954,6 +2965,7 @@ setupAssistant();
 setupBars();
 applyAtmosphere();        // sets body.focus + button label before first render
 buildDust();              // create the dust motes once (shown only when the dust effect is active)
+buildRain();              // create the rain streaks once (shown only on rain/storm stories)
 document.addEventListener("visibilitychange",()=>{ const a=$("amb"); if(a) a.classList.toggle("amb-paused", document.hidden); });
 
 startCase({difficulty:"medium", rand:Math.random()});
