@@ -2726,12 +2726,11 @@ function pickAmbient(s){
   if(/rain|storm|thunder|down ?pour|drizzle|tempest|rainfall/.test(txt)) add("rain");
   if(/candle|candlelight|fire\b|hearth|flame|lantern|guttering|firelight/.test(txt)) add("candle");
   if(/fog|mist|smoke|haze|vapou?r/.test(txt)) add("smoke");
-  if(!set.length){                                   // no story cue -> seeded pick (varies per case)
-    const rng=E.makeRNG((C.seed ^ E.hashStr("ambient"))>>>0), pool=["dust","smoke","candle","grain","rain"];
-    add(pool[Math.floor(rng()*pool.length)]);
-    if(rng()<0.34) add(pool[Math.floor(rng()*pool.length)]);   // sometimes a second
-  }
-  return set.slice(0,2);                             // at most 2 story effects
+  if(set.length) return set.slice(0,2);              // story cue(s) override -> at most 2 effects
+  // no weather/story cue -> run the FULL ambient set together (dust + candle + smoke + grain +
+  // the always-on vignette). NOT rain — rain stays tied to rain/storm stories. Each effect keeps
+  // its existing extremely-subtle opacity/speed, so all of them together still reads as ambient.
+  return ["dust","candle","smoke","grain"];
 }
 function buildDust(){ const host=$("ambDust"); if(!host||host.childElementCount) return;
   for(let i=0;i<12;i++){ const m=document.createElement("i"); m.className="mote";
