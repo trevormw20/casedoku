@@ -644,6 +644,22 @@
     background:linear-gradient(105deg,transparent 32%,rgba(255,245,210,.22) 48%,transparent 64%);
     background-size:250% 100%;background-position:120% 0;animation:tsShine .9s ease-out both;animation-delay:var(--d,0ms);}
   @keyframes tsShine{0%{background-position:120% 0;}100%{background-position:-40% 0;}}
+  /* dossier portraits + room seals + memorial (trophy expansion) */
+  .tc-portrait{width:100%;height:100%;object-fit:cover;border-radius:5px;}
+  .tc-portrait.locked,.mc-art .tc-img.locked{filter:grayscale(1) brightness(.22);opacity:.5;}   /* a soft, tasteful silhouette for faces */
+  .tc-seal{font-size:22px;} .tc-emoji.tc-seal.locked{opacity:.4;}
+  .tc-rar.seal-bronze{color:#c0894c;} .tc-rar.seal-silver{color:#b8bfca;} .tc-rar.seal-gold{color:#e0b24f;} .tc-rar.seal-none{color:#7c8494;}
+  .ts-memorial{margin:7px 0 3px;font-size:12px;color:var(--ink);} .ts-memorial b{color:var(--amber-soft);}
+  .memorial-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:8px;max-height:300px;overflow:auto;padding-right:2px;}
+  .mcard{display:flex;gap:9px;background:#171a22;border:1px solid var(--line);border-radius:9px;padding:8px 9px;align-items:flex-start;}
+  .mcard.unlocked{border-color:rgba(150,150,170,.32);}
+  .mc-art{width:46px;height:46px;flex:none;border-radius:7px;overflow:hidden;background:#10131a;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;}
+  .mc-art .tc-img{width:100%;height:100%;object-fit:cover;}
+  .mc-body{min-width:0;flex:1;} .mc-name{font-weight:700;font-size:12.5px;color:var(--ink);margin-bottom:2px;}
+  .mcard.locked .mc-name{color:var(--ink-dim);font-style:italic;font-weight:600;}
+  .mc-note{font-size:11px;color:var(--ink-dim);line-height:1.4;} .mc-note b{color:var(--amber-soft);} .mc-rip{font-style:italic;color:var(--amber-soft);}
+  body.phone .trophy-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:3px;}   /* 8 tabs -> horizontal scroll on phone */
+  body.phone .trophy-tab{flex:none;}
   .archive-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto;}
   .arch-row{background:#171a22;border:1px solid var(--line);border-radius:8px;padding:8px 11px;}
   .arch-row b{color:var(--amber-soft);} .arch-meta{display:block;font-size:12px;color:var(--ink-dim);margin-top:2px;}
@@ -1237,6 +1253,8 @@
       <div class="sec">Trophies <span class="req" id="trophyCount"></span></div>
       <div class="trophy-tabs" id="trophyTabs"></div>
       <div class="trophy-grid" id="trophyGrid"></div>
+      <div class="sec">Victim Memorial <span class="req" id="memorialCount"></span></div>
+      <div class="memorial-grid" id="memorialGrid"></div>
       <div class="sec">Solved Cases <span class="req" id="archiveCount"></span></div>
       <div class="archive-list" id="archiveList"></div>
     </div>
@@ -1961,13 +1979,16 @@ const MANOR = {
     ],
   },
   // rooms indexed by box id (need >=9). slug -> room floor png; icon -> object png on the room tag
+  // `icon` = the room's default landmark object; `icons` (optional) = a per-case pool so a room
+  // can show different objects across cases. Across the 9 rooms the pools cover all 12 objects:
+  // plant, table, chair, bush, tv, bookshelf, rug, lamp, bed, painting, fireplace, vase.
   rooms:[
     {name:"the Study", slug:"study", icon:"bookshelf", hue:35},
     {name:"the Library", slug:"library", icon:"lamp", hue:48},
-    {name:"the Conservatory", slug:"conservatory", icon:"plant", hue:140},
+    {name:"the Conservatory", slug:"conservatory", icon:"plant", icons:["plant","bush"], hue:140},
     {name:"the Billiard Room", slug:"billiard", icon:"chair", hue:175},
-    {name:"the Grand Hall", slug:"hall", icon:"rug", hue:0},
-    {name:"the Lounge", slug:"lounge", icon:"tv", hue:265},
+    {name:"the Grand Hall", slug:"hall", icon:"rug", icons:["rug","vase"], hue:0},
+    {name:"the Lounge", slug:"lounge", icon:"tv", icons:["tv","fireplace"], hue:265},
     {name:"the Kitchen", slug:"kitchen", icon:"table", hue:200},
     {name:"the Bedroom", slug:"bedroom", icon:"bed", hue:320},
     {name:"the Dining Room", slug:"dining", icon:"painting", hue:20},
@@ -2024,6 +2045,9 @@ function spotName(cfg,theme,cell){
 /* render a structured clue to English */
 let CASE_OBJECTS=[];                       // box -> object landmark cell, for "next to the X" clue text
 function setCaseObjects(arr){ CASE_OBJECTS=Array.isArray(arr)?arr:[]; }
+let CASE_OBJECT_SLUGS=[];                  // box -> per-case object slug (rooms can vary their landmark object across cases)
+function setCaseObjectSlugs(arr){ CASE_OBJECT_SLUGS=Array.isArray(arr)?arr:[]; }
+function roomObjectSlug(theme,box){ const s=CASE_OBJECT_SLUGS[box]; return s!=null?s:theme.rooms[box%theme.rooms.length].icon; }
 const OBJ_NAME={tv:"television"};          // slug -> readable; default = the slug itself
 function objName(slug){ return OBJ_NAME[slug]||slug; }
 function renderClue(cfg,theme,clue){
@@ -2035,7 +2059,7 @@ function renderClue(cfg,theme,clue){
       const E=GLOBAL.CludokuEngine, N=cfg.N, r=Math.floor(p.cell/N), c=p.cell%N, box=E.boxOf(cfg,r,c), oc=CASE_OBJECTS[box];
       if(oc!=null){ const dr=r-Math.floor(oc/N), dc=c-(oc%N);
         if(Math.abs(dr)+Math.abs(dc)===1)
-          return `A witness places <b>${S(p.val)}</b> ${DIRWORD(dr,dc)} the ${objName(theme.rooms[box%theme.rooms.length].icon)} in ${x.room}.`; }
+          return `A witness places <b>${S(p.val)}</b> ${DIRWORD(dr,dc)} the ${objName(roomObjectSlug(theme,box))} in ${x.room}.`; }
       return `A witness places <b>${S(p.val)}</b> in ${x.spot} of ${x.room}.`; }
     case "exclusion":{ const x=spotName(cfg,theme,p.cell);
       return `Whoever stood in ${x.spot} of ${x.room}, it was <b>not</b> ${S(p.val)}.`; }
@@ -2079,7 +2103,7 @@ function renderStory(theme, facts, rng){
 GLOBAL.CLUDOKU_THEMES={manor:MANOR};
 GLOBAL.CludokuSkin={ renderClue, renderStory, roomName, spotName, sName, setCast, vocab, TYPE_LABEL,
   EV_TAG, weaponBySlug, renderWeaponClue, renderMotiveClue,
-  setCaseObjects, objName, pick:(rng,arr)=>arr[Math.floor(rng()*arr.length)] };
+  setCaseObjects, setCaseObjectSlugs, roomObjectSlug, objName, pick:(rng,arr)=>arr[Math.floor(rng()*arr.length)] };
 })(typeof window!=="undefined" ? window : globalThis);
 </script>
 
@@ -2381,6 +2405,11 @@ function dressStory(){
     text:Skin.renderClue(cfg,THEME,cl), key:cl.key, proof:C.proofClues.includes(i), kind:"pos", clueIdx:i }));
   story.weaponClues.forEach(wc=>story.evidence.push({ tag:"WEAPON", text:Skin.renderWeaponClue(THEME,wc), key:true, proof:false, kind:"weapon" }));
   story.motiveClues.forEach(mc=>story.evidence.push({ tag:"MOTIVE", text:Skin.renderMotiveClue(THEME,mc), key:true, proof:false, kind:"motive" }));
+  // scene objects this case actually references (a SIGHTING landing beside a room's object landmark) — for Scene Marker trophies
+  story.referencedObjects=(function(){ const set=new Set(), N=cfg.N;
+    (C.clues||[]).forEach(cl=>{ if(cl.type!=="sighting"||!cl.p) return; const cell=cl.p.cell, r=Math.floor(cell/N), c=cell%N, box=E.boxOf(cfg,r,c), oc=C.objectCells?C.objectCells[box]:null;
+      if(oc!=null){ const dr=r-Math.floor(oc/N), dc=c-(oc%N); if(Math.abs(dr)+Math.abs(dc)===1) set.add((C.objectSlugs&&C.objectSlugs[box])||THEME.rooms[box%THEME.rooms.length].icon); } });
+    return [...set]; })();
   story.extraOrder = story.evidence.map((e,i)=>e.key?-1:i).filter(i=>i>=0);   // discoverable corroborating extras, in their (seeded) order
   const _es=loadEvidenceState(C.code); story.discoveredExtras=_es.discovered; // restored on reload; gated by the Evidence setting
   _unitCredited=new Set(_es.credited);                                        // restore which units already granted a discovery (permanent, no re-credit)
@@ -2420,6 +2449,9 @@ function startCase(opts){
   RING=assignRings(cfg.N);                                    // distinct ring colour per active suspect
   document.documentElement.style.setProperty("--disc-cream",DISC_CREAM);
   Skin.setCaseObjects(C.objectCells);                         // object landmarks for "next to the X" clues
+  { const orng=E.makeRNG((C.seed ^ E.hashStr("objects"))>>>0);   // seeded per-case object per room (from each room's pool) — deterministic, replays match
+    C.objectSlugs=THEME.rooms.map(rm=>{ const pool=(rm.icons&&rm.icons.length)?rm.icons:[rm.icon]; return pool[Math.floor(orng()*pool.length)]; });
+    Skin.setCaseObjectSlugs(C.objectSlugs); }
   dressStory();
   setVar("--cell-max", cfg.N<=6 ? "72px" : "62px"); setVar("--ncols", cfg.N);  // CSS derives --cell (mobile fits to width)
   boardEl.style.gridTemplateColumns=`repeat(${cfg.N}, var(--cell))`;
@@ -2462,7 +2494,7 @@ function renderBoard(){
     if(r%cfg.bh===0 && r!==0 && c%cfg.bw===cfg.bw-1)            cell.classList.add("door-h"); // gap in the horizontal wall
     if(c%cfg.bw===0 && c!==0 && r%cfg.bh===Math.floor(cfg.bh/2)) cell.classList.add("door-v"); // gap in the vertical wall
     if(i===C.murderCell) cell.classList.add("scene");
-    const box=E.boxOf(cfg,r,c), room=THEME.rooms[box%THEME.rooms.length];
+    const box=E.boxOf(cfg,r,c), room=THEME.rooms[box%THEME.rooms.length], objSlug=Skin.roomObjectSlug(THEME,box);
     const sr=r%cfg.bh, sc=c%cfg.bw;                                  // sub-position within the room
     const fx=cfg.bw>1?(sc/(cfg.bw-1))*100:0, fy=cfg.bh>1?(sr/(cfg.bh-1))*100:0;
     cell.style.backgroundColor=`hsla(${room.hue},38%,50%,0.12)`;      // fallback tint if the floor image is missing
@@ -2471,10 +2503,10 @@ function renderBoard(){
     cell.style.backgroundPosition=`${fx}% ${fy}%`;
     cell.dataset.i=i;
     if(r%cfg.bh===0 && c%cfg.bw===0){ const tag=document.createElement("span"); tag.className="room-tag";
-      tag.innerHTML=`<img src="${tAsset('objects','object-'+room.icon+'.png')}" alt="">`+room.name.replace(/^the /i,""); cell.appendChild(tag); }
+      tag.innerHTML=`<img src="${tAsset('objects','object-'+objSlug+'.png')}" alt="">`+room.name.replace(/^the /i,""); cell.appendChild(tag); }
     // object landmark for this room (behind the token) — gives the furniture art a purpose
     if(C.objectCells && C.objectCells[box]===i){ const o=document.createElement("img"); o.className="cell-object"+(board[i]!==0?" badge":"");
-      o.src=tAsset('objects','object-'+room.icon+'.png'); o.alt=""; cell.appendChild(o); }
+      o.src=tAsset('objects','object-'+objSlug+'.png'); o.alt=""; cell.appendChild(o); }
     if(board[i]!==0) cell.appendChild(tokenEl(board[i]));
     else if(candidates[i] && candidates[i].size) cell.appendChild(candGrid(i));
     // crime-scene (dashed) cell: the victim's body + the SCENE OBJECT found beside it (may be planted)
@@ -3116,8 +3148,8 @@ function payoff(grade, won){
     recordSolved(makeHeadline(k.name), perfect);
     recordLeaderboard({ tier:C.tier, ms:elapsedMs(), timeStr:totalTime, no:story.caseNo, code:C.code,
       attempts:guessesUsed+1, acc, perfect:acc===4, date:nowStr() });   // personal best (time incl. penalties)
-    const tr=evalTrophiesOnWin(grade); _payoffStrip={fresh:tr.fresh, ctx:tr.ctx, teases:missedTeases(grade)};   // claim trophies + queue the post-case strip
-    $("poTrophy").innerHTML=tr.fresh.length?`<b style="color:var(--amber-soft)">${tr.fresh.length}</b> new ${tr.fresh.length>1?"trophies":"trophy"} 🏆`:`<span class="muted">none new</span>`;
+    const tr=evalTrophiesOnWin(grade); _payoffStrip={fresh:tr.fresh, ctx:tr.ctx, teases:missedTeases(grade), memorial:tr.memorial};   // claim trophies + queue the post-case strip
+    $("poTrophy").innerHTML=tr.fresh.length?`<b style="color:var(--amber-soft)">${tr.fresh.length}</b> new ${tr.fresh.length>1?"trophies":"trophy"} 🏆`:`<span class="muted">${tr.memorial?"memorial added":"none new"}</span>`;
     setStatus(`Case closed — ${k.name} arrested.`,"good");
   } else {
     _payoffStrip=null;
@@ -3202,6 +3234,7 @@ function renderRecords(tier){
 function openArchive(){
   renderRecords((C&&C.tier&&REC_TIERS.includes(C.tier))?C.tier:"medium");   // leaderboard, defaulting to the current tier
   renderTrophies(_trophyFilter||"all");                                     // tabbed trophy gallery
+  renderMemorial();                                                         // victim memorial gallery (separate)
   const archive=LS.get("archive",[]);
   $("archiveCount").textContent=archive.length?`${archive.length} closed`:"";
   const list=$("archiveList"); list.innerHTML="";
@@ -3213,17 +3246,20 @@ function openArchive(){
 }
 
 /* =====================================================================
-   TROPHY COLLECTION SYSTEM — a detective's archive of trophies.
-   Registry across categories (weapon / motive / relic / perfect / daily)
-   + a persisted unlock map  trophyUnlocks = { id:{date,no,code,title} }.
-   Adapted strictly to existing content: the 12 manor weapons (THEME.weapons)
-   and the existing motive tags/texts (THEME.motiveClues). Category metadata
-   carries a future "room" so categories can later map to manor rooms
-   (a Trophy Hall) — no manor features are built now. The DAILY category is
-   reserved for a future daily mode and is HIDDEN (no tab, never evaluated).
-   Rarity is display-only (no loot). "Mistake" (for Clean Case) is defined as
-   committing a suspect to a cell whose value isn't the unique solution for
-   that cell — see place(); a wrong accusation guess also counts.
+   TROPHY COLLECTION SYSTEM — a detective's archive (~90 trophies) plus a
+   separate Victim Memorial Gallery.
+   Categories: weapon (12) / motive (12) / scene (12 Scene Markers) /
+   room (9 Room Seals, tiered) / dossier (16) / relic (10) / badge (~21) /
+   daily (hidden, reserved for a future daily mode — never evaluated).
+   Persisted state, all migrating cleanly:
+     trophyUnlocks = { id:{date,no,code,title} }   binary unlocks
+     roomSeals     = { slug:{wins,gold,date,no,code,title} }   tiered seals
+     trophyStats   = cumulative counters (wins, perfectWins, ...)
+     victimMemorial= { slug:{name,date,no,code,title,room,weapon} }
+   Adapted strictly to existing content (12 weapons, 12 motive tags, 12 board
+   objects, 9 rooms, 16 suspect roles, 49 victims). Rarity is display-only.
+   "Mistake" (Clean Case) = committing a suspect to a cell whose value isn't
+   the unique solution for it (see place()); a wrong accusation guess counts.
    ===================================================================== */
 const TROPHY_RARITY={
   common:    {label:"Common",     cls:"r-common"},
@@ -3233,15 +3269,26 @@ const TROPHY_RARITY={
   legendary: {label:"Legendary",  cls:"r-legendary"},
 };
 const TROPHY_CATS=[                       // order drives the Archive tabs (Daily hidden)
-  {key:"weapon",  label:"Weapons", room:"The Armory"},
-  {key:"motive",  label:"Motives", room:"The Study"},
-  {key:"relic",   label:"Relics",  room:"The Evidence Room"},
-  {key:"perfect", label:"Perfect", room:"The Trophy Hall"},
-  {key:"daily",   label:"Daily",   room:"The Almanac", hidden:true},
+  {key:"weapon",  label:"Weapons",       room:"The Armory"},
+  {key:"motive",  label:"Motives",       room:"The Study"},
+  {key:"scene",   label:"Scene Markers", room:"The Conservatory"},
+  {key:"room",    label:"Rooms",         room:"The Manor"},
+  {key:"dossier", label:"Dossiers",      room:"The Records Room"},
+  {key:"relic",   label:"Relics",        room:"The Evidence Room"},
+  {key:"badge",   label:"Badges",        room:"The Trophy Hall"},
+  {key:"daily",   label:"Daily",         room:"The Almanac", hidden:true},
 ];
 const SWIFT_TARGET_MS={easy:180000, medium:420000, hard:900000, extreme:1800000};   // per-tier "Swift Justice" par
-const MOTIVE_TITLE={money:"Greed", inheritance:"Inheritance", secret:"A Buried Secret", revenge:"Revenge", reputation:"Reputation"};
-const MOTIVE_ORDER=["money","inheritance","secret","revenge","reputation"];
+const MOTIVE_TITLE={money:"Greed", inheritance:"Inheritance", revenge:"Revenge", secret:"A Buried Secret", reputation:"Reputation",
+  jealousy:"Jealousy", debt:"Debt", blackmail:"Blackmail", betrayal:"Betrayal", forbidden:"Forbidden Love", coverup:"Cover-Up", grudge:"Old Grudge"};
+const MOTIVE_ORDER=["money","inheritance","revenge","secret","reputation","jealousy","debt","blackmail","betrayal","forbidden","coverup","grudge"];
+// the 12 board objects (Scene Markers) — noir display names over the existing object art
+const SCENE_OBJECTS=[
+  {slug:"plant",name:"Potted Fern"},   {slug:"table",name:"Card Table"},     {slug:"chair",name:"Wingback Chair"},
+  {slug:"bush",name:"Topiary"},        {slug:"tv",name:"Wireless Set"},      {slug:"bookshelf",name:"Bookcase"},
+  {slug:"rug",name:"Persian Rug"},     {slug:"lamp",name:"Reading Lamp"},    {slug:"bed",name:"Four-Poster Bed"},
+  {slug:"painting",name:"Oil Portrait"},{slug:"fireplace",name:"The Hearth"},{slug:"vase",name:"Porcelain Vase"},
+];
 /* ~10 noir case relics, each mapped to an achievable existing condition. ctx is built in evalTrophiesOnWin(). */
 const RELIC_DEFS=[
   {id:"relic-note",     name:"Detective's Note",         glyph:"📝", hint:"Close your very first case.",                                     test:c=>c.won&&c.firstWin},
@@ -3255,30 +3302,58 @@ const RELIC_DEFS=[
   {id:"relic-news",     name:"Old Newspaper Clipping",   glyph:"📰", hint:"Uncover every corroborating clue in a case, then solve it.",        test:c=>c.won&&c.extrasAll},
   {id:"relic-portrait", name:"Family Portrait Fragment", glyph:"🖼️", hint:"Win a 6×6 and a 9×9 case on the same day.",                         test:c=>c.won&&c.dayBothSizes},
 ];
-const PERFECT_DEFS=[
-  {id:"perfect-case",    name:"Perfect Case",       rarity:"rare",       glyph:"🎯", desc:"A flawless 4-for-4 accusation: culprit, weapon, motive, and evidence.", hint:"Get all four parts of an accusation right.",            test:c=>c.won&&c.acc===4},
-  {id:"perfect-flawless",name:"Flawless Detective", rarity:"masterwork", glyph:"🔍", desc:"Solved without once asking the Clerk for a hint.",                       hint:"Win a case using no hints.",                            test:c=>c.won&&c.hintsUsed===0},
-  {id:"perfect-clean",   name:"Clean Case",         rarity:"masterwork", glyph:"🧼", desc:"No wrong accusations and no incorrect placements.",                      hint:"Win without a single mistake on the board or in the dock.", test:c=>c.won&&c.guessesUsed===0&&c.mistakes===0},
-  {id:"perfect-swift",   name:"Swift Justice",      rarity:"rare",       glyph:"⚡", desc:"Closed the case under the par time for its difficulty.",                 hint:"Win quickly — beat the par time for the tier.",         test:c=>c.won&&c.elapsedMs<(SWIFT_TARGET_MS[c.tier]||Infinity)},
-  {id:"perfect-fullset", name:"Full Set",           rarity:"legendary",  glyph:"👑", desc:"Closed a case at every difficulty — Routine, Troubling, Grim and Cold.", hint:"Win at least one case on all four difficulties.",       test:c=>c.allTiersWon},
+/* BADGES — performance + milestone achievements. The original five "Perfect Deductions" keep their
+   ids (perfect-*) so existing unlocks migrate; they simply live under the Badges tab now. */
+const BADGE_DEFS=[
+  {id:"perfect-case",     name:"Perfect Case",          rarity:"rare",       glyph:"🎯", desc:"A flawless 4-for-4 accusation: culprit, weapon, motive and evidence.", hint:"Get all four parts of an accusation right.",            test:c=>c.won&&c.acc===4},
+  {id:"perfect-flawless", name:"Flawless Detective",    rarity:"masterwork", glyph:"🔍", desc:"Solved without once asking the Clerk for a hint.",                      hint:"Win a case using no hints.",                            test:c=>c.won&&c.hintsUsed===0},
+  {id:"perfect-clean",    name:"Clean Case",            rarity:"masterwork", glyph:"🧼", desc:"No wrong accusations and no incorrect placements.",                     hint:"Win without a single mistake on the board or in the dock.", test:c=>c.won&&c.guessesUsed===0&&c.mistakes===0},
+  {id:"perfect-swift",    name:"Swift Justice",         rarity:"rare",       glyph:"⚡", desc:"Closed the case under the par time for its difficulty.",                hint:"Win quickly — beat the par time for the tier.",         test:c=>c.won&&c.elapsedMs<(SWIFT_TARGET_MS[c.tier]||Infinity)},
+  {id:"perfect-fullset",  name:"Full Set",              rarity:"legendary",  glyph:"👑", desc:"Closed a case at every difficulty — Routine, Troubling, Grim and Cold.",hint:"Win at least one case on all four difficulties.",       test:c=>c.allTiersWon},
+  {id:"badge-first",      name:"First Case Closed",     rarity:"common",     glyph:"🗂️", desc:"Your very first closed case.",                                          hint:"Close your first case.",                                test:c=>c.won&&c.firstWin},
+  {id:"badge-firstperfect",name:"First Perfect Deduction",rarity:"rare",     glyph:"🌟", desc:"Your first flawless 4/4 accusation.",                                   hint:"Land your first 4/4 accusation.",                       test:c=>c.won&&c.acc===4&&c.stats.perfectWins===1},
+  {id:"badge-tier-easy",  name:"Routine Detective",     rarity:"common",     glyph:"🥉", desc:"Closed a Routine (Easy) case.",                                         hint:"Win an Easy case.",                                     test:c=>c.won&&c.tier==="easy"},
+  {id:"badge-tier-medium",name:"Troubling Detective",   rarity:"common",     glyph:"🥈", desc:"Closed a Troubling (Medium) case.",                                     hint:"Win a Medium case.",                                    test:c=>c.won&&c.tier==="medium"},
+  {id:"badge-tier-hard",  name:"Grim Detective",        rarity:"uncommon",   glyph:"🥇", desc:"Closed a Grim (Hard) case.",                                            hint:"Win a Hard case.",                                      test:c=>c.won&&c.tier==="hard"},
+  {id:"badge-tier-extreme",name:"Cold-Case Detective",  rarity:"rare",       glyph:"🏅", desc:"Closed a Cold (Extreme) case.",                                         hint:"Win an Extreme case.",                                  test:c=>c.won&&c.tier==="extreme"},
+  {id:"badge-cases-10",   name:"Ten Cases Closed",      rarity:"common",     glyph:"📁", desc:"Ten cases solved.",                                                     hint:"Solve 10 cases.",                                       test:c=>c.stats.wins>=10},
+  {id:"badge-cases-25",   name:"Twenty-Five Closed",    rarity:"uncommon",   glyph:"🗃️", desc:"Twenty-five cases solved.",                                             hint:"Solve 25 cases.",                                       test:c=>c.stats.wins>=25},
+  {id:"badge-cases-50",   name:"Fifty Closed",          rarity:"rare",       glyph:"🏛️", desc:"Fifty cases solved.",                                                   hint:"Solve 50 cases.",                                       test:c=>c.stats.wins>=50},
+  {id:"badge-cases-100",  name:"Century of Cases",      rarity:"legendary",  glyph:"🏆", desc:"One hundred cases solved.",                                             hint:"Solve 100 cases.",                                      test:c=>c.stats.wins>=100},
+  {id:"badge-perfect-5",  name:"Five Perfect Cases",    rarity:"rare",       glyph:"✨", desc:"Five flawless 4/4 cases.",                                              hint:"Land five perfect deductions.",                         test:c=>c.stats.perfectWins>=5},
+  {id:"badge-early-5",    name:"Quick Study",           rarity:"uncommon",   glyph:"🐎", desc:"Five wins by early accusation (board under four-fifths filled).",       hint:"Win five times by early accusation.",                   test:c=>c.stats.earlyWins>=5},
+  {id:"badge-zeropen-10", name:"Steady Hands",          rarity:"uncommon",   glyph:"🕊️", desc:"Ten wins with no time penalty.",                                        hint:"Win ten cases with no penalty.",                        test:c=>c.stats.zeroPenWins>=10},
+  {id:"badge-extras-5",   name:"Thorough Investigator", rarity:"uncommon",   glyph:"🔬", desc:"Uncovered every corroborating clue in five cases.",                     hint:"Uncover all the extras in five cases.",                 test:c=>c.stats.extrasWins>=5},
+  {id:"badge-allweapons", name:"Master of the Armory",  rarity:"legendary",  glyph:"🗡️", desc:"Identified all twelve weapons.",                                        hint:"Claim every weapon trophy.",                            test:c=>c.ownedCount("weapon")>=12},
+  {id:"badge-allmotives", name:"Reader of Hearts",      rarity:"legendary",  glyph:"🩸", desc:"Proved all twelve motives.",                                            hint:"Claim every motive trophy.",                            test:c=>c.ownedCount("motive")>=12},
 ];
 let _trophyReg=null;
 function trophyRegistry(){
   if(_trophyReg) return _trophyReg;
   const reg=[];
   (THEME.weapons||[]).forEach((w,i)=>reg.push({ id:"weapon-"+w.slug, cat:"weapon", rarity:"uncommon", slug:w.slug, num:i+1,
-    name:cap(w.n.replace(/^(the|a|an)\s+/i,"")), desc:"The murder weapon, claimed as evidence and locked in the case file.",
+    name:cap(w.n.replace(/^(the|a|an)\s+/i,"")), desc:"The murder weapon, claimed as evidence.",
     hint:"Identify the true weapon in a winning accusation to claim it.",
     test:c=>c.won&&c.weaponRight&&c.trueWeapon===w.slug }));
-  MOTIVE_ORDER.forEach(tag=>{ if(!(THEME.motiveClues&&THEME.motiveClues[tag])) return;
-    reg.push({ id:"motive-"+tag, cat:"motive", rarity:"uncommon", tag, name:MOTIVE_TITLE[tag]||cap(tag),
+  MOTIVE_ORDER.forEach((tag,i)=>{ if(!(THEME.motiveClues&&THEME.motiveClues[tag])) return;
+    reg.push({ id:"motive-"+tag, cat:"motive", rarity:"uncommon", tag, num:i+1, name:MOTIVE_TITLE[tag]||cap(tag),
       desc:(THEME.motiveClues[tag]&&THEME.motiveClues[tag][0])||"A motive proven in the dock.",
       hint:"Name this motive correctly in a winning accusation to claim it.",
       test:c=>c.won&&c.motiveRight&&c.killerMotiveTag===tag }); });
+  SCENE_OBJECTS.forEach((o,i)=>reg.push({ id:"scene-"+o.slug, cat:"scene", rarity:"uncommon", slug:o.slug, num:i+1, name:o.name,
+    desc:"A scene marker — an object a witness placed someone beside.",
+    hint:"Win a case where a clue places a suspect beside this object.",
+    test:c=>c.won&&c.referencedObjects.indexOf(o.slug)>=0 }));
+  (THEME.rooms||[]).forEach(rm=>reg.push({ id:"room-"+rm.slug, cat:"room", rarity:"uncommon", slug:rm.slug,
+    name:rm.name.replace(/^the\s+/i,"The ") }));   // tiered Room Seals — state lives in roomSeals, not the unlock map
+  (THEME.suspects||[]).forEach(su=>reg.push({ id:"dossier-"+su.role, cat:"dossier", rarity:"uncommon", role:su.role, name:su.name,
+    desc:"Their case file — closed the day you correctly named them the killer.",
+    hint:"Correctly accuse this suspect when they are the culprit.",
+    test:c=>c.won&&c.killerRole===su.role }));
   RELIC_DEFS.forEach(r=>reg.push({ id:r.id, cat:"relic", rarity:"common", name:r.name, glyph:r.glyph,
     desc:r.hint, hint:r.hint, test:r.test }));
-  PERFECT_DEFS.forEach(p=>reg.push({ id:p.id, cat:"perfect", rarity:p.rarity, name:p.name, glyph:p.glyph,
-    desc:p.desc, hint:p.hint, test:p.test }));
+  BADGE_DEFS.forEach(b=>reg.push({ id:b.id, cat:"badge", rarity:b.rarity, name:b.name, glyph:b.glyph,
+    desc:b.desc, hint:b.hint, test:b.test }));
   _trophyReg=reg; return reg;
 }
 function loadTrophyUnlocks(){
@@ -3289,28 +3364,61 @@ function loadTrophyUnlocks(){
   return map;
 }
 function saveTrophyUnlocks(map){ LS.set("trophyUnlocks",map); }
+function loadRoomSeals(){ return LS.get("roomSeals",{})||{}; }
+function roomTier(rs){ if(!rs||!rs.wins) return null; return rs.gold?"gold":(rs.wins>=5?"silver":"bronze"); }
 function noteDayWin(){ const day=nowStr(), size=(cfg.N===6)?6:9;   // track which grid sizes were won today (for the "one day" relic)
   let d=LS.get("dayWins",{})||{}; if(d.day!==day) d={day, sizes:{}};
   d.sizes[size]=true; LS.set("dayWins",d); return !!(d.sizes[6]&&d.sizes[9]); }
-/* Evaluate every trophy against this win, persist any newly-unlocked ones, return them + the ctx. */
+function sceneRoomSlug(){ return THEME.rooms[E.boxOf(cfg, Math.floor(C.murderCell/cfg.N), C.murderCell%cfg.N) % THEME.rooms.length].slug; }
+/* is this trophy unlocked? (rooms read their tiered seal, everything else the binary unlock map) */
+function isUnlocked(t, map, seals){ if(t.cat==="room"){ const rs=seals[t.slug]; return !!(rs&&rs.wins); } return !!map[t.id]; }
+function trophyUnlock(t, map, seals){ if(t.cat==="room"){ const rs=seals[t.slug]; if(!rs||!rs.wins) return null;
+    return {tier:roomTier(rs), wins:rs.wins, date:rs.date, no:rs.no, code:rs.code, title:rs.title}; } return map[t.id]||null; }
+/* Evaluate every trophy against this win, persist newly-unlocked ones + tier upgrades + the memorial. */
 function evalTrophiesOnWin(grade){
   const tw=LS.get("tierWins",{})||{}; const firstWin=!Object.keys(tw).length; tw[C.tier]=true; LS.set("tierWins",tw);
   const allTiersWon=REC_TIERS.every(t=>tw[t]);
   const dayBothSizes=noteDayWin();
   let filled=0,total=0; for(let i=0;i<cfg.N*cfg.N;i++){ if(i===C.murderCell) continue; total++; if(board[i]!==0) filled++; }
   const acc=1+(grade.weaponRight?1:0)+(grade.motiveRight?1:0)+(grade.evidenceRight?1:0);
+  const fillFrac=total?filled/total:1, extrasAll=!!(story.extraOrder&&story.extraOrder.length>0&&story.discoveredExtras>=story.extraOrder.length);
   const kt=(story.motiveOptions.find(o=>o.correct)||{}).tag;
+  // cumulative stats (incremented for THIS win first, so milestone badges see the new totals)
+  const stats=LS.get("trophyStats",{})||{};
+  stats.wins=(stats.wins||0)+1;
+  if(acc===4) stats.perfectWins=(stats.perfectWins||0)+1;
+  if(fillFrac<0.8) stats.earlyWins=(stats.earlyWins||0)+1;
+  if(penaltyMs===0) stats.zeroPenWins=(stats.zeroPenWins||0)+1;
+  if(extrasAll) stats.extrasWins=(stats.extrasWins||0)+1;
+  if(elapsedMs()<(SWIFT_TARGET_MS[C.tier]||Infinity)) stats.swiftWins=(stats.swiftWins||0)+1;
+  if(hintsUsed===0) stats.flawlessWins=(stats.flawlessWins||0)+1;
+  if((MAX_GUESSES-guessesLeft)===0 && mistakes===0) stats.cleanWins=(stats.cleanWins||0)+1;
+  LS.set("trophyStats",stats);
+  const map=loadTrophyUnlocks(), seals=loadRoomSeals(), reg=trophyRegistry(), fresh=[];
   const ctx={ won:true, firstWin, tier:C.tier, code:C.code, no:story.caseNo, title:story.title,
     weaponRight:!!grade.weaponRight, motiveRight:!!grade.motiveRight, evidenceRight:!!grade.evidenceRight, acc,
-    trueWeapon:story.trueWeapon, killerMotiveTag:kt, weaponPlanted:!!story.weaponPlanted,
-    hintsUsed, guessesUsed:MAX_GUESSES-guessesLeft, mistakes, penaltyMs, fillFrac:(total?filled/total:1),
-    elapsedMs:elapsedMs(), extrasAll:!!(story.extraOrder&&story.extraOrder.length>0&&story.discoveredExtras>=story.extraOrder.length),
-    allTiersWon, dayBothSizes };
-  const map=loadTrophyUnlocks(), reg=trophyRegistry(), fresh=[];
-  reg.forEach(t=>{ if(t.cat==="daily"||map[t.id]) return; let ok=false; try{ ok=!!t.test(ctx); }catch(e){ ok=false; }
+    trueWeapon:story.trueWeapon, killerMotiveTag:kt, killerRole:Skin.sName(THEME,C.killer).role,
+    referencedObjects:story.referencedObjects||[], weaponPlanted:!!story.weaponPlanted,
+    hintsUsed, guessesUsed:MAX_GUESSES-guessesLeft, mistakes, penaltyMs, fillFrac, elapsedMs:elapsedMs(),
+    extrasAll, allTiersWon, dayBothSizes, stats,
+    ownedCount:cat=>Object.keys(map).filter(id=>id.indexOf(cat+"-")===0).length };
+  // ROOM SEAL: track wins whose murder scene was in this room; bronze(1)/silver(5)/gold(a 4/4 here)
+  const srSlug=sceneRoomSlug(); const rs=seals[srSlug]||{wins:0,gold:false}; const tierBefore=roomTier(rs);
+  rs.wins=(rs.wins||0)+1; if(acc===4) rs.gold=true;
+  if(!rs.code){ rs.date=nowStr(); rs.no=story.caseNo; rs.code=C.code; rs.title=story.title; }   // first seal here = the source case
+  seals[srSlug]=rs; LS.set("roomSeals",seals);
+  const roomTrophy=reg.find(t=>t.id==="room-"+srSlug);
+  if(roomTrophy && roomTier(rs)!==tierBefore) fresh.push(roomTrophy);   // a fresh seal or a tier upgrade
+  // binary trophies (weapons, motives, scene markers, dossiers, relics, then badges LAST so ownedCount sees this win)
+  reg.forEach(t=>{ if(t.cat==="daily"||t.cat==="room"||map[t.id]) return; let ok=false; try{ ok=!!t.test(ctx); }catch(e){ ok=false; }
     if(ok){ map[t.id]={date:nowStr(), no:story.caseNo, code:C.code, title:story.title}; fresh.push(t); } });
-  if(fresh.length) saveTrophyUnlocks(map);
-  return {fresh, ctx};
+  saveTrophyUnlocks(map);
+  // VICTIM MEMORIAL: remember the victim of every solved case
+  let memorial=null;
+  if(story.victimSlug){ const mem=LS.get("victimMemorial",{})||{};
+    if(!mem[story.victimSlug]){ mem[story.victimSlug]={ name:story.victim, date:nowStr(), no:story.caseNo, code:C.code,
+        title:story.title, room:story.sceneRoom, weapon:story.trueWeapon }; LS.set("victimMemorial",mem); memorial=story.victim; } }
+  return {fresh, ctx, memorial};
 }
 function missedTeases(grade){ const t=[];   // softly tease replayable misses (weapon/motive trophies can be claimed on a replay via the case code)
   if(!grade.weaponRight) t.push(`Weapon trophy missed — replay this case (code ${C.code}) and name the true weapon to claim it.`);
@@ -3321,37 +3429,52 @@ function missedTeases(grade){ const t=[];   // softly tease replayable misses (w
 function facedownSVG(){ return '<svg viewBox="0 0 18 18" class="gsvg"><rect x="3" y="2.4" width="12" height="13.2" rx="1.6"/><circle cx="9" cy="9" r="2.5"/><path d="M9 6.6v4.8"/></svg>'; }
 function trophyArtHTML(t, locked){
   if(t.cat==="weapon") return `<img class="tc-img${locked?' locked':''}" src="${tAsset('weapons','weapon-'+t.slug+'.png')}" alt="">`;
+  if(t.cat==="scene")  return `<img class="tc-img${locked?' locked':''}" src="${tAsset('objects','object-'+t.slug+'.png')}" alt="">`;
+  if(t.cat==="dossier")return `<img class="tc-img tc-portrait${locked?' locked':''}" src="${tAsset('suspects','suspect-'+t.role+'.png')}" alt="">`;
   if(t.cat==="motive") return `<span class="tc-glyph${locked?' locked':''}">${locked?facedownSVG():motiveGlyphSVG(t.tag)}</span>`;
+  if(t.cat==="room")   return `<span class="tc-emoji tc-seal${locked?' locked':''}">🏛️</span>`;
   return `<span class="tc-emoji${locked?' locked':''}">${locked?'?':(t.glyph||'🏆')}</span>`;
 }
 function lockedName(t){ if(t.cat==="weapon") return "Unknown Weapon #"+String(t.num).padStart(2,"0");
+  if(t.cat==="scene") return "Unidentified Object";
+  if(t.cat==="dossier") return "Redacted Dossier";
   if(t.cat==="motive") return "Confidential Motive"; return "Locked Trophy"; }
+function srcLine(u){ return (u.code||u.no)?`<div class="tc-src">Unlocked from Case No. ${u.no||"—"}${u.title?" — "+u.title:(u.code?" — "+u.code:"")}${u.date?" · "+u.date:""}</div>`:`<div class="tc-src">Claimed from an earlier case.</div>`; }
 function trophyCardHTML(t, unlock, opts){
-  opts=opts||{}; const locked=!unlock, rar=TROPHY_RARITY[t.rarity]||TROPHY_RARITY.common;
+  opts=opts||{};
+  const style=opts.strip&&opts.idx!=null?` style="--d:${opts.idx*120}ms"`:"";
+  if(t.cat==="room"){   // tiered Room Seal card (always names the room; chip shows the current tier)
+    const tier=unlock?unlock.tier:null, locked=!tier;
+    const chip=tier?`<span class="tc-rar seal-${tier}">${cap(tier)} Seal</span>`:`<span class="tc-rar seal-none">Unsealed</span>`;
+    const body=tier
+      ? `<div class="tc-desc">${unlock.wins} ${unlock.wins===1?"case":"cases"} solved with the scene here${tier==="gold"?" — incl. a flawless 4/4":""}.</div>`+(unlock.code?`<div class="tc-src">First sealed in Case No. ${unlock.no} — ${unlock.title||unlock.code} · ${unlock.date}</div>`:"")
+      : `<div class="tc-hint">Solve a case whose murder scene is in ${t.name}. Bronze = 1, Silver = 5, Gold = a perfect 4/4 here.</div>`;
+    return `<div class="tcard r-uncommon ${locked?'locked':'unlocked'}${opts.strip?' ts-card':''}"${style}>`+
+      `<div class="tc-art">${trophyArtHTML(t,locked)}</div>`+
+      `<div class="tc-body"><div class="tc-name">${t.name}</div>${chip}${body}</div></div>`;
+  }
+  const locked=!unlock, rar=TROPHY_RARITY[t.rarity]||TROPHY_RARITY.common;
   const name=locked?lockedName(t):t.name;
-  const body=locked
-    ? `<div class="tc-hint">${t.hint}</div>`
-    : `<div class="tc-desc">${t.desc||""}</div>`+
-      (unlock.code||unlock.no?`<div class="tc-src">Unlocked from Case No. ${unlock.no||"—"}${unlock.title?" — "+unlock.title:(unlock.code?" — "+unlock.code:"")}${unlock.date?" · "+unlock.date:""}</div>`:`<div class="tc-src">Claimed from an earlier case.</div>`);
-  const style=opts.strip&&opts.idx!=null?` style="--d:${opts.idx*150}ms"`:"";
+  const body=locked ? `<div class="tc-hint">${t.hint}</div>` : `<div class="tc-desc">${t.desc||""}</div>`+srcLine(unlock);
   return `<div class="tcard ${rar.cls} ${locked?'locked':'unlocked'}${opts.strip?' ts-card':''}"${style}>`+
     `<div class="tc-art">${trophyArtHTML(t,locked)}</div>`+
     `<div class="tc-body"><div class="tc-name">${name}</div>`+
     (locked?"":`<span class="tc-rar">${rar.label}</span>`)+body+`</div></div>`;
 }
-/* the post-case strip: collection progress, the newly-unlocked cards (motion-gated slide-in), soft teases */
+/* the post-case strip: collection progress, newly-unlocked cards (motion-gated slide-in), memorial, teases */
 let _payoffStrip=null;
 function renderTrophyStrip(data){
   const strip=$("trophyStrip"); if(!strip) return;
   if(!data){ strip.hidden=true; strip.innerHTML=""; return; }
-  const reg=trophyRegistry(), map=loadTrophyUnlocks();
-  const pool=reg.filter(t=>t.cat!=="daily"); const have=pool.filter(t=>map[t.id]).length;
+  const reg=trophyRegistry(), map=loadTrophyUnlocks(), seals=loadRoomSeals();
+  const pool=reg.filter(t=>t.cat!=="daily"); const have=pool.filter(t=>isUnlocked(t,map,seals)).length;
   let html=`<div class="ts-head">Detective’s Archive <span class="ts-prog">${have}/${pool.length} trophies</span></div>`;
+  if(data.memorial) html+=`<div class="ts-memorial">🕯️ Memorial added: <b>${data.memorial}</b></div>`;
   if(data.fresh.length){
     html+=`<div class="ts-new">${data.fresh.length===1?"New trophy claimed":data.fresh.length+" new trophies claimed"}</div>`;
-    html+=`<div class="ts-cards">`+data.fresh.map((t,i)=>trophyCardHTML(t,map[t.id],{strip:true,idx:i})).join("")+`</div>`;
+    html+=`<div class="ts-cards">`+data.fresh.map((t,i)=>trophyCardHTML(t,trophyUnlock(t,map,seals),{strip:true,idx:i})).join("")+`</div>`;
     if(motionOK()) sfx("confirm");
-  } else {
+  } else if(!data.memorial){
     html+=`<div class="ts-none">No new trophies this time — but the case file is closed.</div>`;
   }
   if(data.teases&&data.teases.length) html+=`<div class="ts-tease">`+data.teases.map(x=>`<div>🔓 ${x}</div>`).join("")+`</div>`;
@@ -3361,21 +3484,37 @@ function renderTrophyStrip(data){
 let _trophyFilter="all";
 function renderTrophies(filter){
   _trophyFilter=filter||_trophyFilter||"all";
-  const reg=trophyRegistry(), map=loadTrophyUnlocks();
+  const reg=trophyRegistry(), map=loadTrophyUnlocks(), seals=loadRoomSeals();
   const cats=TROPHY_CATS.filter(c=>!c.hidden);                   // Daily is hidden
   const tabs=$("trophyTabs");
   if(tabs){ const mk=(k,l)=>`<button class="trophy-tab${_trophyFilter===k?' on':''}" data-f="${k}">${l}</button>`;
     tabs.innerHTML=mk("all","All")+cats.map(c=>mk(c.key,c.label)).join("");
     tabs.querySelectorAll(".trophy-tab").forEach(b=>b.onclick=()=>renderTrophies(b.dataset.f)); }
   const pool=reg.filter(t=>cats.some(c=>c.key===t.cat));
-  const have=pool.filter(t=>map[t.id]).length;
+  const have=pool.filter(t=>isUnlocked(t,map,seals)).length;
   if($("trophyCount")) $("trophyCount").textContent=`${have}/${pool.length}`;
   const grid=$("trophyGrid"); if(!grid) return;
   const items=_trophyFilter==="all"?pool:pool.filter(t=>t.cat===_trophyFilter);
   let head;
-  if(_trophyFilter==="all"){ head=`<div class="tg-prog">`+cats.map(c=>{ const s=pool.filter(t=>t.cat===c.key); return `<span>${c.label} <b>${s.filter(t=>map[t.id]).length}/${s.length}</b></span>`; }).join("")+`</div>`; }
-  else { const c=cats.find(x=>x.key===_trophyFilter); head=`<div class="tg-prog"><span>${c.label} <b>${items.filter(t=>map[t.id]).length}/${items.length}</b></span></div>`; }
-  grid.innerHTML=head+`<div class="tg-cards">`+items.map(t=>trophyCardHTML(t,map[t.id],{})).join("")+`</div>`;
+  if(_trophyFilter==="all"){ head=`<div class="tg-prog">`+cats.map(c=>{ const s=pool.filter(t=>t.cat===c.key); return `<span>${c.label} <b>${s.filter(t=>isUnlocked(t,map,seals)).length}/${s.length}</b></span>`; }).join("")+`</div>`; }
+  else { const c=cats.find(x=>x.key===_trophyFilter); head=`<div class="tg-prog"><span>${c.label} <b>${items.filter(t=>isUnlocked(t,map,seals)).length}/${items.length}</b></span></div>`; }
+  grid.innerHTML=head+`<div class="tg-cards">`+items.map(t=>trophyCardHTML(t,trophyUnlock(t,map,seals),{})).join("")+`</div>`;
+}
+/* ---- Victim Memorial Gallery (separate from the trophy tabs) ---- */
+function renderMemorial(){
+  const grid=$("memorialGrid"); if(!grid) return;
+  const victims=THEME.victims||[], mem=LS.get("victimMemorial",{})||{};
+  const have=victims.filter(v=>mem[v.slug]).length;
+  if($("memorialCount")) $("memorialCount").textContent=`${have}/${victims.length}`;
+  grid.innerHTML=victims.map(v=>{
+    const u=mem[v.slug];
+    if(!u) return `<div class="mcard locked"><div class="mc-art"><img class="tc-img locked" src="${tAsset('victims','victim-'+v.slug+'.png')}" alt=""></div>`+
+      `<div class="mc-body"><div class="mc-name">Unknown</div><div class="tc-hint">Solve a case where this soul is the victim to remember them.</div></div></div>`;
+    return `<div class="mcard unlocked"><div class="mc-art"><img class="tc-img" src="${tAsset('victims','victim-'+v.slug+'.png')}" alt=""></div>`+
+      `<div class="mc-body"><div class="mc-name">${u.name}</div>`+
+      `<div class="mc-note">Remembered in <b>${u.title||('Case No. '+u.no)}</b> — found in ${u.room}, ${Skin.weaponBySlug(THEME,u.weapon).n} the instrument. <span class="mc-rip">May they rest.</span></div>`+
+      `<div class="tc-src">Case No. ${u.no} · ${u.date}</div></div></div>`;
+  }).join("");
 }
 
 /* ---- buttons / keys ---- */
