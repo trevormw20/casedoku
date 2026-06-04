@@ -290,14 +290,36 @@
   .pw-label{font-family:"Courier New",monospace;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);margin-bottom:6px;}
   .pw-hint{text-transform:none;letter-spacing:0;font-style:italic;color:var(--ink-dim);font-size:11px;}
   .possible-weapons{display:flex;gap:8px;flex-wrap:wrap;}
-  .wcand{display:flex;align-items:center;gap:6px;background:#171a22;border:1px solid var(--line);border-radius:9px;
-    padding:6px 9px;cursor:pointer;color:var(--ink);font-family:inherit;font-size:13px;transition:.12s;}
-  .wcand .wicon{width:24px;height:24px;}
+  .wcand{position:relative;display:flex;align-items:center;gap:6px;background:#171a22;border:1px solid var(--line);border-radius:9px;
+    padding:6px 9px;cursor:pointer;color:var(--ink);font-family:inherit;font-size:13px;
+    transition:border-color .15s,box-shadow .15s,opacity .15s,filter .15s,background .15s;}
+  .wcand-ico{position:relative;display:inline-flex;border-radius:4px;overflow:hidden;}
+  .wcand .wicon{width:24px;height:24px;display:block;}
   .wcand-name{font-weight:700;}
-  .wcand-mark{font-family:"Courier New",monospace;font-size:8.5px;letter-spacing:1px;text-transform:uppercase;padding:1px 5px;border-radius:4px;}
-  .wcand.mark-possible{border-color:rgba(231,185,77,.5);} .wcand.mark-possible .wcand-mark{background:rgba(231,185,77,.18);color:var(--amber-soft);}
-  .wcand.mark-doubtful{border-color:rgba(225,150,40,.65);} .wcand.mark-doubtful .wcand-mark{background:rgba(225,150,40,.22);color:#e6a04a;}
-  .wcand.mark-cleared{opacity:.5;filter:grayscale(.6);} .wcand.mark-cleared .wcand-name{text-decoration:line-through;} .wcand.mark-cleared .wcand-mark{background:rgba(120,120,120,.22);color:#9aa0ae;}
+  .wcand-mark{font-family:"Courier New",monospace;font-size:8.5px;letter-spacing:1px;text-transform:uppercase;padding:1px 5px;border-radius:4px;display:none;}
+  /* magnifier glint sweep — plays ONCE when Suspected is freshly marked (.just-set), motion-gated */
+  .wlens{position:absolute;inset:0;pointer-events:none;opacity:0;
+    background:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.6) 50%,transparent 62%);transform:translateX(-120%);}
+  .wcand.st-suspected.just-set .wlens{animation:wlensSweep .7s ease-out;}
+  @keyframes wlensSweep{0%{opacity:0;transform:translateX(-120%);}18%{opacity:.85;}100%{opacity:0;transform:translateX(130%);}}
+  /* diagonal CLEARED / CONFIRMED stamp; stamp-in only on a fresh mark (.just-set), motion-gated */
+  .wstamp{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-13deg);
+    font-family:"Courier New",monospace;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;
+    padding:2px 8px;border:2px solid;border-radius:4px;pointer-events:none;white-space:nowrap;display:none;}
+  .wcand.just-set .wstamp{animation:wstampIn .34s cubic-bezier(.2,1.5,.4,1);}
+  @keyframes wstampIn{0%{transform:translate(-50%,-50%) rotate(-13deg) scale(2.4);opacity:0;}55%{opacity:1;}100%{transform:translate(-50%,-50%) rotate(-13deg) scale(1);opacity:1;}}
+  /* SUSPECTED — faint red outline + tag */
+  .wcand.st-suspected{border-color:rgba(220,70,70,.7);}
+  .wcand.st-suspected .wcand-ico{outline:2px solid rgba(220,70,70,.85);outline-offset:1px;}
+  .wcand.st-suspected .wcand-mark{display:inline-block;background:rgba(220,70,70,.18);color:#e88a8a;}
+  /* CLEARED — greyed out + diagonal stamp */
+  .wcand.st-cleared{opacity:.55;filter:grayscale(.7);}
+  .wcand.st-cleared .wcand-name{text-decoration:line-through;text-decoration-color:rgba(170,170,180,.6);}
+  .wcand.st-cleared .wstamp{display:block;color:rgba(195,195,205,.95);border-color:rgba(175,175,185,.8);background:rgba(18,20,26,.6);}
+  /* CONFIRMED — gold outline + stamp + warm glow */
+  .wcand.st-confirmed{border-color:var(--amber);background:#221d10;box-shadow:0 0 0 1px var(--amber),0 0 14px rgba(231,185,77,.35);}
+  .wcand.st-confirmed .wcand-ico{outline:2px solid var(--amber);outline-offset:1px;}
+  .wcand.st-confirmed .wstamp{display:block;font-size:9.5px;color:var(--amber-soft);border-color:var(--amber);background:rgba(231,185,77,.1);}
   /* accusation weapon picker */
   .accuse-weapons{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:2px;}
   .accuse-weapon{display:flex;align-items:center;gap:6px;background:#171a22;border:1px solid var(--line);border-radius:9px;padding:7px 10px;cursor:pointer;color:var(--ink);font-size:13px;}
@@ -450,6 +472,9 @@
   .news-masthead{font-family:Georgia,serif;font-weight:bold;font-size:12px;letter-spacing:3px;text-transform:uppercase;
     border-bottom:2px solid #1a1a22;padding-bottom:4px;margin-bottom:6px;}
   .news-headline{font-family:Georgia,serif;font-weight:bold;font-size:20px;line-height:1.15;text-transform:uppercase;letter-spacing:.5px;}
+  .news-headline.typing::after{content:"";display:inline-block;width:3px;height:.92em;background:currentColor;
+    margin-left:2px;vertical-align:-1px;animation:hlCaret .6s steps(1) infinite;}
+  @keyframes hlCaret{50%{opacity:0;}}
   .news-stamp{position:absolute;right:-10px;top:-14px;width:78px;transform:rotate(9deg);pointer-events:none;
     filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));}
   .payoff-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;text-align:left;}
@@ -2138,10 +2163,9 @@ function dressStory(){
 
   story={ victim:vsel.name, victimDisplay:vsel.name, victimSlug:vsel.slug, victimTags:vsel,
     sceneObject:wcase.sceneObject, trueWeapon:wcase.trueWeapon, weaponCandidates:wcase.candidates,
-    weaponClues:wcase.clues, weaponPlanted:wcase.planted, weaponMarks:{},
+    weaponClues:wcase.clues, weaponPlanted:wcase.planted, weaponMarks:loadWeaponMarks(C.code),
     motiveClues, motiveOptions, killerTag,
     time:pick(THEME.times), atmosphere, sceneRoom, alibiRoom, killer, caseNo:100+(C.seed%900) };
-  wcase.candidates.forEach(s=>story.weaponMarks[s]="possible");   // per-case player marks (not persisted)
   story.title=`The Murder of ${vsel.name}`;
   // unified evidence list: position clues (solve WHO) + [WEAPON] (solve WHAT) + [MOTIVE] (solve WHY), each tagged
   story.evidence=[];
@@ -2318,19 +2342,39 @@ function renderEvCurrent(){
   $("evClue").innerHTML=`<span class="ev-tag tag-${e.tag.toLowerCase()}">${e.tag}</span>${star}${e.text}`;
   $("evStep").textContent=`${clueStep+1} / ${n}`;
 }
-/* Possible Weapons: the 3 candidates; tap a chip to cycle the player's mark possible -> doubtful -> cleared */
-const WMARK_NEXT={possible:"doubtful", doubtful:"cleared", cleared:"possible"};
+/* Possible Weapons — the player's notebook. Tap a chip to cycle:
+   none -> Suspected (red outline + magnifier sweep) -> Cleared (grey + diagonal stamp + thud)
+   -> Confirmed (gold outline + stamp + glow) -> none. Player-only marking, no validation.
+   Marks persist per case (by case code, in localStorage) and re-render statically (entrance
+   animations replay only on a fresh tap, never on a plain re-render / reload / panel reparent). */
+const WMARK_NEXT={none:"suspected", suspected:"cleared", cleared:"confirmed", confirmed:"none"};
+const WMARK_TAG={suspected:"Suspected"};
+const WMARK_STAMP={cleared:"Cleared", confirmed:"Confirmed Weapon"};
+function loadWeaponMarks(code){ const all=LS.get("weaponMarks",{})||{}; return Object.assign({}, all[code]||{}); }
+function saveWeaponMarks(){ if(!C) return; const all=LS.get("weaponMarks",{})||{}; all[C.code]=story.weaponMarks;
+  const ks=Object.keys(all); while(ks.length>40){ delete all[ks.shift()]; } LS.set("weaponMarks",all); }
+let _wmarkJustSet=null;   // the slug whose entrance animation should play this render (cleared after one render)
 function renderPossibleWeapons(){
   const host=$("possibleWeapons"); if(!host||!story) return; host.innerHTML="";
   story.weaponCandidates.forEach(slug=>{
-    const w=Skin.weaponBySlug(THEME,slug), mark=story.weaponMarks[slug]||"possible";
-    const chip=document.createElement("button"); chip.className="wcand mark-"+mark; chip.dataset.slug=slug;
-    chip.title="Tap to mark: possible → doubtful → cleared";
-    chip.innerHTML=`<img class="wicon" src="${tAsset('weapons','weapon-'+slug+'.png')}" alt="">`+
-      `<span class="wcand-name">${w.n.replace(/^(the|a|an)\s+/i,"")}</span><span class="wcand-mark">${mark}</span>`;
-    chip.onclick=()=>{ story.weaponMarks[slug]=WMARK_NEXT[story.weaponMarks[slug]||"possible"]; renderPossibleWeapons(); };
+    const w=Skin.weaponBySlug(THEME,slug), st=story.weaponMarks[slug]||"none";
+    const chip=document.createElement("button"); chip.className="wcand st-"+st+(_wmarkJustSet===slug?" just-set":""); chip.dataset.slug=slug;
+    chip.title="Your notebook — tap to mark: Suspected → Cleared → Confirmed → clear";
+    chip.innerHTML=`<span class="wcand-ico"><img class="wicon" src="${tAsset('weapons','weapon-'+slug+'.png')}" alt=""><span class="wlens"></span></span>`+
+      `<span class="wcand-name">${w.n.replace(/^(the|a|an)\s+/i,"")}</span>`+
+      `<span class="wcand-mark">${WMARK_TAG[st]||""}</span>`+
+      `<span class="wstamp">${WMARK_STAMP[st]||""}</span>`;
+    chip.onclick=()=>{
+      const next=WMARK_NEXT[story.weaponMarks[slug]||"none"];
+      story.weaponMarks[slug]=next; saveWeaponMarks();
+      _wmarkJustSet=slug;                          // animate only this chip's new state
+      if(next==="cleared") sfx("stamp");           // soft thud (Sound-gated; the stamp-in animation is motion-gated via CSS)
+      else if(next==="confirmed") sfx("confirm");  // soft warm confirm
+      renderPossibleWeapons();
+    };
     host.appendChild(chip);
   });
+  _wmarkJustSet=null;                              // consumed -> later re-renders don't replay entrance animations
 }
 
 /* ---- interactions (cell-first: tap a cell to select, then tap a suspect to place) ---- */
@@ -2622,7 +2666,7 @@ function payoff(grade, won){
   const totalTime=fmtTime(elapsedMs()), guessesUsed=MAX_GUESSES-guessesLeft;
   const penaltyStr=penaltyMs?` · penalty +${fmtTime(penaltyMs)}`:"";
   if(won){
-    $("newsHeadline").textContent=makeHeadline(k.name);
+    setHeadline(makeHeadline(k.name));   // types in char-by-char (instant when Motion off); tap to skip
     $("poTrophy").innerHTML=`<img class="wicon" src="${tAsset('weapons','weapon-'+story.trueWeapon+'.png')}" alt="">${cap(tw.n.replace(/^(the|a|an)\s+/i,""))}`;
     const acc=1+(grade.weaponRight?1:0)+(grade.motiveRight?1:0)+(grade.evidenceRight?1:0), perfect=acc===4; isPerfect=perfect;
     const plantNote=story.weaponPlanted?` (the ${Skin.weaponBySlug(THEME,story.sceneObject).n} by the body was planted)`:"";
@@ -2634,7 +2678,7 @@ function payoff(grade, won){
     recordSolved(makeHeadline(k.name), perfect);
     setStatus(`Case closed — ${k.name} arrested.`,"good");
   } else {
-    $("newsHeadline").textContent=failHeadline();
+    setHeadline(failHeadline());
     $("poTrophy").innerHTML=`<span class="muted">none — case unsolved</span>`;
     $("accuseScore").innerHTML=
       `<div class="acc-stars" style="color:var(--bad)">CASE UNSOLVED</div>`+
@@ -2999,7 +3043,9 @@ function sfx(name){ if(!settings.sound) return; if(!audioCtx()) return;
   else if(name==="thunk"){ _tone(120,0.2,"sine",0.22); _noise(0.08,0.1); }
   else if(name==="buzz"){ _tone(150,0.22,"sawtooth",0.14); _tone(146,0.22,"sawtooth",0.1); }
   else if(name==="win"){ [523.25,659.25,783.99].forEach((f,i)=>_tone(f,0.22,"sine",0.14,i*0.11)); }
-  else if(name==="paper"){ _noise(0.17,0.05); } }   // soft paper slide for the case-open sequence
+  else if(name==="paper"){ _noise(0.17,0.05); }     // soft paper slide for the case-open sequence
+  else if(name==="stamp"){ _tone(90,0.16,"sine",0.16); _noise(0.06,0.07); }                       // soft "Cleared" stamp thud
+  else if(name==="confirm"){ _tone(523.25,0.14,"sine",0.06); _tone(783.99,0.16,"sine",0.05,0.06); } }   // soft warm "Confirmed"
 /* ---- very quiet footstep shuffle that rides the footprint walk-out trail (cell selection) ---- */
 let _lastSteps=-1e9;   // far in the past so the first footstep sequence is never rate-limited
 function _step(delay){ const a=audioCtx(); if(!a) return; const t0=a.currentTime+(delay||0);
@@ -3020,6 +3066,25 @@ function playFootsteps(){
   const n=3+Math.floor(Math.random()*3);            // a short sequence of 3-5 soft steps
   let t=0; for(let k=0;k<n;k++){ _step(t); t+=0.10+Math.random()*0.07; }   // slight timing randomization
 }
+/* ---- payoff newspaper headline: deliberate typewriter with quiet, slightly-random key ticks ---- */
+let _hlTimers=[], _hlFull="";
+function _clearHlTimers(){ while(_hlTimers.length) clearTimeout(_hlTimers.pop()); }
+function _hlTick(){ if(!settings.sound) return; const a=audioCtx(); if(!a) return; const t0=a.currentTime;   // soft typewriter key click
+  const len=Math.max(1,(a.sampleRate*0.012)|0), buf=a.createBuffer(1,len,a.sampleRate), d=buf.getChannelData(0);
+  for(let j=0;j<len;j++) d[j]=(Math.random()*2-1)*(1-j/len);
+  const s=a.createBufferSource(); s.buffer=buf;
+  const hp=a.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=1500+Math.random()*900;
+  const g=a.createGain(); g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.028+Math.random()*0.02,t0+0.002); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.03);
+  s.connect(hp).connect(g).connect(a.destination); s.start(t0); s.stop(t0+0.04); }
+function _hlDing(){ if(!settings.sound) return; _tone(1760,0.2,"sine",0.05); _tone(2349,0.18,"sine",0.03,0.012); }   // carriage-return bell
+function setHeadline(text){ const el=$("newsHeadline"); if(!el) return; _hlFull=text; _clearHlTimers();
+  if(!motionOK()){ el.textContent=text; el.classList.remove("typing"); return; }   // Motion off / reduced-motion -> full headline instantly
+  el.textContent=""; el.classList.add("typing"); let i=0;
+  (function step(){ el.textContent=text.slice(0,i);
+    if(i<text.length){ const ch=text[i++]; if(ch!==" ") _hlTick(); _hlTimers.push(setTimeout(step, 46+Math.random()*14)); }   // ~46-60ms/char
+    else { el.classList.remove("typing"); _hlDing(); } })();
+}
+function skipHeadline(){ _clearHlTimers(); const el=$("newsHeadline"); if(el){ el.textContent=_hlFull; el.classList.remove("typing"); } }
 
 /* the big solved-case reveal: flashbulb -> bars slam -> stamp thunk + dust -> confetti (3/3).
    Final state is the CSS resting state, so skip / Motion-off just shows the end immediately. */
@@ -3054,7 +3119,7 @@ function startMusicIfOn(){ if(settings.music){ const a=ensureBgMusic(); if(a.pau
 if($("musicBtn")) $("musicBtn").onclick=()=>{ settings.music=!settings.music; LS.set("settings",settings); applyJuiceButtons(); applyMusic(); };
 // first user gesture: unlock SFX audio AND start the music if autoplay was blocked (while Music is ON)
 ["pointerdown","keydown","touchstart"].forEach(ev=>window.addEventListener(ev,()=>{ if(settings.sound) audioCtx(); startMusicIfOn(); },{passive:true}));
-if($("winModal")) $("winModal").addEventListener("pointerdown",skipReveal);   // tap to skip the reveal to its final state
+if($("winModal")) $("winModal").addEventListener("pointerdown",()=>{ skipReveal(); skipHeadline(); });   // tap to skip the reveal + finish the headline
 applyMotion(); applyJuiceButtons(); applyMusic();   // try to start music immediately (retried on first gesture if blocked)
 /* ---- case intro / case-text settings (persisted) + intro card wiring ---- */
 function applyCaseButtons(){ const ib=$("introBtn"), sk=$("introSkipBtn"), ct=$("caseTextBtn");
