@@ -351,9 +351,16 @@
 
   /* ===== payoff accusation trio: culprit + weapon + motive pinned side by side, proof beneath ===== */
   .accuse-trio{display:flex;gap:12px;justify-content:center;align-items:flex-start;margin:8px 0 4px;flex-wrap:wrap;}
-  .trio-cell{display:flex;flex-direction:column;align-items:center;gap:3px;width:98px;text-align:center;animation:trioIn .4s ease both;}
-  .trio-cell:nth-child(2){animation-delay:.08s;} .trio-cell:nth-child(3){animation-delay:.16s;}
-  @keyframes trioIn{from{opacity:0;transform:translateY(9px);}to{opacity:1;transform:none;}}
+  .trio-cell{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:98px;text-align:center;}
+  /* payoff sequence: cells hidden under .seq, revealed one at a time with a per-role entrance (motion-gated) */
+  .accuse-trio.seq .trio-cell{opacity:0;}
+  .accuse-trio.seq .trio-cell.in{opacity:1;}
+  .accuse-trio.seq .trio-cell.tc-culprit.in{animation:tcFade .42s ease;}
+  .accuse-trio.seq .trio-cell.tc-weapon.in{animation:tcSlide .45s cubic-bezier(.2,.8,.3,1);}
+  .accuse-trio.seq .trio-cell.tc-motive.in{animation:tcFlip .5s ease;}
+  @keyframes tcFade{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  @keyframes tcSlide{from{opacity:0;transform:translateX(46px);}to{opacity:1;transform:none;}}
+  @keyframes tcFlip{from{opacity:0;transform:perspective(520px) rotateY(86deg);}to{opacity:1;transform:perspective(520px) rotateY(0);}}
   .trio-art{width:62px;height:62px;display:flex;align-items:center;justify-content:center;background:rgba(10,12,18,.5);border:1px solid var(--line);border-radius:10px;}
   .trio-art .trio-token{width:50px;height:50px;}
   .trio-weapon{width:44px;height:44px;object-fit:contain;}
@@ -367,6 +374,16 @@
   .trio-proof{text-align:center;font-size:13px;font-style:italic;color:var(--ink);margin:4px auto 4px;max-width:430px;line-height:1.45;}
   .trio-proof b{font-style:normal;}
   .trio-proof-label{display:block;font-family:"Courier New",monospace;font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);font-style:normal;margin-bottom:2px;}
+  /* ---- themed payoff stamps (red distressed ink; CSS only; slam in then rest) ---- */
+  .trio-art{position:relative;} .trio-proof{position:relative;} .accuse-suspect{position:relative;}
+  .payoff-stamp{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(var(--st-rot,-11deg));scale:1;
+    font-family:"Courier New",monospace;font-weight:700;font-size:8px;letter-spacing:.5px;text-transform:uppercase;
+    color:#ea5450;border:2px solid rgba(205,48,48,.85);border-radius:4px;padding:2px 4px;white-space:nowrap;
+    background:rgba(30,12,12,.22);text-shadow:0 0 1px rgba(0,0,0,.55);pointer-events:none;z-index:8;opacity:.95;}
+  .payoff-stamp.pre{opacity:0;}
+  .payoff-stamp.slam{animation:stampSlam .42s cubic-bezier(.3,1.3,.5,1);}
+  @keyframes stampSlam{0%{scale:2.7;opacity:0;}52%{opacity:.95;}72%{scale:.9;}100%{scale:1;opacity:.95;}}
+  .stamp-proof{top:5px;left:auto;right:8px;transform:translate(0,0) rotate(-7deg);}
   /* accusation weapon picker */
   .accuse-weapons{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:2px;}
   .accuse-weapon{display:flex;align-items:center;gap:6px;background:#171a22;border:1px solid var(--line);border-radius:9px;padding:7px 10px;cursor:pointer;color:var(--ink);font-size:13px;}
@@ -2768,6 +2785,10 @@ function submitAccusation(){
       payoff(null, false);
       return;
     }
+    // a wrong accusation proves them innocent -> slam a "SUSPECT CLEARED" stamp on the accused
+    const sb=document.querySelector(`#accuseSuspects .accuse-suspect[data-v="${accuseCulprit}"]`);
+    if(sb && !sb.querySelector(".payoff-stamp")){ sb.insertAdjacentHTML("beforeend", mkStampHTML("Suspect Cleared","stamp-suspect",-9));
+      const st=sb.querySelector(".payoff-stamp"); if(st && motionOK()) restartAnim(st,"slam"); }
     setAccuseFeedback(`Wrong accusation. +1:00 added to your time. ${guessesLeft} guess${guessesLeft===1?"":"es"} left.`,"bad");
     return;
   }
@@ -2782,6 +2803,7 @@ function submitAccusation(){
 }
 
 /* payoff accusation trio: culprit + weapon + motive pinned side by side (✓/✗ on a win; the truth on a fail) */
+function mkStampHTML(text, cls, rot){ return `<span class="payoff-stamp ${cls}" style="--st-rot:${rot}deg">${text}</span>`; }
 function trioCell(label, ok, valHTML){
   const cell=document.createElement("div"); cell.className="trio-cell"+(ok===true?" right":(ok===false?" wrong":""));
   const mark=ok===true?" ✓":(ok===false?" ✗":"");
@@ -2791,20 +2813,23 @@ function trioCell(label, ok, valHTML){
 function buildAccuseTrio(grade, won){
   const k=Skin.sName(THEME,C.killer), wrap=document.createElement("div"); wrap.className="accuse-trio";
   const wnm=s=>cap(Skin.weaponBySlug(THEME,s).n.replace(/^(the|a|an)\s+/i,""));
-  // CULPRIT (always the killer; on a win the player named them)
-  const c1=trioCell("Culprit", won?true:null, k.name.replace(/^The\s+/i,""));
+  // CULPRIT — on a win, their alibi crumbled -> FALSE ALIBI stamp
+  const c1=trioCell("Culprit", won?true:null, k.name.replace(/^The\s+/i,"")); c1.classList.add("tc-culprit");
   const tok=makeToken(C.killer); tok.classList.add("trio-token"); c1.querySelector(".trio-art").appendChild(tok);
-  // WEAPON
+  if(won) c1.querySelector(".trio-art").insertAdjacentHTML("beforeend", mkStampHTML("False Alibi","stamp-falsealibi",-12));
+  // WEAPON — WEAPON CONFIRMED stamp if right
   const trueW=story.trueWeapon, pickW=(won && grade.weaponPick)?grade.weaponPick:trueW;
   let wVal=wnm(pickW); if(won && !grade.weaponRight) wVal+=`<span class="trio-actual">actually ${wnm(trueW)}</span>`;
-  const c2=trioCell("Weapon", won?grade.weaponRight:null, wVal);
+  const c2=trioCell("Weapon", won?grade.weaponRight:null, wVal); c2.classList.add("tc-weapon");
   c2.querySelector(".trio-art").innerHTML=`<img class="trio-weapon" src="${tAsset('weapons','weapon-'+pickW+'.png')}" alt="">`;
-  // MOTIVE
+  if(won && grade.weaponRight) c2.querySelector(".trio-art").insertAdjacentHTML("beforeend", mkStampHTML("Weapon Confirmed","stamp-weapon",-9));
+  // MOTIVE — MOTIVE CONFIRMED stamp if right
   const trueM=story.motiveOptions.find(o=>o.correct)||{motive:k.motive, tag:story.killerTag};
   const pickM=(won && grade.motivePick>=0 && story.motiveOptions[grade.motivePick])?story.motiveOptions[grade.motivePick]:trueM;
   let mVal=cap(pickM.motive); if(won && !grade.motiveRight) mVal+=`<span class="trio-actual">actually ${cap(trueM.motive)}</span>`;
-  const c3=trioCell("Motive", won?grade.motiveRight:null, mVal);
+  const c3=trioCell("Motive", won?grade.motiveRight:null, mVal); c3.classList.add("tc-motive");
   c3.querySelector(".trio-art").innerHTML=`<span class="trio-motive">${motiveGlyphSVG((won?pickM:trueM).tag)}</span>`;
+  if(won && grade.motiveRight) c3.querySelector(".trio-art").insertAdjacentHTML("beforeend", mkStampHTML("Motive Confirmed","stamp-motive",-10));
   wrap.appendChild(c1); wrap.appendChild(c2); wrap.appendChild(c3);
   return wrap;
 }
@@ -2826,7 +2851,6 @@ function payoff(grade, won){
   const totalTime=fmtTime(elapsedMs()), guessesUsed=MAX_GUESSES-guessesLeft;
   const penaltyStr=penaltyMs?` · penalty +${fmtTime(penaltyMs)}`:"";
   if(won){
-    setHeadline(makeHeadline(k.name));   // types in char-by-char (instant when Motion off); tap to skip
     $("poTrophy").innerHTML=`<img class="wicon" src="${tAsset('weapons','weapon-'+story.trueWeapon+'.png')}" alt="">${cap(tw.n.replace(/^(the|a|an)\s+/i,""))}`;
     const acc=1+(grade.weaponRight?1:0)+(grade.motiveRight?1:0)+(grade.evidenceRight?1:0), perfect=acc===4; isPerfect=perfect;
     const plantNote=story.weaponPlanted?` (the ${Skin.weaponBySlug(THEME,story.sceneObject).n} by the body was planted)`:"";
@@ -2834,13 +2858,12 @@ function payoff(grade, won){
       `<div class="acc-stars">${"★".repeat(acc)}${"☆".repeat(4-acc)} <span class="acc-num">Accuracy ${acc}/4 · ⏱ ${totalTime}${penaltyStr} · ${guessesUsed+1}/${MAX_GUESSES} guesses</span></div>`+
       (perfect?`<div class="acc-correct good">Flawless deduction.${plantNote}</div>`:``);
     sc.appendChild(buildAccuseTrio(grade,true));
-    sc.insertAdjacentHTML("beforeend",`<div class="trio-proof"><span class="trio-proof-label">Proof</span>“${correctProof}”</div>`);
+    sc.insertAdjacentHTML("beforeend",`<div class="trio-proof"><span class="trio-proof-label">Proof</span>“${correctProof}”${grade.evidenceRight?mkStampHTML("Evidence Found","stamp-proof",-7):""}</div>`);
     recordSolved(makeHeadline(k.name), perfect);
     recordLeaderboard({ tier:C.tier, ms:elapsedMs(), timeStr:totalTime, no:story.caseNo, code:C.code,
       attempts:guessesUsed+1, acc, perfect:acc===4, date:nowStr() });   // personal best (time incl. penalties)
     setStatus(`Case closed — ${k.name} arrested.`,"good");
   } else {
-    setHeadline(failHeadline());
     $("poTrophy").innerHTML=`<span class="muted">none — case unsolved</span>`;
     const sc=$("accuseScore"); sc.innerHTML=
       `<div class="acc-stars" style="color:var(--bad)">CASE UNSOLVED <span class="acc-num" style="color:var(--ink-dim)">⏱ ${totalTime}${penaltyStr} · ${MAX_GUESSES}/${MAX_GUESSES} guesses used</span></div>`;
@@ -2851,7 +2874,7 @@ function payoff(grade, won){
   setResolution(won);   // 2-3 sentence story closer (different flavor on a fail)
   buildChain();
   $("winModal").classList.add("show");
-  playReveal(won, isPerfect);   // flashbulb -> bars slam -> stamp thunk + dust -> confetti (3/3); tap to skip
+  playPayoff(grade, won, isPerfect, won?makeHeadline(k.name):failHeadline());   // sequenced stamp reveal -> CASE CLOSED -> headline
 }
 function failHeadline(){
   const opts=["THE KILLER WALKS FREE — CASE GOES COLD","NO ARREST AT {PLACE}: KILLER ESCAPES","{PLACE} MURDER LEFT UNSOLVED"];
@@ -3293,6 +3316,51 @@ function skipReveal(){ clearRevealTimers();
   if(wrap)wrap.classList.remove("j-slam"); if(stamp)stamp.classList.remove("j-thunk"); if(paper)paper.classList.remove("j-spin");
   document.querySelectorAll(".j-confetti,.j-bulb,.j-puff").forEach(e=>e.remove()); }
 
+/* ===== sequenced stamp payoff: bars -> trio reveals + themed stamp slams -> CASE CLOSED -> headline.
+   Motion-gated (instant static when off); tap the win modal to skip straight to the final state. ===== */
+let _payoffHeadline="";
+function slamStamp(sel){ const s=document.querySelector("#winModal "+sel); if(!s) return;
+  s.classList.remove("pre"); restartAnim(s,"slam"); fxPuff(s); sfx("thunk");
+  const host=s.closest(".trio-cell")||s.closest(".trio-proof"); if(host) fxShake(host); }   // tiny localized "screen" shake
+function playPayoff(grade, won, perfect, headlineText){
+  _payoffHeadline=headlineText||"";
+  clearRevealTimers();
+  const trio=document.querySelector("#accuseScore .accuse-trio");
+  const wrap=$("revealWrap"), stamp=document.querySelector("#winModal .news-stamp"), paper=document.querySelector("#winModal .newspaper");
+  if(wrap)wrap.classList.remove("j-slam"); if(stamp)stamp.classList.remove("j-thunk"); if(paper)paper.classList.remove("j-spin");
+  if(trio) trio.classList.remove("seq");
+  document.querySelectorAll("#winModal .trio-cell").forEach(c=>c.classList.remove("in"));
+  document.querySelectorAll("#winModal .payoff-stamp").forEach(s=>s.classList.remove("pre","slam"));
+  if(!motionOK()){ setHeadline(_payoffHeadline); return; }   // Motion off / reduced-motion -> everything static, headline instant
+  // motion on: run the sequence
+  if(trio) trio.classList.add("seq");
+  document.querySelectorAll("#winModal .payoff-stamp").forEach(s=>s.classList.add("pre"));
+  if(paper) restartAnim(paper,"j-spin");
+  fxBulb(); sfx(won?"win":"buzz");
+  const cells = trio?[...trio.querySelectorAll(".trio-cell")]:[];
+  const cell=cls=>cells.find(c=>c.classList.contains(cls)), show=cls=>{ const c=cell(cls); if(c)c.classList.add("in"); };
+  const T=(ms,fn)=>_revealTimers.push(setTimeout(fn,ms));
+  if(won && wrap) T(120,()=>wrap.classList.add("j-slam"));   // culprit behind bars (existing)
+  T(300,()=>{ show("tc-culprit"); slamStamp(".stamp-falsealibi"); });   // FALSE ALIBI
+  T(680,()=> show("tc-weapon"));                                         // weapon slides in
+  T(980,()=> slamStamp(".stamp-weapon"));                                // WEAPON CONFIRMED (if right)
+  T(1280,()=> show("tc-motive"));                                        // motive flips
+  T(1580,()=> slamStamp(".stamp-motive"));                               // MOTIVE CONFIRMED (if right)
+  T(1820,()=> slamStamp(".stamp-proof"));                                // EVIDENCE FOUND (if right)
+  T(2120,()=>{ if(stamp){ restartAnim(stamp,"j-thunk"); fxPuff(stamp); } sfx("thunk");
+    fxShake($("winModal").querySelector(".modal")); if(perfect) fxConfetti(); });   // CASE CLOSED
+  T(2460,()=> setHeadline(_payoffHeadline));                             // typewriter headline (existing)
+}
+function skipPayoff(){ clearRevealTimers();
+  const trio=document.querySelector("#accuseScore .accuse-trio"); if(trio) trio.classList.remove("seq");
+  document.querySelectorAll("#winModal .trio-cell").forEach(c=>c.classList.add("in"));
+  document.querySelectorAll("#winModal .payoff-stamp").forEach(s=>s.classList.remove("pre","slam"));
+  const wrap=$("revealWrap"); if(wrap) wrap.classList.remove("j-slam");
+  const stamp=document.querySelector("#winModal .news-stamp"); if(stamp) stamp.classList.remove("j-thunk");
+  document.querySelectorAll(".j-confetti,.j-bulb,.j-puff").forEach(e=>e.remove());
+  const el=$("newsHeadline"); if(el){ _clearHlTimers(); el.textContent=_payoffHeadline; el.classList.remove("typing"); }
+}
+
 function applyJuiceButtons(){ const m=$("motionBtn"), s=$("soundBtn"), mu=$("musicBtn");
   if(m){ m.textContent="✨ Motion: "+(settings.motion?"On":"Off"); m.classList.toggle("on",!!settings.motion); }
   if(s){ s.textContent="♪ Sound: "+(settings.sound?"On":"Off"); s.classList.toggle("on",!!settings.sound); }
@@ -3307,7 +3375,7 @@ function startMusicIfOn(){ if(settings.music){ const a=ensureBgMusic(); if(a.pau
 if($("musicBtn")) $("musicBtn").onclick=()=>{ settings.music=!settings.music; LS.set("settings",settings); applyJuiceButtons(); applyMusic(); };
 // first user gesture: unlock SFX audio AND start the music if autoplay was blocked (while Music is ON)
 ["pointerdown","keydown","touchstart"].forEach(ev=>window.addEventListener(ev,()=>{ if(settings.sound) audioCtx(); startMusicIfOn(); },{passive:true}));
-if($("winModal")) $("winModal").addEventListener("pointerdown",()=>{ skipReveal(); skipHeadline(); });   // tap to skip the reveal + finish the headline
+if($("winModal")) $("winModal").addEventListener("pointerdown",skipPayoff);   // tap to skip the whole payoff sequence to its final state
 applyMotion(); applyJuiceButtons(); applyMusic();   // try to start music immediately (retried on first gesture if blocked)
 /* ---- case intro / case-text settings (persisted) + intro card wiring ---- */
 function applyCaseButtons(){ const ib=$("introBtn"), sk=$("introSkipBtn"), ct=$("caseTextBtn");
