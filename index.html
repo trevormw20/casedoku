@@ -96,8 +96,10 @@
   .cell.peer-col::before{background-color:rgba(120,28,30,.12);
     background-image:var(--shoe-v);background-repeat:repeat-y;background-position:center top;background-size:22px 40px;
     animation:stepWalk .38s ease-out both;animation-delay:calc((var(--trail-d,1) - 1) * .1s);}
-  /* mobile (body.phone): footprints stay ORIGINAL size; just a slightly stronger red wash for contrast */
+  /* mobile (body.phone): SMALLER footprints than desktop + a slightly stronger red wash for contrast */
   body.phone .cell.peer-row::before,body.phone .cell.peer-col::before{background-color:rgba(120,28,30,.16);}
+  body.phone .cell.peer-row::before{background-size:26px 15px;}
+  body.phone .cell.peer-col::before{background-size:15px 26px;}
   .cell.sel::before{background:rgba(231,185,77,.20);}
   .cell.sel{box-shadow:inset 0 0 0 3px var(--amber), 0 0 13px rgba(231,185,77,.7) !important;z-index:3;}
   .cell.scene::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(193,39,45,.7);
@@ -139,7 +141,7 @@
     display:flex;align-items:center;justify-content:center;
     background:var(--disc, #888);                 /* fallback: suspect-color disc (set inline) */
     /* rings are DIM by default (muted toward the dark panel); they light up on selection (.match / .susp.sel) */
-    box-shadow:0 0 0 var(--ring-w) color-mix(in srgb, var(--ring,#888) 38%, #1b1f29), 0 2px 4px rgba(0,0,0,.55);
+    box-shadow:0 0 0 var(--ring-w) color-mix(in srgb, var(--ring,#888) 68%, #1b1f29), 0 2px 4px rgba(0,0,0,.55);
     transition:box-shadow .12s;}
   .token .tletter{font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.75);
     font-size:inherit;line-height:1;}
@@ -215,7 +217,7 @@
     box-shadow:0 2px 8px rgba(0,0,0,.5);}
   .victim-tag{font-family:"Courier New",monospace;font-size:8.5px;letter-spacing:1px;text-transform:uppercase;color:var(--blood);}
   /* victim art absent (files not yet dropped): show a silhouette placeholder instead of a broken image */
-  .victim-portrait.img-missing,.cell-victim.img-missing{
+  .victim-portrait.img-missing,.cell-victim.img-missing,.intro-portrait.img-missing{
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23596273' d='M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 1.8c-4.4 0-8 2.7-8 6.2v.5h16v-.5c0-3.5-3.6-6.2-8-6.2Z'/%3E%3C/svg%3E");
     background-repeat:no-repeat;background-position:center 60%;background-size:64%;}
   .case-title{font-size:21px;color:var(--blood);margin:0 0 4px;font-variant:small-caps;letter-spacing:1px;}
@@ -633,6 +635,22 @@
   /* Motion OFF or reduced-motion -> disable every animation (snap straight to final state) */
   body.no-motion *, body.no-motion *::before, body.no-motion *::after{animation:none !important;}
   @media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation:none !important;} }
+
+  /* ---- case intro card (shown at case start; always skippable) ---- */
+  .intro-card{max-width:520px;}
+  .intro-victim{display:flex;flex-direction:column;align-items:center;gap:4px;margin:2px auto 8px;}
+  .intro-portrait{width:96px;height:96px;border-radius:10px;object-fit:cover;object-position:center top;
+    border:2px solid var(--blood);background:#10131a;filter:grayscale(.25) brightness(.95);box-shadow:0 3px 12px rgba(0,0,0,.55);}
+  .intro-title{font-size:24px;color:var(--blood);font-variant:small-caps;letter-spacing:1px;margin:2px 0 10px;}
+  .intro-body{font-size:16px;line-height:1.65;color:var(--ink);text-align:left;max-width:430px;
+    border-left:3px solid rgba(231,185,77,.5);padding:4px 0 4px 14px;margin:0 auto 8px;}
+  .intro-body .intro-cta{display:block;margin-top:10px;color:var(--amber-soft);font-style:italic;font-weight:700;}
+  .intro-skip-note{font-size:11px;color:var(--ink-dim);font-style:italic;margin-top:10px;}
+  /* ---- resolution closer on the payoff (beginning -> middle -> end) ---- */
+  .resolution{font-size:14.5px;line-height:1.6;color:var(--ink);text-align:left;background:rgba(231,185,77,.06);
+    border-left:3px solid rgba(231,185,77,.5);border-radius:0 8px 8px 0;padding:10px 13px;margin:4px 0 10px;}
+  .resolution[hidden]{display:none;}
+  .modal.failed .resolution{border-left-color:rgba(193,39,45,.6);background:rgba(193,39,45,.08);}
 </style>
 </head>
 <body>
@@ -676,6 +694,9 @@
         <button class="btn" id="motionBtn" title="Toggle animations">✨ Motion: On</button>
         <button class="btn" id="soundBtn" title="Toggle sound effects">♪ Sound: Off</button>
         <button class="btn" id="musicBtn" title="Toggle background music">🎵 Music: On</button>
+        <button class="btn" id="introBtn" title="Show the case intro card at the start of each case">📖 Intro: On</button>
+        <button class="btn" id="introSkipBtn" title="After you've read one intro, skip the rest automatically (still in the case file)">⏭ Auto-skip: Off</button>
+        <button class="btn" id="caseTextBtn" title="Case briefing length: Short intro, or Full atmospheric text">📝 Case text: Short</button>
       </div>
       <!-- mobile-only: opens the tabbed case-file overlay (the side panel is hidden on phones) -->
       <button class="case-file-btn" id="caseFileBtn">📁 Case File <span class="cf-sub">Evidence · Weapons · People · Case</span></button>
@@ -851,6 +872,7 @@
       <div class="reveal-wrap" id="revealWrap"><div class="reveal-token" id="revealToken"></div><div class="reveal-bars" id="revealBars"></div></div>
       <div class="killer-name" id="killerName">—</div>
       <p id="killerMotive" style="color:var(--ink-dim);font-style:italic;margin:4px 0 8px"></p>
+      <p class="resolution" id="resolution" hidden></p>
       <div class="payoff-grid">
         <div class="po-cell"><span class="po-label">Key evidence</span><span class="po-val" id="poEvidence">—</span></div>
         <div class="po-cell"><span class="po-label">Trophy unlocked</span><span class="po-val" id="poTrophy">—</span></div>
@@ -865,6 +887,21 @@
         <button class="btn" id="winArchive"><img src="assets/ui/icon-notebook.png" alt=""/>Evidence Archive</button>
         <button class="btn primary" id="winNew">Open the Next Case</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Case intro card (shown at case start; always skippable; same text stays in the case file) -->
+  <div class="modal-bg" id="introModal">
+    <div class="modal intro-card center">
+      <button class="x" id="introClose"><img src="assets/ui/icon-close.png" alt="close"/></button>
+      <div class="intro-victim">
+        <img class="intro-portrait img-missing" id="introPortrait" alt=""/>
+        <span class="victim-tag">The Victim</span>
+      </div>
+      <h2 class="intro-title" id="introTitle">—</h2>
+      <p class="intro-body" id="introBody"></p>
+      <button class="btn primary" id="introBegin" style="margin-top:6px">Begin Investigation</button>
+      <p class="intro-skip-note">Tap anywhere to skip · the full file stays in the case panel</p>
     </div>
   </div>
 
@@ -1751,6 +1788,9 @@ let settings=LS.get("settings",{atmosphere:"low"});   // Focus(low) by default
 if(settings.motion===undefined) settings.motion=true;   // animations ON by default
 if(settings.sound===undefined) settings.sound=false;    // sound effects OFF by default
 if(settings.music===undefined) settings.music=true;     // background music ON by default
+if(settings.intro===undefined) settings.intro=true;            // show the case intro card by default
+if(settings.introAutoskip===undefined) settings.introAutoskip=false;  // don't auto-skip until the player opts in
+if(settings.caseText===undefined) settings.caseText="short";   // tight intro in the case-file briefing by default
 /* ---- flavor labels ---- */
 const TIER_FLAVOR={easy:"Routine Case",medium:"Troubling Case",hard:"Grim Case",extreme:"Cold Case"};
 function cap(s){ return s? s.charAt(0).toUpperCase()+s.slice(1) : s; }
@@ -1845,6 +1885,86 @@ function recordVictim(slug, seed){
   LS.set(VICTIM_RECENT_KEY, recent);
 }
 
+/* ===== case intro card + resolution closer. Built from the generated story pieces.
+   CRITICAL: the intro must NOT reveal the killer, the true motive, whether the found-beside
+   object is the real weapon or planted, or detailed suspect info — curiosity, not answers. ===== */
+function buildCaseIntro(s, N){
+  const rng=E.makeRNG((C.seed ^ E.hashStr("intro"))>>>0);
+  const pick=a=>a[Math.floor(rng()*a.length)];
+  const victim=s.victimDisplay, room=s.sceneRoom, time=s.time;
+  const obj=Skin.weaponBySlug(THEME,s.sceneObject).n.replace(/^(the|a|an)\s+/i,"");   // bare object noun
+  const disc=pick([
+    `${victim} was found ${pick(["dead","lifeless","slain"])} in ${room} ${time}.`,
+    `${cap(time)}, ${victim} was discovered ${pick(["dead","collapsed","lifeless"])} in ${room}.`,
+    `${victim} lies dead in ${room}, ${time}.`,
+  ]);
+  const wq=pick([                                                  // weapon posed as a QUESTION — never reveals real/planted
+    `The ${obj} found beside the body looks the obvious weapon — but is it truly the one that killed?`,
+    `A ${obj} lay at the scene; whether it dealt the fatal blow is for you to determine.`,
+    `The ${obj} was close at hand, though the wound leaves room for doubt.`,
+  ]);
+  const susp=pick([                                                // opportunity puzzle — N guests, no suspect specifics
+    `All ${N} guests under this roof swear they never crossed ${room} — yet the manor's floor plan says one of them must have.`,
+    `Every one of the ${N} guests claims an alibi; the geometry of the house leaves exactly one of them without.`,
+    `${N} guests, ${N} tidy alibis — and only the seating of the rooms can reveal whose story cannot hold.`,
+  ]);
+  const cta=pick([
+    `Solve the grid to uncover who had the opportunity.`,
+    `Seat every guest by the evidence to reveal who had the opportunity.`,
+  ]);
+  return [disc, wq, susp, cta];
+}
+function renderCaseBriefing(){ if(!story) return;
+  const full = settings.caseText==="full" && story.narrative;     // Full adds the atmospheric/profile lines
+  $("caseStory").textContent = full ? story.narrative : (story.intro ? story.intro.join(" ") : (story.narrative||"")); }
+function buildResolution(won){                                     // 2-3 sentence closer (beginning -> middle -> end)
+  const rng=E.makeRNG((C.seed ^ E.hashStr("resolution"))>>>0);
+  const pick=a=>a[Math.floor(rng()*a.length)];
+  const k=Skin.sName(THEME,C.killer), victim=story.victimDisplay, room=story.sceneRoom;
+  const tw=Skin.weaponBySlug(THEME,story.trueWeapon).n, so=Skin.weaponBySlug(THEME,story.sceneObject).n, motive=k.motive;
+  if(won){
+    const s1=pick([
+      `With every guest finally in place, only one figure remained at the scene: ${k.name}.`,
+      `The grid told the truth the alibis could not — ${k.name} was the one who could not have been elsewhere.`,
+      `When the last suspect was seated, ${k.name} stood alone where ${victim} had fallen.`,
+    ]);
+    const s2 = story.weaponPlanted
+      ? `The killing was done with ${tw}; ${so} by the body was only a decoy to muddy the trail.`
+      : `${cap(tw)} was the weapon after all, just where it lay.`;
+    const s3=pick([
+      `Driven by ${motive}, they had trusted ${room} to keep the secret. It did not.`,
+      `It was ${motive} in the end — undone by a single seat no one else could fill.`,
+      `${cap(motive)} was the reason; the floor plan was the proof.`,
+    ]);
+    return `${s1} ${s2} ${s3}`;
+  }
+  const f1=pick([
+    `The accusation faltered, and ${k.name} slipped away into the night.`,
+    `Three wrong names — and the real culprit, ${k.name}, was never called.`,
+    `The trail went cold; ${k.name} was never made to answer for it.`,
+  ]);
+  return `${f1} The truth — ${tw}, and a motive of ${motive} — left with them, and the ${victim} case joined the manor's unsolved sorrows.`;
+}
+function setResolution(won){ const el=$("resolution"); if(!el) return;
+  try{ el.textContent=buildResolution(won); el.hidden=false; }catch(e){ el.hidden=true; } }
+/* intro card: show on case start, subject to settings; defer past the first-time How-to modal */
+function maybeShowIntro(){
+  if(!settings.intro) return;                                     // "Show case intro" off
+  if(settings.introAutoskip && LS.get("introSeen",false)) return; // "Auto-skip after first read" on
+  const hm=$("howtoModal"); if(hm && hm.classList.contains("show")){ setTimeout(maybeShowIntro,400); return; }
+  showIntro();
+}
+function showIntro(){ if(!story) return;
+  $("introTitle").textContent=story.title;
+  const p=$("introPortrait"); if(p){ p.classList.add("img-missing"); p.removeAttribute("src");
+    if(story.victimSlug) loadOptionalImg(p, tAsset('victims','victim-'+story.victimSlug+'.png')); }
+  const arr=story.intro||[]; const body=arr.slice(0,-1).join(" "), cta=arr[arr.length-1]||"";
+  $("introBody").innerHTML=`${body} <span class="intro-cta">${cta}</span>`;
+  $("introModal").classList.add("show");
+  LS.set("introSeen",true);                                       // the player has now read at least one intro
+}
+function hideIntro(){ const m=$("introModal"); if(m) m.classList.remove("show"); }
+
 function dressStory(){
   const rng=E.makeRNG((C.seed ^ E.hashStr("story"))>>>0);
   const pick=arr=>arr[Math.floor(rng()*arr.length)];
@@ -1891,6 +2011,7 @@ function dressStory(){
   story.narrative=Skin.renderStory(THEME, {
     place:THEME.place||"the manor", victim:story.victim, victimDesc:vsel.slug?victimDescriptor(vsel):"",
     room:story.sceneRoom, time:story.time, weapon:wName(wcase.sceneObject), n:cfg.N, atmosphere }, srng);
+  story.intro=buildCaseIntro(story, cfg.N);   // tight, spoiler-free intro for the card + (Short) briefing
 }
 
 /* seeded playable cast: a random N-subset of the 16-role roster, deterministic from the case
@@ -1930,6 +2051,7 @@ function startCase(opts){
     `only the evidence narrows it to one. The scene (dashed) hides the killer.`;
   setStatus(`Case No. ${story.caseNo} opened — ${board.filter(v=>!v).length} positions to place.`,"");
   startTimer();
+  maybeShowIntro();   // case intro card (subject to settings; skippable)
 }
 function setVar(k,v){ document.documentElement.style.setProperty(k,v); }
 /* ---- simple MM:SS case timer (freezes on solve/accusation; resets each case) ---- */
@@ -2013,7 +2135,7 @@ function renderCase(){
   if(story.victimSlug) loadOptionalImg($("caseVictim"), tAsset('victims','victim-'+story.victimSlug+'.png'));
   else { $("caseVictim").removeAttribute("src"); }
   $("caseVictim").title=story.victimDisplay;
-  $("caseStory").textContent=story.narrative;
+  renderCaseBriefing();   // Short (tight intro) by default; Full adds the atmospheric narrative
   const so=Skin.weaponBySlug(THEME,story.sceneObject);
   $("caseSub").innerHTML=`Case No. ${story.caseNo} · <b>${TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label}</b> · ${THEME.place}`+
     ` · Found beside victim: <img class="wicon" src="${tAsset('weapons','weapon-'+story.sceneObject+'.png')}" alt="">${so.n}.`;
@@ -2375,6 +2497,7 @@ function payoff(grade, won){
       `<div class="acc-correct">The culprit was <b>${k.name}</b>. The proof: “${correctProof}”. Motive: ${cap(k.motive)}.</div>`;
     setStatus(`Case unsolved — ${k.name} got away.`,"bad");
   }
+  setResolution(won);   // 2-3 sentence story closer (different flavor on a fail)
   buildChain();
   $("winModal").classList.add("show");
   playReveal(won, isPerfect);   // flashbulb -> bars slam -> stamp thunk + dust -> confetti (3/3); tap to skip
@@ -2724,6 +2847,16 @@ if($("musicBtn")) $("musicBtn").onclick=()=>{ settings.music=!settings.music; LS
 ["pointerdown","keydown","touchstart"].forEach(ev=>window.addEventListener(ev,()=>{ if(settings.sound) audioCtx(); startMusicIfOn(); },{passive:true}));
 if($("winModal")) $("winModal").addEventListener("pointerdown",skipReveal);   // tap to skip the reveal to its final state
 applyMotion(); applyJuiceButtons(); applyMusic();   // try to start music immediately (retried on first gesture if blocked)
+/* ---- case intro / case-text settings (persisted) + intro card wiring ---- */
+function applyCaseButtons(){ const ib=$("introBtn"), sk=$("introSkipBtn"), ct=$("caseTextBtn");
+  if(ib){ ib.textContent="📖 Intro: "+(settings.intro?"On":"Off"); ib.classList.toggle("on",!!settings.intro); }
+  if(sk){ sk.textContent="⏭ Auto-skip: "+(settings.introAutoskip?"On":"Off"); sk.classList.toggle("on",!!settings.introAutoskip); }
+  if(ct){ ct.textContent="📝 Case text: "+(settings.caseText==="full"?"Full":"Short"); ct.classList.toggle("on",settings.caseText==="full"); } }
+if($("introBtn")) $("introBtn").onclick=()=>{ settings.intro=!settings.intro; LS.set("settings",settings); applyCaseButtons(); };
+if($("introSkipBtn")) $("introSkipBtn").onclick=()=>{ settings.introAutoskip=!settings.introAutoskip; LS.set("settings",settings); applyCaseButtons(); };
+if($("caseTextBtn")) $("caseTextBtn").onclick=()=>{ settings.caseText=settings.caseText==="full"?"short":"full"; LS.set("settings",settings); applyCaseButtons(); renderCaseBriefing(); };
+if($("introModal")) $("introModal").onclick=hideIntro;   // tap anywhere (card, backdrop, X, Begin) to skip
+applyCaseButtons();
 
 setupBrand();
 setupAssistant();
