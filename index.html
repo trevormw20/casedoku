@@ -637,15 +637,50 @@
   @media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation:none !important;} }
 
   /* ---- case intro card (shown at case start; always skippable) ---- */
-  .intro-card{max-width:520px;}
-  .intro-victim{display:flex;flex-direction:column;align-items:center;gap:4px;margin:2px auto 8px;}
+  .intro-card{max-width:520px;position:relative;perspective:1400px;}
+  .intro-card .x{z-index:6;}                                    /* close X stays above the folder flap */
+  .intro-evidence{display:flex;gap:20px;align-items:flex-start;justify-content:center;margin:2px auto 10px;}
+  .intro-victim,.intro-found{display:flex;flex-direction:column;align-items:center;gap:4px;}
   .intro-portrait{width:96px;height:96px;border-radius:10px;object-fit:cover;object-position:center top;
     border:2px solid var(--blood);background:#10131a;filter:grayscale(.25) brightness(.95);box-shadow:0 3px 12px rgba(0,0,0,.55);}
-  .intro-title{font-size:24px;color:var(--blood);font-variant:small-caps;letter-spacing:1px;margin:2px 0 10px;}
+  .intro-object{width:80px;height:80px;object-fit:contain;filter:drop-shadow(0 2px 5px rgba(0,0,0,.5));}
+  .intro-object.img-missing{visibility:hidden;}
+  .intro-found .victim-tag{color:var(--amber-soft);}
+  .intro-title{font-size:24px;color:var(--blood);font-variant:small-caps;letter-spacing:1px;margin:2px 0 10px;min-height:1.2em;}
   .intro-body{font-size:16px;line-height:1.65;color:var(--ink);text-align:left;max-width:430px;
     border-left:3px solid rgba(231,185,77,.5);padding:4px 0 4px 14px;margin:0 auto 8px;}
   .intro-body .intro-cta{display:block;margin-top:10px;color:var(--amber-soft);font-style:italic;font-weight:700;}
   .intro-skip-note{font-size:11px;color:var(--ink-dim);font-style:italic;margin-top:10px;}
+  /* ===== case-open animation sequence (only added when motionOK; default state = fully revealed) ===== */
+  .intro-reveal{position:relative;}
+  .intro-flap{position:absolute;inset:-6px -6px 0;z-index:3;display:none;transform-origin:top center;
+    background:linear-gradient(180deg,#dac99b,#c6af72);border:1px solid #a8915a;border-radius:9px;
+    box-shadow:inset 0 -12px 26px rgba(120,96,40,.35),0 6px 16px rgba(0,0,0,.45);
+    align-items:center;justify-content:center;backface-visibility:hidden;}
+  .iflap-tab{position:absolute;top:-13px;left:26px;background:#dac99b;border:1px solid #a8915a;border-bottom:none;
+    border-radius:7px 7px 0 0;padding:3px 16px;font-family:"Courier New",monospace;font-size:11px;letter-spacing:2px;
+    text-transform:uppercase;color:#5b4a22;}
+  .iflap-stamp{transform:rotate(-8deg);border:2px solid rgba(150,32,32,.55);color:rgba(150,32,32,.62);
+    font-family:"Courier New",monospace;font-weight:700;font-size:16px;letter-spacing:3px;padding:5px 14px;border-radius:4px;text-transform:uppercase;}
+  /* folder slides up/in */
+  .intro-card.seq{animation:introSlide .5s cubic-bezier(.2,.7,.3,1) both;}
+  @keyframes introSlide{from{transform:translateY(48px) scale(.96);opacity:0;}to{transform:translateY(0) scale(1);opacity:1;}}
+  /* flap shown closed during the sequence, then swings open */
+  .intro-card.seq .intro-flap{display:flex;transform:rotateX(0deg);transition:transform .55s ease,opacity .35s ease .2s;}
+  .intro-card.seq.s-open .intro-flap{transform:rotateX(-112deg);opacity:0;}
+  /* staged reveals: hidden while sequencing, faded in per stage */
+  .intro-card.seq .intro-victim,.intro-card.seq .intro-found,.intro-card.seq .intro-title,.intro-card.seq .intro-body{opacity:0;}
+  .intro-card.seq.s-victim .intro-victim{opacity:1;transition:opacity .5s ease;}
+  .intro-card.seq.s-found .intro-found{opacity:1;transition:opacity .5s ease;}
+  .intro-card.seq.s-title .intro-title{opacity:1;transition:opacity .3s ease;}
+  .intro-card.seq.s-body .intro-body{opacity:1;transition:opacity .6s ease;}
+  /* scene object: dark silhouette while sequencing, resolves to the art after a beat */
+  .intro-card.seq .intro-object{filter:brightness(0);}
+  .intro-card.seq.s-found .intro-object{filter:brightness(1);transition:filter .9s ease .3s;}
+  /* title typewriter caret */
+  .intro-title.typing::after{content:"";display:inline-block;width:2px;height:1em;background:var(--amber-soft);
+    margin-left:3px;vertical-align:-2px;animation:introCaret .7s steps(1) infinite;}
+  @keyframes introCaret{50%{opacity:0;}}
   /* ---- resolution closer on the payoff (beginning -> middle -> end) ---- */
   .resolution{font-size:14.5px;line-height:1.6;color:var(--ink);text-align:left;background:rgba(231,185,77,.06);
     border-left:3px solid rgba(231,185,77,.5);border-radius:0 8px 8px 0;padding:10px 13px;margin:4px 0 10px;}
@@ -949,14 +984,26 @@
 
   <!-- Case intro card (shown at case start; always skippable; same text stays in the case file) -->
   <div class="modal-bg" id="introModal">
-    <div class="modal intro-card center">
+    <div class="modal intro-card center" id="introCard">
       <button class="x" id="introClose"><img src="assets/ui/icon-close.png" alt="close"/></button>
-      <div class="intro-victim">
-        <img class="intro-portrait img-missing" id="introPortrait" alt=""/>
-        <span class="victim-tag">The Victim</span>
+      <div class="intro-reveal">
+        <!-- closed case-file flap that swings open (CSS 3D) to reveal the stack beneath -->
+        <div class="intro-flap" id="introFlap"><span class="iflap-tab">Case File</span><span class="iflap-stamp">Confidential</span></div>
+        <div class="intro-stack">
+          <div class="intro-evidence">
+            <div class="intro-victim">
+              <img class="intro-portrait img-missing" id="introPortrait" alt=""/>
+              <span class="victim-tag">The Victim</span>
+            </div>
+            <div class="intro-found">
+              <img class="intro-object img-missing" id="introObject" alt=""/>
+              <span class="victim-tag">Found at the scene</span>
+            </div>
+          </div>
+          <h2 class="intro-title" id="introTitle">—</h2>
+          <p class="intro-body" id="introBody"></p>
+        </div>
       </div>
-      <h2 class="intro-title" id="introTitle">—</h2>
-      <p class="intro-body" id="introBody"></p>
       <button class="btn primary" id="introBegin" style="margin-top:6px">Begin Investigation</button>
       <p class="intro-skip-note">Tap anywhere to skip · the full file stays in the case panel</p>
     </div>
@@ -2011,16 +2058,49 @@ function maybeShowIntro(){
   const hm=$("howtoModal"); if(hm && hm.classList.contains("show")){ setTimeout(maybeShowIntro,400); return; }
   showIntro();
 }
+/* ---- case-open animation sequence (folder slides in -> opens -> victim -> object -> title types) ---- */
+let introTimers=[], introAnimating=false;
+function clearIntroTimers(){ while(introTimers.length) clearTimeout(introTimers.pop()); }
+const SEQ_CLASSES=["seq","s-open","s-victim","s-found","s-title","s-body"];
+function introTypeTitle(text){                                    // typewriter, char by char, with a caret
+  const el=$("introTitle"); if(!el) return; el.textContent=""; el.classList.add("typing"); let i=0;
+  (function step(){ el.textContent=text.slice(0,i);
+    if(i++ < text.length){ introTimers.push(setTimeout(step,34)); } else { el.classList.remove("typing"); } })();
+}
+function introRevealAll(){                                        // skip -> jump straight to the fully-revealed card
+  clearIntroTimers(); introAnimating=false;
+  const card=$("introCard"); if(card) card.classList.remove(...SEQ_CLASSES);
+  const t=$("introTitle"); if(t){ t.classList.remove("typing"); if(story) t.textContent=story.title; }
+}
+function introAnimate(){                                          // the full sequence (~3s, then fully readable)
+  const card=$("introCard"); if(!card){ return; }
+  clearIntroTimers(); card.classList.remove(...SEQ_CLASSES);
+  $("introTitle").textContent=""; $("introTitle").classList.remove("typing");
+  void card.offsetWidth; card.classList.add("seq");              // restart the slide-in
+  introAnimating=true; sfx("paper");                              // soft slide sound (only if Sound is on)
+  const T=(ms,fn)=>introTimers.push(setTimeout(fn,ms));
+  T(560, ()=>{ card.classList.add("s-open"); sfx("paper"); });    // folder flap opens
+  T(1080,()=> card.classList.add("s-victim"));                    // victim portrait fades in
+  T(1380,()=> card.classList.add("s-found"));                     // scene-object silhouette -> resolves to art
+  T(1760,()=>{ card.classList.add("s-title"); introTypeTitle(story.title); });   // title types in
+  T(2680,()=> card.classList.add("s-body"));                      // intro sentences fade in
+  T(3120,()=>{ introAnimating=false; });                          // sequence complete
+}
 function showIntro(){ if(!story) return;
-  $("introTitle").textContent=story.title;
   const p=$("introPortrait"); if(p){ p.classList.add("img-missing"); p.removeAttribute("src");
     if(story.victimSlug) loadOptionalImg(p, tAsset('victims','victim-'+story.victimSlug+'.png')); }
+  const ob=$("introObject"); if(ob){ ob.classList.add("img-missing"); ob.removeAttribute("src");   // the found-beside object (NOT "the weapon")
+    if(story.sceneObject) loadOptionalImg(ob, tAsset('weapons','weapon-'+story.sceneObject+'.png')); }
   const arr=story.intro||[]; const body=arr.slice(0,-1).join(" "), cta=arr[arr.length-1]||"";
   $("introBody").innerHTML=`${body} <span class="intro-cta">${cta}</span>`;
+  $("introTitle").textContent=story.title;
   $("introModal").classList.add("show");
   LS.set("introSeen",true);                                       // the player has now read at least one intro
+  if(motionOK()) introAnimate(); else introRevealAll();           // full sequence vs. instant static card
 }
-function hideIntro(){ const m=$("introModal"); if(m) m.classList.remove("show"); }
+function hideIntro(){ clearIntroTimers(); introAnimating=false;
+  const m=$("introModal"); if(m) m.classList.remove("show");
+  const c=$("introCard"); if(c) c.classList.remove(...SEQ_CLASSES); }
 
 function dressStory(){
   const rng=E.makeRNG((C.seed ^ E.hashStr("story"))>>>0);
@@ -2912,7 +2992,8 @@ function sfx(name){ if(!settings.sound) return; if(!audioCtx()) return;
   if(name==="place") _tone(620,0.09,"triangle",0.12);
   else if(name==="thunk"){ _tone(120,0.2,"sine",0.22); _noise(0.08,0.1); }
   else if(name==="buzz"){ _tone(150,0.22,"sawtooth",0.14); _tone(146,0.22,"sawtooth",0.1); }
-  else if(name==="win"){ [523.25,659.25,783.99].forEach((f,i)=>_tone(f,0.22,"sine",0.14,i*0.11)); } }
+  else if(name==="win"){ [523.25,659.25,783.99].forEach((f,i)=>_tone(f,0.22,"sine",0.14,i*0.11)); }
+  else if(name==="paper"){ _noise(0.17,0.05); } }   // soft paper slide for the case-open sequence
 
 /* the big solved-case reveal: flashbulb -> bars slam -> stamp thunk + dust -> confetti (3/3).
    Final state is the CSS resting state, so skip / Motion-off just shows the end immediately. */
@@ -2957,7 +3038,11 @@ function applyCaseButtons(){ const ib=$("introBtn"), sk=$("introSkipBtn"), ct=$(
 if($("introBtn")) $("introBtn").onclick=()=>{ settings.intro=!settings.intro; LS.set("settings",settings); applyCaseButtons(); };
 if($("introSkipBtn")) $("introSkipBtn").onclick=()=>{ settings.introAutoskip=!settings.introAutoskip; LS.set("settings",settings); applyCaseButtons(); };
 if($("caseTextBtn")) $("caseTextBtn").onclick=()=>{ settings.caseText=settings.caseText==="full"?"short":"full"; LS.set("settings",settings); applyCaseButtons(); renderCaseBriefing(); };
-if($("introModal")) $("introModal").onclick=hideIntro;   // tap anywhere (card, backdrop, X, Begin) to skip
+// tap anywhere / X / Begin during the sequence -> jump to the fully-revealed card; once revealed -> close & play
+function introSkipOrClose(e){ if(e) e.stopPropagation(); if(introAnimating) introRevealAll(); else hideIntro(); }
+if($("introModal")) $("introModal").onclick=introSkipOrClose;
+if($("introClose")) $("introClose").onclick=introSkipOrClose;
+if($("introBegin")) $("introBegin").onclick=introSkipOrClose;
 applyCaseButtons();
 
 setupBrand();
