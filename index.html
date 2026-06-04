@@ -558,6 +558,21 @@
   .archive-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto;}
   .arch-row{background:#171a22;border:1px solid var(--line);border-radius:8px;padding:8px 11px;}
   .arch-row b{color:var(--amber-soft);} .arch-meta{display:block;font-size:12px;color:var(--ink-dim);margin-top:2px;}
+  /* personal leaderboard (per-difficulty fastest wins) */
+  .rec-tabs{display:flex;gap:4px;margin:2px 0 8px;flex-wrap:wrap;}
+  .rec-tab{flex:1;min-width:68px;background:#171a22;border:1px solid var(--line);color:var(--ink-dim);
+    font-family:"Courier New",monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:6px 4px;border-radius:7px;cursor:pointer;}
+  .rec-tab.on{background:linear-gradient(180deg,#262b38,#1b1f2a);border-color:var(--amber);color:var(--amber-soft);}
+  .rec-table{display:flex;flex-direction:column;}
+  .rec-row{display:grid;grid-template-columns:20px 58px 1fr auto;gap:8px;align-items:center;padding:6px 6px;border-bottom:1px dashed var(--line);}
+  .rec-row.head{font-family:"Courier New",monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-dim);border-bottom:1px solid var(--line);}
+  .rec-rank{font-family:"Courier New",monospace;color:var(--amber);text-align:center;}
+  .rec-table .rec-row:nth-child(2) .rec-rank{color:#ffd86b;}   /* #1 highlighted */
+  .rec-time{font-family:"Courier New",monospace;font-weight:700;color:var(--ink);}
+  .rec-meta{color:var(--ink-dim);font-size:11px;}
+  .rec-acc{font-family:"Courier New",monospace;color:var(--ink-dim);text-align:right;}
+  .rec-acc.perfect{color:var(--good);}
+  .rec-empty{color:var(--ink-dim);font-style:italic;font-size:12.5px;padding:8px 4px;}
   .muted{color:var(--ink-dim);font-style:italic;font-size:13px;}
   .chain{list-style:none;padding:0;margin:14px 0;text-align:left;}
   .chain li{padding:8px 10px 8px 14px;border-left:2px solid var(--amber);background:rgba(231,185,77,.06);
@@ -1098,6 +1113,14 @@
     <div class="modal">
       <button class="x" id="archiveClose"><img src="assets/ui/icon-close.png" alt="close"/></button>
       <h2 style="text-align:center">Evidence Archive</h2>
+      <div class="sec">Records <span class="req">— fastest wins per difficulty</span></div>
+      <div class="rec-tabs" id="recTabs">
+        <button class="rec-tab" data-tier="easy">Routine</button>
+        <button class="rec-tab" data-tier="medium">Troubling</button>
+        <button class="rec-tab" data-tier="hard">Grim</button>
+        <button class="rec-tab" data-tier="extreme">Cold</button>
+      </div>
+      <div class="rec-table" id="recTable"></div>
       <div class="sec">Trophies <span class="req" id="trophyCount"></span></div>
       <div class="trophies" id="trophyShelf"></div>
       <div class="sec">Solved Cases <span class="req" id="archiveCount"></span></div>
@@ -2813,6 +2836,8 @@ function payoff(grade, won){
     sc.appendChild(buildAccuseTrio(grade,true));
     sc.insertAdjacentHTML("beforeend",`<div class="trio-proof"><span class="trio-proof-label">Proof</span>“${correctProof}”</div>`);
     recordSolved(makeHeadline(k.name), perfect);
+    recordLeaderboard({ tier:C.tier, ms:elapsedMs(), timeStr:totalTime, no:story.caseNo, code:C.code,
+      attempts:guessesUsed+1, acc, perfect:acc===4, date:nowStr() });   // personal best (time incl. penalties)
     setStatus(`Case closed — ${k.name} arrested.`,"good");
   } else {
     setHeadline(failHeadline());
@@ -2874,7 +2899,29 @@ function recordSolved(headline, perfect){
   const trophies=LS.get("trophies",[]);
   if(!trophies.includes(story.trueWeapon)){ trophies.push(story.trueWeapon); LS.set("trophies", trophies); }
 }
+/* personal leaderboard: per-tier fastest WON cases (time incl. penalties), kept to the top 10 */
+function recordLeaderboard(entry){
+  const all=LS.get("leaderboard",{})||{}; const list=(all[entry.tier]||[]).slice();
+  list.push(entry); list.sort((a,b)=>a.ms-b.ms);
+  all[entry.tier]=list.slice(0,10); LS.set("leaderboard",all);
+}
+const REC_TIERS=["easy","medium","hard","extreme"];
+function renderRecords(tier){
+  const tbl=$("recTable"); if(!tbl) return;
+  document.querySelectorAll("#recTabs .rec-tab").forEach(t=>t.classList.toggle("on", t.dataset.tier===tier));
+  const all=LS.get("leaderboard",{})||{}; const list=(all[tier]||[]).slice().sort((a,b)=>a.ms-b.ms);
+  tbl.innerHTML="";
+  if(!list.length){ tbl.innerHTML=`<div class="rec-empty">No ${TIER_FLAVOR[tier]||tier} records yet — win one to set a time.</div>`; return; }
+  tbl.insertAdjacentHTML("beforeend",`<div class="rec-row head"><span></span><span>Time</span><span>Case</span><span>Acc</span></div>`);
+  list.forEach((e,i)=>{ const tries=e.attempts+(e.attempts===1?" try":" tries");
+    tbl.insertAdjacentHTML("beforeend",
+      `<div class="rec-row"><span class="rec-rank">${i+1}</span>`+
+      `<span class="rec-time">${e.timeStr}</span>`+
+      `<span class="rec-meta">No. ${e.no} · ${tries} · ${e.date}</span>`+
+      `<span class="rec-acc${e.perfect?' perfect':''}">${e.acc}/4${e.perfect?' ✓':''}</span></div>`); });
+}
 function openArchive(){
+  renderRecords((C&&C.tier&&REC_TIERS.includes(C.tier))?C.tier:"medium");   // leaderboard, defaulting to the current tier
   const archive=LS.get("archive",[]), trophies=LS.get("trophies",[]);
   const shelf=$("trophyShelf"); shelf.innerHTML="";
   $("trophyCount").textContent=trophies.length?`${trophies.length}`:"";
@@ -2913,6 +2960,7 @@ $("howtoGo").onclick=()=>{ $("howtoModal").classList.remove("show"); LS.set("see
   if(!C) startCase({difficulty:"medium", rand:Math.random()}); };   // guarantee a playable case after the intro
 if(!LS.get("seenHowTo",false)) $("howtoModal").classList.add("show");   // first-time intro
 $("archiveClose").onclick=()=>$("archiveModal").classList.remove("show");
+document.querySelectorAll("#recTabs .rec-tab").forEach(t=>t.onclick=()=>renderRecords(t.dataset.tier));   // leaderboard difficulty filter
 $("winArchive").onclick=openArchive;
 $("evPrev").onclick=()=>{ clueStep--; renderEvCurrent(); };
 $("evNext").onclick=()=>{ clueStep++; renderEvCurrent(); };
