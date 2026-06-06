@@ -1060,6 +1060,31 @@
   body.phone .manor-tab{font-size:calc(13px * var(--ps,1));}
   body.phone .manor-hub .btn{font-size:calc(15px * var(--ps,1));min-height:calc(46px * var(--ps,1));}
   body.phone .manor-toast{font-size:calc(14px * var(--ps,1));}
+
+  /* ===================== DEV / TEST PANEL (left dock; gated) ===================== */
+  .dev-panel{position:fixed;left:0;top:0;height:100vh;height:100dvh;width:210px;z-index:9999;
+    background:rgba(11,13,18,.97);border-right:2px solid #00d0a0;color:#cfe;
+    font-family:"Courier New",monospace;font-size:11px;display:flex;flex-direction:column;
+    box-shadow:4px 0 22px rgba(0,0,0,.6);transition:transform .18s ease;}
+  .dev-panel.dev-off{transform:translateX(-102%);}
+  .dev-head{display:flex;align-items:center;gap:4px;padding:6px 8px;background:#0a3b30;border-bottom:1px solid #00d0a0;flex:none;}
+  .dev-title{flex:1;font-weight:700;letter-spacing:1px;color:#5fffd0;font-size:12px;}
+  .dev-mini{background:#06241d;border:1px solid #0a6;color:#9fffe0;width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:12px;line-height:1;padding:0;}
+  .dev-mini:hover{background:#0a3b30;}
+  .dev-body{flex:1 1 auto;overflow-y:auto;padding:6px;min-height:0;}
+  .dev-panel.dev-collapsed .dev-body,.dev-panel.dev-collapsed .dev-log{display:none;}
+  .dev-readout{background:#06141a;border:1px solid #1a4a44;border-radius:5px;padding:5px 7px;margin-bottom:7px;line-height:1.55;color:#9bc;}
+  .dev-readout b{color:#5fffd0;}
+  .dev-sec{margin-bottom:9px;}
+  .dev-sec-h{color:#6cf;text-transform:uppercase;letter-spacing:1px;font-size:9px;margin:0 0 3px;border-bottom:1px dashed #234;padding-bottom:2px;}
+  .dev-btns{display:flex;flex-direction:column;gap:3px;}
+  .dev-btn{background:#13202a;border:1px solid #2a4a55;color:#bfe;text-align:left;padding:4px 7px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:11px;line-height:1.25;}
+  .dev-btn:hover{background:#1d3340;border-color:#3fd0b0;}
+  .dev-btn.warn{border-color:#a44;color:#fbb;} .dev-btn.warn:hover{background:#3a1414;border-color:#e66;}
+  .dev-seed{display:flex;gap:4px;margin-top:4px;}
+  .dev-seed input{flex:1 1 auto;min-width:0;background:#0a141a;border:1px solid #2a4a55;color:#cfe;border-radius:4px;padding:3px 6px;font-family:inherit;font-size:11px;}
+  .dev-log{flex:none;max-height:90px;overflow-y:auto;border-top:1px solid #144;padding:5px 7px;color:#89a;font-size:10px;line-height:1.5;background:#060f17;}
+  .dev-log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 </style>
 </head>
 <body>
@@ -4371,6 +4396,136 @@ document.addEventListener("visibilitychange",()=>{ const a=$("amb"); if(a) a.cla
 // HOME: the game opens to the manor hub (no auto-started case). First launch plays the Graves opening.
 showManor();
 if(!LS.get("manorIntroSeen",false)) showManorStory(MANOR_OPENING, ()=>LS.set("manorIntroSeen",true), "intro");
+
+/* =====================================================================
+   DEV / TEST PANEL — left-docked, gated, NEVER shown to players by default.
+   Enable with ?dev=1 (persists; ?dev=0 disables) or Ctrl+Shift+D. Operates
+   through the game's REAL functions/state so it exercises the actual paths.
+   This block only exists in the main game (index.html); the demo is untouched.
+   ===================================================================== */
+const DEV_ON=(()=>{ try{ const u=new URLSearchParams(location.search);
+  if(u.get("dev")==="1") LS.set("devPanel",true); if(u.get("dev")==="0") LS.set("devPanel",false);
+  return !!LS.get("devPanel",false); }catch(e){ return false; } })();
+const _LSKEY=k=>"casedoku."+k, _rm=k=>{ try{ localStorage.removeItem(_LSKEY(k)); }catch(e){} };
+let _devLog=[];
+function devLog(m){ _devLog.unshift(m); _devLog=_devLog.slice(0,7); const el=$("devLogArea");
+  if(el) el.innerHTML=_devLog.map(x=>`<div>› ${x}</div>`).join(""); }
+function devCounts(){ let trophies=0,total=0,memN=0;
+  try{ const reg=trophyRegistry(),map=loadTrophyUnlocks(),seals=loadRoomSeals(),pool=reg.filter(t=>t.cat!=="daily");
+    total=pool.length; trophies=pool.filter(t=>isUnlocked(t,map,seals)).length; }catch(e){}
+  try{ memN=Object.keys(LS.get("victimMemorial",{})||{}).length; }catch(e){}
+  const unlocked=MANOR_DATA.filter(r=>!r.locked&&roomUnlocked(r.id)).map(r=>r.name.replace(/^The /,""));
+  return { trophies, total, memN, victims:(THEME.victims||[]).length, seals:manorSeals(),
+    unlocked, cases:(LS.get("archive",[])||[]).length }; }
+function refreshDevReadout(){ const ro=$("devReadout"); if(!ro) return; const c=devCounts(), room=roomById(_manorRoom)||MANOR_DATA[0];
+  ro.innerHTML=`Room <b>${room.name.replace(/^The /,"")}</b> · <b>${Math.round(roomPct(room)*100)}%</b><br>`+
+    `Unlocked: <b>${c.unlocked.join(", ")||"—"}</b><br>`+
+    `Seals <b>${c.seals}</b> · Cases solved <b>${c.cases}</b><br>`+
+    `Trophies <b>${c.trophies}/${c.total}</b> · Memorials <b>${c.memN}/${c.victims}</b>`; }
+function devEcon(msg){ if(manorOpen()) renderManor(); devLog(msg); }
+/* ----- manor ----- */
+function devUnlockNext(){ const pl=MANOR_DATA.filter(r=>!r.locked); let last=-1; pl.forEach((r,i)=>{ if(roomUnlocked(r.id)) last=i; });
+  const next=pl[last+1]; if(!next){ devLog("All rooms unlocked."); return; } unlockRoom(next.id);
+  _manorRoom=next.id; LS.set("manorActiveRoom",next.id); if(!manorOpen()) showManor(); else renderManor();
+  showManorStory(`<div class="ms-kicker">${next.name} unlocked</div>${next.beat}`,null,"beat"); devLog("Unlocked "+next.name); }
+function devLockPrev(){ const pl=MANOR_DATA.filter(r=>!r.locked); let last=0; pl.forEach((r,i)=>{ if(roomUnlocked(r.id)) last=i; });
+  if(last<=0){ devLog("Only the Study is unlocked."); return; } const u=LS.get("manorUnlocked",{})||{}; delete u[pl[last].id]; LS.set("manorUnlocked",u);
+  if(_manorRoom===pl[last].id){ _manorRoom=pl[last-1].id; LS.set("manorActiveRoom",_manorRoom); } if(manorOpen()) renderManor(); devLog("Locked "+pl[last].name); }
+function devRestoreStep(){ const room=roomById(_manorRoom); if(!room||room.locked){ devLog("No restorable room."); return; }
+  const obj=room.objects.find(o=>manorStageOf(room.id,o.id)<o.stages.length-1); if(!obj){ devLog(room.name+" fully restored."); return; }
+  if(!manorOpen()) showManor(); setManorSeals(manorSeals()+1); restoreObject(room.id,obj.id); devLog("Restored +1: "+obj.name); }
+function devRestoreFull(){ const room=roomById(_manorRoom); if(!room||room.locked){ devLog("No restorable room."); return; }
+  if(!manorOpen()) showManor(); let g=0;
+  room.objects.forEach(o=>{ while(manorStageOf(room.id,o.id)<o.stages.length-1 && g++<300){ setManorSeals(manorSeals()+1); restoreObject(room.id,o.id); } });
+  devLog("Restored FULLY: "+room.name); }
+function devResetRoom(){ const room=roomById(_manorRoom); if(!room) return; room.objects.forEach(o=>setManorStage(room.id,o.id,0));
+  if(manorOpen()) renderManor(); devLog("Reset to ruined: "+room.name); }
+function devResetManor(){ _rm("manorObj"); _rm("manorUnlocked"); _rm("manorActiveRoom"); _manorRoom=MANOR_DATA[0].id;
+  if(!manorOpen()) showManor(); else renderManor(); devLog("Reset ALL manor progress."); }
+/* ----- cases / records ----- */
+function devEnsureCase(){ if(!C || solved){ const d=["easy","medium","hard","extreme"][Math.floor(Math.random()*4)]; startCase({difficulty:d, rand:Math.random()}); } }
+function devMarkSolved(perfect){ devEnsureCase(); if(!C||!story){ devLog("No case."); return; }
+  const corM=story.motiveOptions.findIndex(o=>o.correct), prf=story.evidence.findIndex(e=>e.proof);
+  const grade={ weaponRight:!!perfect, motiveRight:!!perfect, evidenceRight:!!perfect,
+    weaponPick: perfect?story.trueWeapon:(story.weaponCandidates.find(s=>s!==story.trueWeapon)||story.trueWeapon),
+    motivePick: perfect?corM:(story.motiveOptions.findIndex(o=>!o.correct)), evPick: perfect?prf:-1 };
+  const acc=1+(grade.weaponRight?1:0)+(grade.motiveRight?1:0)+(grade.evidenceRight?1:0), pf=acc===4;
+  try{ recordSolved(makeHeadline(Skin.sName(THEME,C.killer).name), pf); }catch(e){}
+  try{ recordLeaderboard({tier:C.tier, ms:elapsedMs(), timeStr:fmtTime(elapsedMs()), no:story.caseNo, code:C.code, attempts:1, acc, perfect:pf, date:nowStr()}); }catch(e){}
+  try{ evalTrophiesOnWin(grade); }catch(e){}
+  const s=grantSeals(pf); solved=true; devLog(`Marked solved ${C.code} (${acc}/4) +${s} seal`); showManor(); }
+function devWinCurrent(){ devEnsureCase(); if(!C){ devLog("No case."); return; }
+  for(let i=0;i<cfg.N*cfg.N;i++){ if(i===C.murderCell||given[i]) continue; if(board[i]!==C.solution[i]) place(i,C.solution[i]); }
+  openAccusation(); accuseCulprit=C.killer; accuseWeapon=story.trueWeapon;
+  const m=$("accuseMotive"), ev=$("accuseEvidence");
+  if(m) m.value=String(story.motiveOptions.findIndex(o=>o.correct)); if(ev) ev.value=String(story.evidence.findIndex(e=>e.proof));
+  submitAccusation(); devLog("Auto-won "+C.code+" (4/4)"); }
+function devFailCurrent(){ devEnsureCase(); if(!C){ devLog("No case."); return; } openAccusation();
+  let g=0; while(!solved && g++<6){ accuseCulprit=(C.killer===1?2:1); submitAccusation(); } devLog("Forced fail "+(C?C.code:"")); }
+function devClearCases(){ ["archive","leaderboard","tierWins","dayWins","trophyStats"].forEach(_rm); devLog("Cleared solved cases / records."); }
+/* ----- trophies / memorial ----- */
+function devUnlockTrophies(){ try{ const reg=trophyRegistry(), map=loadTrophyUnlocks();
+    reg.forEach(t=>{ if(t.cat==="daily"||t.cat==="room") return; if(!map[t.id]) map[t.id]={date:nowStr(),no:0,code:"DEV",title:"(dev unlock)"}; });
+    saveTrophyUnlocks(map);
+    const rs=loadRoomSeals(); (THEME.rooms||[]).forEach(rm=>{ rs[rm.slug]={wins:5,gold:true,date:nowStr(),no:0,code:"DEV",title:"(dev)"}; }); LS.set("roomSeals",rs);
+    LS.set("tierWins",{easy:true,medium:true,hard:true,extreme:true});
+    LS.set("trophyStats",{wins:100,perfectWins:5,earlyWins:5,zeroPenWins:10,extrasWins:5,swiftWins:5,flawlessWins:5,cleanWins:5});
+    if($("archiveModal").classList.contains("show")) renderTrophies(); devLog("Unlocked ALL trophies."); }catch(e){ devLog("ERR trophies: "+e.message); } }
+function devUnlockMemorials(){ try{ const mem=LS.get("victimMemorial",{})||{};
+    (THEME.victims||[]).forEach(v=>{ if(!mem[v.slug]) mem[v.slug]={name:v.name,date:nowStr(),no:0,code:"DEV",title:"(dev)",room:"the manor",weapon:((THEME.weapons||[])[0]||{}).slug||"knife"}; });
+    LS.set("victimMemorial",mem); devLog("Unlocked ALL memorials."); }catch(e){ devLog("ERR mem: "+e.message); } }
+function devResetTrophies(){ ["trophyUnlocks","roomSeals","trophyStats","victimMemorial","tierWins","dayWins","trophies"].forEach(_rm); devLog("Reset trophies & memorials."); }
+/* ----- story / flow ----- */
+function devResetSeen(){ ["seenHowTo","manorIntroSeen","introSeen","seenDiscoverHint"].forEach(_rm); devLog("Reset 'seen' flags (intro/how-to/tips)."); }
+function devResetAll(){ try{ Object.keys(localStorage).filter(k=>k.indexOf("casedoku.")===0).forEach(k=>localStorage.removeItem(k)); }catch(e){}
+  location.href=location.pathname+"?dev=1"; }   // true fresh-install + reload (keeps the dev panel)
+/* ----- quick launch / toggles ----- */
+function devStart(diff){ startCase({difficulty:diff, rand:Math.random()}); devLog("Started "+diff+" case "+(C?C.code:"")); }
+function devFillSolution(){ if(!C||solved){ devLog("No active case."); return; }
+  for(let i=0;i<cfg.N*cfg.N;i++){ if(i===C.murderCell||given[i]) continue; if(board[i]!==C.solution[i]) place(i,C.solution[i]); } devLog("Filled solution."); }
+function devPlanted(){ for(let s=1;s<=90;s++){ startCase({difficulty:"extreme",seed:s}); if(story&&story.weaponPlanted){ devLog("Planted-weapon case: "+C.code); return; } } devLog("No planted case found (1–90)."); }
+function devToggleMotion(){ settings.motion=!settings.motion; LS.set("settings",settings); applyMotion(); if(typeof applyJuiceButtons==="function") applyJuiceButtons(); devLog("Motion "+(settings.motion?"ON":"OFF")); }
+function devToggleAppfit(){ const on=document.body.classList.toggle("appfit");
+  if(on){ if(typeof fitBoard==="function") fitBoard(); } else { document.documentElement.style.removeProperty("--cell"); const l=document.querySelector(".layout"); if(l) l.style.removeProperty("height"); }
+  devLog("App-fit layout "+(on?"ON":"OFF")); }
+function devDump(){ const o={}; try{ Object.keys(localStorage).filter(k=>k.indexOf("casedoku.")===0).forEach(k=>{ try{ o[k]=JSON.parse(localStorage.getItem(k)); }catch(e){ o[k]=localStorage.getItem(k); } }); }catch(e){}
+  console.log("%c[Casedoku state]","color:#5fffd0",o); devLog("Dumped state → console ("+Object.keys(o).length+" keys)."); }
+const DEV_GROUPS=[
+ ["Manor progression",[["Unlock next room",devUnlockNext],["Lock previous room",devLockPrev],["Restore +1 step",devRestoreStep],["Restore room FULLY",devRestoreFull],["Reset room → ruined",devResetRoom],["Reset ALL manor",devResetManor,"warn"]]],
+ ["Seals",[["+1 Seal",()=>devEcon((setManorSeals(manorSeals()+1),"+1 seal"))],["+10 Seals",()=>devEcon((setManorSeals(manorSeals()+10),"+10 seals"))],["Seals → 0",()=>devEcon((setManorSeals(0),"seals = 0"))]]],
+ ["Cases / records",[["Mark case solved",()=>devMarkSolved(false)],["Mark solved PERFECT",()=>devMarkSolved(true)],["Win current instantly",devWinCurrent],["Fail current case",devFailCurrent],["Clear solved cases",devClearCases,"warn"]]],
+ ["Trophies / memorial",[["Unlock all trophies",devUnlockTrophies],["Unlock all memorials",devUnlockMemorials],["Reset trophies & memorials",devResetTrophies,"warn"]]],
+ ["Story / flow",[["Replay opening intro",()=>showManorStory(MANOR_OPENING,null,"intro")],["Reset 'seen' flags",devResetSeen],["Go to Manor",()=>showManor()],["Reset EVERYTHING",devResetAll,"warn"]]],
+ ["Quick launch",[["Routine (Easy)",()=>devStart("easy")],["Troubling (Medium)",()=>devStart("medium")],["Grim (Hard)",()=>devStart("hard")],["Cold (Extreme)",()=>devStart("extreme")]]],
+ ["Toggles / diagnostics",[["Fill solution",devFillSolution],["Jump to accusation",()=>{ if(C&&!solved) openAccusation(); else devLog("No active case."); }],["Planted-weapon case",devPlanted],["Motion: toggle",devToggleMotion],["App-fit: toggle",devToggleAppfit],["Dump state → console",devDump]]],
+];
+function buildDevPanel(){ if($("devPanel")) return $("devPanel");
+  const p=document.createElement("div"); p.id="devPanel"; p.className="dev-panel";
+  const head=document.createElement("div"); head.className="dev-head"; head.innerHTML=`<span class="dev-title">🛠 DEV / TEST</span>`;
+  const col=document.createElement("button"); col.className="dev-mini"; col.textContent="▾"; col.title="Collapse";
+  col.onclick=()=>{ const c=p.classList.toggle("dev-collapsed"); col.textContent=c?"▸":"▾"; };
+  const hide=document.createElement("button"); hide.className="dev-mini"; hide.textContent="✕"; hide.title="Hide (Ctrl+Shift+D)";
+  hide.onclick=()=>p.classList.add("dev-off");
+  head.appendChild(col); head.appendChild(hide); p.appendChild(head);
+  const body=document.createElement("div"); body.className="dev-body"; p.appendChild(body);
+  const ro=document.createElement("div"); ro.className="dev-readout"; ro.id="devReadout"; body.appendChild(ro);
+  DEV_GROUPS.forEach(([title,btns])=>{ const sec=document.createElement("div"); sec.className="dev-sec";
+    const h=document.createElement("div"); h.className="dev-sec-h"; h.textContent=title; sec.appendChild(h);
+    const wrap=document.createElement("div"); wrap.className="dev-btns";
+    btns.forEach(([label,fn,cls])=>{ const b=document.createElement("button"); b.className="dev-btn"+(cls?" "+cls:""); b.textContent=label;
+      b.onclick=()=>{ try{ fn(); }catch(e){ devLog("ERR: "+e.message); console.error(e); } refreshDevReadout(); }; wrap.appendChild(b); });
+    sec.appendChild(wrap);
+    if(title==="Quick launch"){ const row=document.createElement("div"); row.className="dev-seed";
+      const inp=document.createElement("input"); inp.id="devSeed"; inp.placeholder="seed / code…";
+      const go=document.createElement("button"); go.className="dev-btn"; go.textContent="Load"; go.style.flex="0 0 auto";
+      go.onclick=()=>{ const v=inp.value.trim(); if(!v) return; try{ $("seedInput").value=v; loadCaseCode(); devLog("Loaded "+v); }catch(e){ try{ startCase({seed:v}); }catch(_){ devLog("Bad seed"); } } refreshDevReadout(); };
+      row.appendChild(inp); row.appendChild(go); sec.appendChild(row); }
+    body.appendChild(sec); });
+  const log=document.createElement("div"); log.className="dev-log"; log.id="devLogArea"; p.appendChild(log);
+  document.body.appendChild(p); refreshDevReadout(); devLog("Dev panel ready."); return p; }
+window.addEventListener("keydown",e=>{ if(e.ctrlKey&&e.shiftKey&&(e.key==="D"||e.key==="d"||e.code==="KeyD")){ e.preventDefault();
+  let p=$("devPanel"); if(!p){ LS.set("devPanel",true); buildDevPanel(); } else p.classList.toggle("dev-off"); } });
+if(DEV_ON) buildDevPanel();
 })();
 </script>
 </body>
