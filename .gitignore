@@ -2,3 +2,8 @@ node_modules/
 *.log
 .DS_Store
 Thumbs.db
+
+# Manor art: keep raw originals + intermediate processed cutouts on disk but OUT of git.
+# (Named cutouts in assets/manor/<room>/ and manifest.json ARE tracked.)
+assets/manor/_inbox/
+assets/manor/_processed/
