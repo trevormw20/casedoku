@@ -959,6 +959,52 @@
   /* phone: lighter — keep at most 7 motes */
   body.phone #amb .amb-dust .mote:nth-child(n+8){display:none;}
 
+  /* ============================ APP-FIT LANDSCAPE ============================
+     Steam Deck / desktop-app / short-landscape windows: fit the WHOLE app inside
+     the viewport height with NO page scroll. Two panes — game on the left (board
+     sized off available HEIGHT by JS, tray + toolbar under it), the case file on
+     the right scrolling INTERNALLY. Triggered by body.appfit (JS: Electron flag,
+     or a short landscape window). Height-driven, so it's robust to DPR. Does NOT
+     touch the normal desktop browser layout or the phone layout. */
+  body.appfit{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;}
+  body.appfit footer{display:none;}
+  body.appfit header.app{width:auto;max-width:none;margin:0;flex:0 0 auto;flex-wrap:nowrap;
+    justify-content:space-between;align-items:center;gap:5px 10px;padding:5px 12px;border-bottom:1px solid var(--line);}
+  body.appfit header.app .brand{min-height:0;flex:0 0 auto;}
+  body.appfit header.app img.logo{height:30px;}
+  body.appfit .brand-text{font-size:18px;}
+  /* controls stay on ONE row; scroll horizontally if the window is too narrow (keeps header height fixed) */
+  body.appfit .top-controls{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;min-width:0;justify-content:flex-end;gap:5px;align-items:center;scrollbar-width:thin;}
+  body.appfit .top-controls>*{flex:0 0 auto;}
+  body.appfit .pill{padding:4px 8px;font-size:12px;min-height:0;}
+  body.appfit .pill-badge{width:16px;height:16px;}
+  body.appfit .top-controls .btn{padding:5px 9px;font-size:12.5px;min-height:0;}
+  body.appfit .demo-badge{font-size:10px;padding:2px 6px;}
+  /* the two-pane row fills the remaining height; only the right pane scrolls */
+  body.appfit{margin:0;}
+  body.appfit .layout{flex:1 1 0;display:grid;grid-template-columns:minmax(0,1fr) clamp(220px,30%,360px);
+    gap:12px;max-width:none;margin:0;padding:8px 12px 10px;min-height:0;overflow:hidden;align-items:stretch;}
+  body.appfit .board-wrap{min-height:0;overflow:hidden;justify-content:flex-start;gap:8px;padding-top:2px;}
+  body.appfit .casefile{height:100%;min-height:0;overflow-y:auto;overflow-x:hidden;margin:0;}
+  body.appfit .top-controls .btn-tx{display:none;}   /* icon-only header buttons -> header stays one row */
+  /* toolbar: ONE row that scrolls horizontally (never wraps to many rows / never steals board height) */
+  body.appfit .toolbar{gap:5px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;justify-content:flex-start;
+    width:100%;padding-bottom:2px;scrollbar-width:thin;}
+  body.appfit .toolbar .btn{padding:5px 8px;font-size:11.5px;min-height:0;white-space:nowrap;flex:0 0 auto;}
+  /* tray: ONE compact row (smaller tokens) that scrolls horizontally if it can't fit */
+  body.appfit .tray{gap:6px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;justify-content:flex-start;padding-top:2px;scrollbar-width:thin;}
+  body.appfit .tray .susp{width:46px;flex:0 0 auto;}
+  body.appfit .tray .susp .disc{width:40px;height:40px;}
+  body.appfit .tray .susp-name{font-size:10px;max-width:46px;}
+  body.appfit .tray-label{font-size:11px;margin:0;}
+  body.appfit .first-tip{display:none;}            /* the first-run tip would eat board height — hidden in appfit */
+  body.appfit .ev-mount{display:none;}            /* keep the stepper in the right pane -> more board height */
+  body.appfit .assistant{margin:0;padding:6px 8px;font-size:12px;}
+  /* every overlay/modal fits within the viewport height and scrolls internally if tall */
+  body.appfit .modal-bg{align-items:flex-start;padding:10px;}
+  body.appfit .modal{max-height:calc(100dvh - 20px);overflow-y:auto;}
+  body.appfit #caseOverlay,body.appfit .co-scroll{max-height:100dvh;}
+
   /* ===================== DEMO BUILD additions ===================== */
   /* small DEMO badge near the logo */
   .demo-badge{display:inline-flex;align-items:center;gap:5px;margin-left:10px;align-self:center;
@@ -2586,6 +2632,7 @@ function startCase(opts){
   setVar("--cell-max", cfg.N<=6 ? "72px" : "62px"); setVar("--ncols", cfg.N);  // CSS derives --cell (mobile fits to width)
   boardEl.style.gridTemplateColumns=`repeat(${cfg.N}, var(--cell))`;
   renderBoard(); renderTray(); renderCase();
+  if(typeof fitBoard==="function") fitBoard();   // appfit: size the board to the new case's grid
   $("diffPill").innerHTML=`<img class="pill-badge" src="../assets/ui/badge-${C.tier}.png" alt=""/>`+
     `<b>${TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label}</b> · ${cfg.N}×${cfg.N}`;
   $("codePill").textContent=`Case No. ${story.caseNo}`;
@@ -3727,17 +3774,44 @@ let _vpRepaired=false;
 function updatePhone(){
   if(!_vpRepaired){ repairViewport(); _vpRepaired=true; }
   document.body.classList.remove("phone","force-phone");   // never enter phone mode in the demo
+  // APP-FIT: the desktop/Steam-Deck app (Electron flag) OR a short landscape window -> fit-to-height layout
+  const appfit = !!window.casedokuDesktop || (window.innerWidth>=window.innerHeight && window.innerHeight<=860);
+  document.body.classList.toggle("appfit", appfit);
   document.documentElement.style.setProperty("--ps","1");
+  document.documentElement.style.overflow = appfit ? "hidden" : "";
   placeCaseFile();                                         // keep the case file in the desktop side panel
+  if(appfit) fitBoard();
+  else { document.documentElement.style.removeProperty("--cell"); const lay=document.querySelector(".layout"); if(lay) lay.style.removeProperty("height"); }
   if(typeof applyAmbient==="function" && C) applyAmbient();
   maybeShowDesktopNotice();
+}
+/* APP-FIT board sizing: make the board as large as fits in the LEFT pane, sized off available HEIGHT
+   (so it's robust to device-pixel-ratio). cell = min(paneWidth, availableHeight) / ncols. */
+function fitBoard(){
+  if(!C || !document.body.classList.contains("appfit")) return;
+  const n=cfg.N, root=document.documentElement;
+  const wrap=document.querySelector(".board-wrap"), layoutEl=document.querySelector(".layout"), boardEl2=$("board");
+  if(!wrap||!layoutEl||!boardEl2) return;
+  const cs=getComputedStyle(wrap), gap=parseFloat(cs.rowGap||cs.gap)||8;
+  const padX=(parseFloat(cs.paddingLeft)||0)+(parseFloat(cs.paddingRight)||0);
+  const padY=(parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0);
+  const kids=[...wrap.children].filter(ch=>ch.offsetParent!==null);   // visible children only
+  let nonBoard=0; for(const ch of kids){ if(ch!==boardEl2) nonBoard+=ch.offsetHeight; }
+  nonBoard += gap*Math.max(0,kids.length-1) + padY;
+  const lcs=getComputedStyle(layoutEl), layoutTop=layoutEl.getBoundingClientRect().top;
+  layoutEl.style.height=(window.innerHeight - layoutTop)+"px";   // fill to the viewport bottom (stretches the right pane; no slack)
+  const paneH=(window.innerHeight - layoutTop) - (parseFloat(lcs.paddingTop)||0) - (parseFloat(lcs.paddingBottom)||0);
+  const availH=paneH - nonBoard - 8;                        // 8 = board border/pad fudge
+  const paneW=wrap.clientWidth - padX - 8;
+  const cell=Math.max(16, Math.floor(Math.min(paneW/n, availH/n)));
+  root.style.setProperty("--cell", cell+"px");
 }
 function maybeShowDesktopNotice(){
   const note=$("desktopNotice"); if(!note) return;
   if(note.dataset.dismissed==="1"){ note.classList.remove("show"); return; }
   const small = (window.innerWidth||9999) < 860;
   let touch=false; try{ touch=matchMedia("(pointer:coarse)").matches; }catch(e){}
-  note.classList.toggle("show", small || touch);
+  note.classList.toggle("show", (small || touch) && !document.body.classList.contains("appfit"));
 }
 if($("desktopNoticeOk")) $("desktopNoticeOk").onclick=()=>{ const n=$("desktopNotice"); n.dataset.dismissed="1"; n.classList.remove("show"); };
 if(caseMQ.addEventListener) caseMQ.addEventListener("change",updatePhone); else caseMQ.addListener(updatePhone);
@@ -3808,7 +3882,7 @@ $("firstTipOk").onclick=()=>{ $("firstTip").hidden=true; LS.set("seenRule",true)
 const evStackMQ = window.matchMedia("(max-width:1040px)");
 function placeEvidence(){
   const ev=$("evBlock"), mount=$("evMount"), home=$("evHome"); if(!ev||!mount||!home) return;
-  if(evStackMQ.matches && $("firstTip").hidden){           // mobile + tip dismissed -> by the board
+  if(evStackMQ.matches && !document.body.classList.contains("appfit") && $("firstTip").hidden){   // mobile + tip dismissed -> by the board (appfit keeps it in the right pane)
     if(ev.parentNode!==mount) mount.appendChild(ev);
     mount.hidden=false; ev.open=true; if($("allEv").open) $("allEv").open=false;
   } else {                                                  // desktop, or tip still up -> case file

@@ -43,6 +43,11 @@ function createWindow() {
 
   Menu.setApplicationMenu(null);                 // no application menu at all
   mainWindow.once("ready-to-show", () => mainWindow.show());
+  // Pin the page zoom to 1 and forbid pinch-zoom so CSS px are predictable. The app-fit layout is
+  // HEIGHT-driven, so it adapts to whatever CSS viewport the Deck's device-scale reports regardless.
+  mainWindow.webContents.on("did-finish-load", () => {
+    try { mainWindow.webContents.setZoomFactor(1); mainWindow.webContents.setVisualZoomLevelLimits(1, 1); } catch (e) {}
+  });
   mainWindow.loadFile(demoIndexPath());
 
   // External links (the demo's CTA buttons use window.open; any target=_blank too) -> default browser.
