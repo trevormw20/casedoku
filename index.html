@@ -1021,6 +1021,8 @@
     background:radial-gradient(125% 85% at 50% 38%, transparent 58%, rgba(6,7,11,.40) 100%);
     box-shadow:inset 0 -40px 55px rgba(0,0,0,.45),inset 0 28px 42px rgba(0,0,0,.34);}
   .manor-floor.study-room .manor-avatar{left:72%;}   /* stand the detective beside the desk, clear of the key props */
+  /* when an iso room-shell background is in use, the shell carries the walls/depth: drop the top-down overlays */
+  .manor-floor.iso-bg::after,.manor-floor.iso-bg::before{display:none;}
   .manor-obj{position:absolute;background:none;border:none;padding:0;cursor:pointer;transform-origin:bottom center;
     display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 6px 8px rgba(0,0,0,.6));transition:transform .14s,filter .14s;}
   .manor-obj img{width:100%;height:auto;display:block;pointer-events:none;}
@@ -3741,7 +3743,7 @@ const MANOR_DATA=[
     {id:"desk",     name:"The Detective's Desk",key:true, pos:{left:34,top:38,width:32,z:3},  stages:MS("study","study_desk",["0","1","2","3"]),
        steps:["The dust-sheet comes away in a grey cloud — beneath it, Graves' desk, scarred but sound.","Beeswax and a soft cloth, and the green leather top glows like a card table again.","The bottom drawer fights you, then surrenders — and a folded slip of paper slides into your hand."],
        reveal:"In a slanting hand, dated the night he disappeared:<br><b>“If you are reading this, I did not simply leave. — A.G.”</b><br>Wembly reads it twice, says nothing, and quietly pockets his handkerchief."},
-    {id:"lamp",     name:"The Banker's Lamp",   pos:{left:56,top:30,width:8,z:4},  stages:MS("study","study_lamp",["0","1","2"]),
+    {id:"lamp",     name:"The Banker's Lamp",   pos:{left:54,top:3,width:9,z:4}, on:"desk",  stages:MS("study","study_lamp",["0","1","2"]),
        steps:["You stand the banker's lamp upright and wipe the green glass shade clean.","A new bulb, a click — and a warm pool of light spills across the desk."]},
     {id:"rug",      name:"The Persian Rug",     pos:{left:28,top:50,width:44,z:1},  stages:MS("study","study_rug",["0","1","2"]),
        steps:["You drag the worn rug into the light and beat the dust from its faded threads.","Cleaned and laid flat, the Persian colours come back like an old memory."]},
@@ -3831,6 +3833,21 @@ if(!roomById(_manorRoom) || !roomUnlocked(_manorRoom)) _manorRoom=MANOR_DATA[0].
 function manorAvatarMarker(){ const a=$("manorAvatar"); if(!a||a.dataset.probed) return; a.dataset.probed="1";
   const probe=new Image(); probe.onload=()=>{ a.style.backgroundImage=`url("assets/ui/avatar-idle.png")`; a.classList.add("has-img"); a.textContent=""; };
   probe.src="assets/ui/avatar-idle.png"; }   // graceful: emoji marker until/unless the avatar art exists
+/* Per-room ISOMETRIC room-shell background. If assets/manor/<roomid>/room-bg.{png,webp,jpg} exists,
+   use it as the restoration backdrop INSTEAD of the top-down board floor; otherwise fall back to the
+   floor JPG. Result is cached per room so we only probe once. */
+const _roomBgCache={};   // roomid -> shell url (string) once found, or false if none exists
+function resolveRoomBg(roomId, cb){
+  if(roomId in _roomBgCache){ cb(_roomBgCache[roomId]); return; }
+  const exts=["png","webp","jpg"], base="assets/manor/"+roomId+"/room-bg."; let i=0;
+  (function tryNext(){
+    if(i>=exts.length){ _roomBgCache[roomId]=false; cb(false); return; }
+    const url=base+exts[i++], img=new Image();
+    img.onload=()=>{ _roomBgCache[roomId]=url; cb(url); };
+    img.onerror=tryNext;
+    img.src=url;
+  })();
+}
 function renderManor(){
   const room=roomById(_manorRoom)||MANOR_DATA[0];
   $("manorRoomName").textContent=room.name;
@@ -3844,14 +3861,22 @@ function renderManor(){
     else b.onclick=()=>manorToast(r.beat||"Locked.");
     nav.appendChild(b); });
   const floor=$("manorFloor"), avatar=$("manorAvatar");
+  // Default to the top-down board floor (fallback); swap to the iso room-shell if one exists.
   floor.style.backgroundImage=`linear-gradient(rgba(8,9,13,.28),rgba(8,9,13,.50)),url("${room.floor}")`;
+  floor.classList.remove("iso-bg");
   floor.classList.toggle("study-room", room.id==="study");   // study-only framing/avatar tweaks (composition pass)
+  resolveRoomBg(room.id, url=>{ if(_manorRoom!==room.id) return;   // ignore if the player switched rooms mid-probe
+    if(url){ floor.style.backgroundImage=`url("${url}")`; floor.classList.add("iso-bg"); }   // iso shell carries the walls -> drop the top-down overlay
+    else floor.classList.remove("iso-bg"); });
   floor.querySelectorAll(".manor-obj").forEach(e=>e.remove());
+  const posById={}; room.objects.forEach(o=>{ if(o.pos) posById[o.id]=o.pos; });   // for surface-grounding lookups
   room.objects.forEach(o=>{
     const st=Math.min(manorStageOf(room.id,o.id), o.stages.length-1), max=o.stages.length-1, full=st>=max;
     const el=document.createElement("button");
     el.className="manor-obj"+(full?" full":"")+(o.key?" key":""); el.dataset.obj=o.id;
-    el.style.left=o.pos.left+"%"; el.style.top=o.pos.top+"%"; el.style.width=o.pos.width+"%";
+    // grounding: if this object sits ON another (o.on), its pos.top is an offset BELOW that surface's top edge
+    const baseTop = (o.on && posById[o.on]) ? posById[o.on].top + o.pos.top : o.pos.top;
+    el.style.left=o.pos.left+"%"; el.style.top=baseTop+"%"; el.style.width=o.pos.width+"%";
     if(o.pos.z!=null) el.style.zIndex=o.pos.z;   // explicit depth order (nearer/lower objects paint over farther/higher; rug beneath the desk cluster)
     el.title=room.locked?room.name:(o.name+(full?" — restored":` — stage ${st}/${max} · 1 seal`));
     el.innerHTML=`<img src="${o.stages[st]}" alt="${o.name}" draggable="false"><span class="manor-obj-tag">${o.name}</span>`+
