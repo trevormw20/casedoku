@@ -1,0 +1,892 @@
+{
+  "about": "Manor restoration art - identification & naming. Stages: s0 = cobwebbed/ruined, higher = cleaner/repaired/polished.",
+  "room_mapping": {
+    "room1": "study",
+    "room2": "entry-hall",
+    "room3": "library",
+    "room4": "trophy-hall"
+  },
+  "pipeline": {
+    "quantizer": "pillow-fallback (pngquant not on PATH)",
+    "flood_fill": "scipy",
+    "images_processed": 88,
+    "total_in": "38.04MB",
+    "total_out": "6.52MB",
+    "cutout_long_edge_px": 256
+  },
+  "counts": {
+    "auto_named_high_confidence": 52,
+    "needs_review": 36,
+    "total": 88
+  },
+  "assignments": [
+    {
+      "source": "Chandelier_slumped_on_floor_202606052303.png",
+      "room": "entry-hall",
+      "object": "entryhall_chandelier",
+      "stage": 0,
+      "final_path": "assets/manor/entry-hall/entryhall_chandelier_s0.png",
+      "confidence": "high",
+      "note": "chandelier slumped/broken on floor (worst)"
+    },
+    {
+      "source": "Chandelier_on_floor_202606052303.png",
+      "room": "entry-hall",
+      "object": "entryhall_chandelier",
+      "stage": 1,
+      "final_path": "assets/manor/entry-hall/entryhall_chandelier_s1.png",
+      "confidence": "high",
+      "note": "chandelier on floor (recovered, not hung)"
+    },
+    {
+      "source": "Chandelier_hanging_high_lit_202606052302.png",
+      "room": "entry-hall",
+      "object": "entryhall_chandelier",
+      "stage": 2,
+      "final_path": "assets/manor/entry-hall/entryhall_chandelier_s2.png",
+      "confidence": "high",
+      "note": "chandelier hung and lit (restored)"
+    },
+    {
+      "source": "Abandoned_grandfather_clock_dust_202606052302.png",
+      "room": "entry-hall",
+      "object": "entryhall_clock",
+      "stage": 0,
+      "final_path": "assets/manor/entry-hall/entryhall_clock_s0.png",
+      "confidence": "high",
+      "note": "grandfather clock, abandoned and dusty"
+    },
+    {
+      "source": "Coat_rack_toppled_on_floor_202606052303.png",
+      "room": "entry-hall",
+      "object": "entryhall_coatrack",
+      "stage": 0,
+      "final_path": "assets/manor/entry-hall/entryhall_coatrack_s0.png",
+      "confidence": "high",
+      "note": "coat rack toppled on floor (worst)"
+    },
+    {
+      "source": "Doors_peeling_paint_sagging_hinge_202606052303.png",
+      "room": "entry-hall",
+      "object": "entryhall_doors",
+      "stage": 0,
+      "final_path": "assets/manor/entry-hall/entryhall_doors_s0.png",
+      "confidence": "high",
+      "note": "double doors peeling paint, sagging hinge (worst)"
+    },
+    {
+      "source": "Doors_mid-restoration_bare_wood_202606052303.png",
+      "room": "entry-hall",
+      "object": "entryhall_doors",
+      "stage": 1,
+      "final_path": "assets/manor/entry-hall/entryhall_doors_s1.png",
+      "confidence": "high",
+      "note": "double doors mid-restoration, bare wood"
+    },
+    {
+      "source": "Double_doors_with_fanlight_202606052303.png",
+      "room": "entry-hall",
+      "object": "entryhall_doors",
+      "stage": 2,
+      "final_path": "assets/manor/entry-hall/entryhall_doors_s2.png",
+      "confidence": "high",
+      "note": "double doors with fanlight, painted (restored)"
+    },
+    {
+      "source": "Marble_floor_section_grey_202606052303.png",
+      "room": "entry-hall",
+      "object": "entryhall_floor",
+      "stage": 0,
+      "final_path": "assets/manor/entry-hall/entryhall_floor_s0.png",
+      "confidence": "high",
+      "note": "marble floor, grey/dirty (worst)"
+    },
+    {
+      "source": "Mirror_draped_in_dust_sheet_202606052303.png",
+      "room": "entry-hall",
+      "object": "entryhall_mirror",
+      "stage": 0,
+      "final_path": "assets/manor/entry-hall/entryhall_mirror_s0.png",
+      "confidence": "high",
+      "note": "hall mirror draped in dust sheet (worst)"
+    },
+    {
+      "source": "Hall_mirror_fogged_hazy_202606052303.png",
+      "room": "entry-hall",
+      "object": "entryhall_mirror",
+      "stage": 1,
+      "final_path": "assets/manor/entry-hall/entryhall_mirror_s1.png",
+      "confidence": "high",
+      "note": "hall mirror fogged/hazy"
+    },
+    {
+      "source": "Gilt-framed_hall_mirror_202606052303.png",
+      "room": "entry-hall",
+      "object": "entryhall_mirror",
+      "stage": 2,
+      "final_path": "assets/manor/entry-hall/entryhall_mirror_s2.png",
+      "confidence": "high",
+      "note": "gilt-framed hall mirror (restored)"
+    },
+    {
+      "source": "Broken_grand_staircase_sagging_l…_202606052302.png",
+      "room": "entry-hall",
+      "object": "entryhall_staircase",
+      "stage": 0,
+      "final_path": "assets/manor/entry-hall/entryhall_staircase_s0.png",
+      "confidence": "high",
+      "note": "grand staircase broken and sagging (worst)"
+    },
+    {
+      "source": "Half-repaired_grand_staircase_202606052302.png",
+      "room": "entry-hall",
+      "object": "entryhall_staircase",
+      "stage": 1,
+      "final_path": "assets/manor/entry-hall/entryhall_staircase_s1.png",
+      "confidence": "high",
+      "note": "grand staircase half-repaired"
+    },
+    {
+      "source": "Battered_umbrella_stand_with_umb…_202606052303.png",
+      "room": "entry-hall",
+      "object": "entryhall_umbrellastand",
+      "stage": 0,
+      "final_path": "assets/manor/entry-hall/entryhall_umbrellastand_s0.png",
+      "confidence": "high",
+      "note": "battered umbrella stand"
+    },
+    {
+      "source": "Brass_umbrella_stand_holding_umb…_202606052303.png",
+      "room": "entry-hall",
+      "object": "entryhall_umbrellastand",
+      "stage": 1,
+      "final_path": "assets/manor/entry-hall/entryhall_umbrellastand_s1.png",
+      "confidence": "high",
+      "note": "brass umbrella stand restored, holding umbrella"
+    },
+    {
+      "source": "Card_catalog_with_missing_drawers_202606052256.png",
+      "room": "library",
+      "object": "library_cardcatalog",
+      "stage": 0,
+      "final_path": "assets/manor/library/library_cardcatalog_s0.png",
+      "confidence": "high",
+      "note": "card catalog with missing drawers (worst)"
+    },
+    {
+      "source": "Card_catalog_unfinished_pale_wood_202606052256.png",
+      "room": "library",
+      "object": "library_cardcatalog",
+      "stage": 1,
+      "final_path": "assets/manor/library/library_cardcatalog_s1.png",
+      "confidence": "high",
+      "note": "card catalog, unfinished pale wood"
+    },
+    {
+      "source": "Oak_card-catalog_cabinet_isolated_202606052256.png",
+      "room": "library",
+      "object": "library_cardcatalog",
+      "stage": 2,
+      "final_path": "assets/manor/library/library_cardcatalog_s2.png",
+      "confidence": "high",
+      "note": "oak card-catalog cabinet, isolated (restored)"
+    },
+    {
+      "source": "Torn_reading_chair_and_ottoman_202606052255.png",
+      "room": "library",
+      "object": "library_chair",
+      "stage": 0,
+      "final_path": "assets/manor/library/library_chair_s0.png",
+      "confidence": "high",
+      "note": "reading chair + ottoman, torn (worst)"
+    },
+    {
+      "source": "Chair_and_ottoman_shabby_202606052255.png",
+      "room": "library",
+      "object": "library_chair",
+      "stage": 1,
+      "final_path": "assets/manor/library/library_chair_s1.png",
+      "confidence": "high",
+      "note": "reading chair + ottoman, shabby"
+    },
+    {
+      "source": "Wingback_chair_with_ottoman_202606052255.png",
+      "room": "library",
+      "object": "library_chair",
+      "stage": 2,
+      "final_path": "assets/manor/library/library_chair_s2.png",
+      "confidence": "high",
+      "note": "wingback chair + ottoman, restored"
+    },
+    {
+      "source": "Fireplace_cold_ash-choked_202606052256.png",
+      "room": "library",
+      "object": "library_fireplace",
+      "stage": 0,
+      "final_path": "assets/manor/library/library_fireplace_s0.png",
+      "confidence": "high",
+      "note": "library fireplace, cold and ash-choked (worst)"
+    },
+    {
+      "source": "Library_fireplace_with_no_fire_202606052256.png",
+      "room": "library",
+      "object": "library_fireplace",
+      "stage": 1,
+      "final_path": "assets/manor/library/library_fireplace_s1.png",
+      "confidence": "high",
+      "note": "marble library fireplace, no fire"
+    },
+    {
+      "source": "Marble_library_fireplace_burning_202606052256.png",
+      "room": "library",
+      "object": "library_fireplace",
+      "stage": 2,
+      "final_path": "assets/manor/library/library_fireplace_s2.png",
+      "confidence": "high",
+      "note": "marble library fireplace, burning (restored)"
+    },
+    {
+      "source": "Globe_bar_closed_rusted_faded_202606052256.png",
+      "room": "library",
+      "object": "library_globebar",
+      "stage": 0,
+      "final_path": "assets/manor/library/library_globebar_s0.png",
+      "confidence": "high",
+      "note": "globe bar closed, rusted and faded (worst)"
+    },
+    {
+      "source": "Globe_bar_open_empty_202606052256.png",
+      "room": "library",
+      "object": "library_globebar",
+      "stage": 1,
+      "final_path": "assets/manor/library/library_globebar_s1.png",
+      "confidence": "high",
+      "note": "globe bar open, empty"
+    },
+    {
+      "source": "Antique_globe_bar_opened_202606052256.png",
+      "room": "library",
+      "object": "library_globebar",
+      "stage": 2,
+      "final_path": "assets/manor/library/library_globebar_s2.png",
+      "confidence": "high",
+      "note": "globe bar open, stocked with bottles (restored)"
+    },
+    {
+      "source": "Rolling_ladder_on_floor_202606052255.png",
+      "room": "library",
+      "object": "library_ladder",
+      "stage": 0,
+      "final_path": "assets/manor/library/library_ladder_s0.png",
+      "confidence": "high",
+      "note": "rolling ladder fallen on floor (worst)"
+    },
+    {
+      "source": "Lamp_leaning_tired_angle_scorched_202606052256.png",
+      "room": "library",
+      "object": "library_lamp",
+      "stage": 0,
+      "final_path": "assets/manor/library/library_lamp_s0.png",
+      "confidence": "high",
+      "note": "floor lamp leaning, scorched shade (worst)"
+    },
+    {
+      "source": "Brass_standing_floor_lamp_lit_202606052256.png",
+      "room": "library",
+      "object": "library_lamp",
+      "stage": 1,
+      "final_path": "assets/manor/library/library_lamp_s1.png",
+      "confidence": "high",
+      "note": "brass standing floor lamp, lit (restored)"
+    },
+    {
+      "source": "Neglected_atlas_stand_and_atlas_202606052256.png",
+      "room": "library",
+      "object": "library_lectern",
+      "stage": 0,
+      "final_path": "assets/manor/library/library_lectern_s0.png",
+      "confidence": "high",
+      "note": "atlas lectern, neglected and dark (worst)"
+    },
+    {
+      "source": "Broken_gallery_rail_marble_bust_202606052256.png",
+      "room": "library",
+      "object": "library_railing",
+      "stage": 0,
+      "final_path": "assets/manor/library/library_railing_s0.png",
+      "confidence": "high",
+      "note": "broken gallery rail + bust on floor (worst)"
+    },
+    {
+      "source": "Rail_and_bust_half-restored_202606052257.png",
+      "room": "library",
+      "object": "library_railing",
+      "stage": 1,
+      "final_path": "assets/manor/library/library_railing_s1.png",
+      "confidence": "high",
+      "note": "gallery rail + bust half-restored"
+    },
+    {
+      "source": "Marble_bust_on_railing_202606052256.png",
+      "room": "library",
+      "object": "library_railing",
+      "stage": 2,
+      "final_path": "assets/manor/library/library_railing_s2.png",
+      "confidence": "high",
+      "note": "marble bust on railing (restored)"
+    },
+    {
+      "source": "Run-down_window_seat_cartoon_202606052256.png",
+      "room": "library",
+      "object": "library_windowseat",
+      "stage": 0,
+      "final_path": "assets/manor/library/library_windowseat_s0.png",
+      "confidence": "high",
+      "note": "window seat, run-down (worst)"
+    },
+    {
+      "source": "Window_seat_bare_wood_202606052256.png",
+      "room": "library",
+      "object": "library_windowseat",
+      "stage": 1,
+      "final_path": "assets/manor/library/library_windowseat_s1.png",
+      "confidence": "high",
+      "note": "window seat, bare wood (mid)"
+    },
+    {
+      "source": "Window_seat_with_rain_202606052257.png",
+      "room": "library",
+      "object": "library_windowseat",
+      "stage": 2,
+      "final_path": "assets/manor/library/library_windowseat_s2.png",
+      "confidence": "high",
+      "note": "window seat with rain/window (restored)"
+    },
+    {
+      "source": "Grimy_filing_cabinet_two_drawers_202606052300.png",
+      "room": "study",
+      "object": "study_cabinet",
+      "stage": 0,
+      "final_path": "assets/manor/study/study_cabinet_s0.png",
+      "confidence": "high",
+      "note": "grimy filing cabinet (worst)"
+    },
+    {
+      "source": "Damaged_leather_chair_202606052300.png",
+      "room": "study",
+      "object": "study_chair",
+      "stage": 0,
+      "final_path": "assets/manor/study/study_chair_s0.png",
+      "confidence": "high",
+      "note": "leather wingback, damaged (worst)"
+    },
+    {
+      "source": "Oxblood_leather_wingback_desk_chair_202606052301.png",
+      "room": "study",
+      "object": "study_chair",
+      "stage": 3,
+      "final_path": "assets/manor/study/study_chair_s3.png",
+      "confidence": "high",
+      "note": "oxblood wingback, fully restored (best)"
+    },
+    {
+      "source": "Desk_draped_in_dust_sheet_202606052300.png",
+      "room": "study",
+      "object": "study_desk",
+      "stage": 0,
+      "final_path": "assets/manor/study/study_desk_s0.png",
+      "confidence": "high",
+      "note": "desk draped in dust sheet (covered)"
+    },
+    {
+      "source": "Detective's_desk_neglected_dusty_202606052301.png",
+      "room": "study",
+      "object": "study_desk",
+      "stage": 1,
+      "final_path": "assets/manor/study/study_desk_s1.png",
+      "confidence": "high",
+      "note": "desk neglected and dusty (uncovered)"
+    },
+    {
+      "source": "Fireplace_with_ash_and_cobweb_202606052300.png",
+      "room": "study",
+      "object": "study_fireplace",
+      "stage": 0,
+      "final_path": "assets/manor/study/study_fireplace_s0.png",
+      "confidence": "high",
+      "note": "fireplace with ash and cobweb (worst)"
+    },
+    {
+      "source": "Banker's_lamp_neglected_and_swit…_202606052300.png",
+      "room": "study",
+      "object": "study_lamp",
+      "stage": 0,
+      "final_path": "assets/manor/study/study_lamp_s0.png",
+      "confidence": "high",
+      "note": "banker's lamp, neglected and switched off"
+    },
+    {
+      "source": "Banker's_lamp_switched_off_202606052300.png",
+      "room": "study",
+      "object": "study_lamp",
+      "stage": 1,
+      "final_path": "assets/manor/study/study_lamp_s1.png",
+      "confidence": "high",
+      "note": "banker's lamp, clean but off"
+    },
+    {
+      "source": "Brass_banker's_lamp_glowing_202606052300.png",
+      "room": "study",
+      "object": "study_lamp",
+      "stage": 2,
+      "final_path": "assets/manor/study/study_lamp_s2.png",
+      "confidence": "high",
+      "note": "banker's lamp, restored and glowing"
+    },
+    {
+      "source": "Worn_rug_clean_faded_fringe_202606052300.png",
+      "room": "study",
+      "object": "study_rug",
+      "stage": 0,
+      "final_path": "assets/manor/study/study_rug_s0.png",
+      "confidence": "high",
+      "note": "worn, faded Persian rug (worst)"
+    },
+    {
+      "source": "Bay_window_boarded_over_202606052300.png",
+      "room": "study",
+      "object": "study_window",
+      "stage": 0,
+      "final_path": "assets/manor/study/study_window_s0.png",
+      "confidence": "high",
+      "note": "bay window boarded over (ruined)"
+    },
+    {
+      "source": "Bay_window_fixture_with_curtains_202606052300.png",
+      "room": "study",
+      "object": "study_window",
+      "stage": 3,
+      "final_path": "assets/manor/study/study_window_s3.png",
+      "confidence": "high",
+      "note": "bay window with curtains (restored)"
+    },
+    {
+      "source": "Display_cases_derelict_dusty_202606052257.png",
+      "room": "trophy-hall",
+      "object": "trophyhall_displaycase",
+      "stage": 0,
+      "final_path": "assets/manor/trophy-hall/trophyhall_displaycase_s0.png",
+      "confidence": "high",
+      "note": "display cases derelict, cracked glass (worst)"
+    },
+    {
+      "source": "Display_cases_with_keepsakes_202606052257.png",
+      "room": "trophy-hall",
+      "object": "trophyhall_displaycase",
+      "stage": 3,
+      "final_path": "assets/manor/trophy-hall/trophyhall_displaycase_s3.png",
+      "confidence": "high",
+      "note": "display cases with keepsakes/trophies (restored)"
+    }
+  ],
+  "needs_review": [
+    {
+      "source": "Grandfather_clock_case_clean_202606052302.png",
+      "room": "entry-hall",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Grandfather_clock_case_clean_202606052302.png",
+      "best_guess": {
+        "object": "entryhall_clock",
+        "stage": 1
+      },
+      "reason": "grandfather clock 'case_clean' - sibling of 'on_white'"
+    },
+    {
+      "source": "Grandfather_clock_on_white_backg…_202606052303.png",
+      "room": "entry-hall",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Grandfather_clock_on_white_backg…_202606052303.png",
+      "best_guess": {
+        "object": "entryhall_clock",
+        "stage": 1
+      },
+      "reason": "grandfather clock 'on_white' - sibling of 'case_clean'"
+    },
+    {
+      "source": "Coat_rack_with_coat_hanging_202606052303.png",
+      "room": "entry-hall",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Coat_rack_with_coat_hanging_202606052303.png",
+      "best_guess": {
+        "object": "entryhall_coatrack",
+        "stage": 1
+      },
+      "reason": "coat rack with coat - sibling of 'overcoat'"
+    },
+    {
+      "source": "Coat_rack_with_overcoat_202606052303.png",
+      "room": "entry-hall",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Coat_rack_with_overcoat_202606052303.png",
+      "best_guess": {
+        "object": "entryhall_coatrack",
+        "stage": 1
+      },
+      "reason": "coat rack with overcoat - sibling of 'coat'"
+    },
+    {
+      "source": "Console_table_with_bare_top_202606052303.png",
+      "room": "entry-hall",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Console_table_with_bare_top_202606052303.png",
+      "best_guess": {
+        "object": "entryhall_console",
+        "stage": 0
+      },
+      "reason": "console table bare top; decoration variants, order unclear"
+    },
+    {
+      "source": "Console_table_with_envelopes_202606052303.png",
+      "room": "entry-hall",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Console_table_with_envelopes_202606052303.png",
+      "best_guess": {
+        "object": "entryhall_console",
+        "stage": 1
+      },
+      "reason": "console table with envelopes; order unclear"
+    },
+    {
+      "source": "Console_table_with_letter_tray_202606052303.png",
+      "room": "entry-hall",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Console_table_with_letter_tray_202606052303.png",
+      "best_guess": {
+        "object": "entryhall_console",
+        "stage": 2
+      },
+      "reason": "console table with letter tray; order unclear"
+    },
+    {
+      "source": "Marble_floor_checkerboard_pattern_202606052303.png",
+      "room": "entry-hall",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Marble_floor_checkerboard_pattern_202606052303.png",
+      "best_guess": {
+        "object": "entryhall_floor",
+        "stage": 1
+      },
+      "reason": "clean checkerboard marble floor - sibling tile"
+    },
+    {
+      "source": "Object_on_checkerboard_floor_202606052303.png",
+      "room": "entry-hall",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Object_on_checkerboard_floor_202606052303.png",
+      "best_guess": {
+        "object": "entryhall_floor",
+        "stage": 1
+      },
+      "reason": "checkerboard floor tile - sibling of the clean floor"
+    },
+    {
+      "source": "Manor_staircase_on_white_background_202606052302.webp",
+      "room": "entry-hall",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Manor_staircase_on_white_background_202606052302.webp",
+      "best_guess": {
+        "object": "entryhall_staircase",
+        "stage": null
+      },
+      "reason": "RESTORED manor staircase (red carpet) - pipeline mis-classified it as a background (source name contains 'background'), so output is a 1024px non-transparent webp, not a 256 cutout. Re-run after renaming the source to drop 'background'.",
+      "pipeline_issue": "mis-routed to background webp (source filename contains 'background')"
+    },
+    {
+      "source": "Bookshelves_packed_with_books_202606052253.png",
+      "room": "library",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Bookshelves_packed_with_books_202606052253.png",
+      "best_guess": {
+        "object": "library_bookshelf",
+        "stage": 0
+      },
+      "reason": "bookshelf 'packed' - one of four near-identical shelves"
+    },
+    {
+      "source": "Empty_library_shelves_with_books_202606052253.png",
+      "room": "library",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Empty_library_shelves_with_books_202606052253.png",
+      "best_guess": {
+        "object": "library_bookshelf",
+        "stage": 1
+      },
+      "reason": "'empty_library_shelves_with_books' - ambiguous of four"
+    },
+    {
+      "source": "Library_shelves_with_books_202606052253 (1).png",
+      "room": "library",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Library_shelves_with_books_202606052253 (1).png",
+      "best_guess": {
+        "object": "library_bookshelf",
+        "stage": 2
+      },
+      "reason": "library shelves with books - near-duplicate sibling"
+    },
+    {
+      "source": "Library_shelves_with_books_202606052253.png",
+      "room": "library",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Library_shelves_with_books_202606052253.png",
+      "best_guess": {
+        "object": "library_bookshelf",
+        "stage": 2
+      },
+      "reason": "library shelves with books - near-duplicate sibling"
+    },
+    {
+      "source": "Library_ladder_on_brass_rail_202606052255.png",
+      "room": "library",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Library_ladder_on_brass_rail_202606052255.png",
+      "best_guess": {
+        "object": "library_ladder",
+        "stage": 1
+      },
+      "reason": "ladder on brass rail; vs the two 'repaired' siblings"
+    },
+    {
+      "source": "Rolling_ladder_repaired_plain_202606052255 (1).png",
+      "room": "library",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Rolling_ladder_repaired_plain_202606052255 (1).png",
+      "best_guess": {
+        "object": "library_ladder",
+        "stage": 2
+      },
+      "reason": "rolling ladder 'repaired_plain' - sibling"
+    },
+    {
+      "source": "Rolling_ladder_repaired_plain_202606052255.png",
+      "room": "library",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Rolling_ladder_repaired_plain_202606052255.png",
+      "best_guess": {
+        "object": "library_ladder",
+        "stage": 2
+      },
+      "reason": "rolling ladder 'repaired_plain' - sibling"
+    },
+    {
+      "source": "Reading_lamp_on_white_background_202606052256.webp",
+      "room": "library",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Reading_lamp_on_white_background_202606052256.webp",
+      "best_guess": {
+        "object": "library_lamp",
+        "stage": null
+      },
+      "reason": "RESTORED reading lamp - same 'white background' mis-classification; output is a 1024px webp, not a cutout. Re-run after renaming.",
+      "pipeline_issue": "mis-routed to background webp (source filename contains 'background')"
+    },
+    {
+      "source": "Atlas_closed_on_lectern_202606052256.png",
+      "room": "library",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Atlas_closed_on_lectern_202606052256.png",
+      "best_guess": {
+        "object": "library_lectern",
+        "stage": 1
+      },
+      "reason": "atlas closed on lectern - sibling of wooden lectern"
+    },
+    {
+      "source": "Wooden_lectern_holding_atlas_202606052256.png",
+      "room": "library",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Wooden_lectern_holding_atlas_202606052256.png",
+      "best_guess": {
+        "object": "library_lectern",
+        "stage": 2
+      },
+      "reason": "wooden lectern holding atlas - sibling of 'atlas_closed'"
+    },
+    {
+      "source": "Filing_cabinet_with_closed_drawers_202606052300.png",
+      "room": "study",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Filing_cabinet_with_closed_drawers_202606052300.png",
+      "best_guess": {
+        "object": "study_cabinet",
+        "stage": 1
+      },
+      "reason": "filing cabinet closed drawers; s1 vs 'isolated' unclear"
+    },
+    {
+      "source": "Office_filing_cabinet_isolated_o…_202606052300.png",
+      "room": "study",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Office_filing_cabinet_isolated_o…_202606052300.png",
+      "best_guess": {
+        "object": "study_cabinet",
+        "stage": 2
+      },
+      "reason": "'isolated' filing cabinet; s2 vs 'closed' unclear"
+    },
+    {
+      "source": "Leather_chair_covered_in_dust_202606052300.png",
+      "room": "study",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Leather_chair_covered_in_dust_202606052300.png",
+      "best_guess": {
+        "object": "study_chair",
+        "stage": 1
+      },
+      "reason": "chair covered in dust; damaged-vs-dusty order unclear"
+    },
+    {
+      "source": "Leather_chair_repaired_unfinished_202606052300.png",
+      "room": "study",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Leather_chair_repaired_unfinished_202606052300.png",
+      "best_guess": {
+        "object": "study_chair",
+        "stage": 2
+      },
+      "reason": "leather chair 'repaired_unfinished' - sibling of the other"
+    },
+    {
+      "source": "Leather_chair_repaired_unfinished_202606052301.png",
+      "room": "study",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Leather_chair_repaired_unfinished_202606052301.png",
+      "best_guess": {
+        "object": "study_chair",
+        "stage": 2
+      },
+      "reason": "leather chair 'repaired_unfinished' - sibling of the other"
+    },
+    {
+      "source": "Detective's_desk_repaired_clean_202606052301.png",
+      "room": "study",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Detective's_desk_repaired_clean_202606052301.png",
+      "best_guess": {
+        "object": "study_desk",
+        "stage": 2
+      },
+      "reason": "repaired-clean desk; near-duplicate of the 'isolated' desk"
+    },
+    {
+      "source": "Victorian_detective_desk_isolated_202606052301.png",
+      "room": "study",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Victorian_detective_desk_isolated_202606052301.png",
+      "best_guess": {
+        "object": "study_desk",
+        "stage": 2
+      },
+      "reason": "'isolated' clean desk; near-duplicate of repaired-clean"
+    },
+    {
+      "source": "Fireplace_half-cleaned_isolated_…_202606052300.png",
+      "room": "study",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Fireplace_half-cleaned_isolated_…_202606052300.png",
+      "best_guess": {
+        "object": "study_fireplace",
+        "stage": 1
+      },
+      "reason": "fireplace 'half-cleaned'; mid-stage ordering unclear"
+    },
+    {
+      "source": "Empty_fireplace_with_brass_tools_202606052300.png",
+      "room": "study",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Empty_fireplace_with_brass_tools_202606052300.png",
+      "best_guess": {
+        "object": "study_fireplace",
+        "stage": 2
+      },
+      "reason": "empty fireplace with brass tools; ordering unclear"
+    },
+    {
+      "source": "make_it_larger_bricks_202606052300.png",
+      "room": "study",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/make_it_larger_bricks_202606052300.png",
+      "best_guess": {
+        "object": "study_fireplace",
+        "stage": 3
+      },
+      "reason": "fireplace with fire; junk source name 'make_it_larger_bricks'"
+    },
+    {
+      "source": "Rectangular_Persian_rug_202606052300 (1).png",
+      "room": "study",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Rectangular_Persian_rug_202606052300 (1).png",
+      "best_guess": {
+        "object": "study_rug",
+        "stage": 1
+      },
+      "reason": "Persian rug - near-duplicate sibling"
+    },
+    {
+      "source": "Rectangular_Persian_rug_202606052300.png",
+      "room": "study",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Rectangular_Persian_rug_202606052300.png",
+      "best_guess": {
+        "object": "study_rug",
+        "stage": 1
+      },
+      "reason": "Persian rug - near-duplicate sibling"
+    },
+    {
+      "source": "Damaged_bay_window_fixture_202606052300.png",
+      "room": "study",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Damaged_bay_window_fixture_202606052300.png",
+      "best_guess": {
+        "object": "study_window",
+        "stage": 1
+      },
+      "reason": "damaged window; order vs the rain variant unclear"
+    },
+    {
+      "source": "Bay_window_with_rain_droplets_202606052300.png",
+      "room": "study",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Bay_window_with_rain_droplets_202606052300.png",
+      "best_guess": {
+        "object": "study_window",
+        "stage": 2
+      },
+      "reason": "rain-droplet window; order vs 'damaged' unclear"
+    },
+    {
+      "source": "Three_display_cases_empty_202606052257.png",
+      "room": "trophy-hall",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Three_display_cases_empty_202606052257.png",
+      "best_guess": {
+        "object": "trophyhall_displaycase",
+        "stage": 1
+      },
+      "reason": "empty display cases, clean glass - sibling of velvet"
+    },
+    {
+      "source": "Three_empty_display_cases_202606052257.png",
+      "room": "trophy-hall",
+      "confidence": "needs_review",
+      "review_path": "assets/manor/_review/Three_empty_display_cases_202606052257.png",
+      "best_guess": {
+        "object": "trophyhall_displaycase",
+        "stage": 2
+      },
+      "reason": "empty cases with blue velvet - sibling of clean"
+    }
+  ]
+}
