@@ -46,8 +46,10 @@
     background-size:cover;background-position:center;}
   @media (max-width:700px){body::before{background-image:linear-gradient(rgba(8,9,13,.82),rgba(8,9,13,.94)),url("../assets/ui/bg-mobile.jpg");}}
 
-  header.app{display:flex;align-items:center;justify-content:space-between;gap:14px;
-    flex-wrap:wrap;max-width:1240px;margin:0 auto 16px;}
+  /* hug the content and center it (capped to the layout's max width) so the logo and the controls
+     sit together over the content with a sensible gap — no space-between dead zone on wide screens */
+  header.app{display:flex;align-items:center;gap:12px 16px;
+    flex-wrap:wrap;justify-content:center;width:fit-content;max-width:1240px;margin:0 auto 16px;}
   .brand{display:flex;align-items:center;min-height:56px;}
   header.app img.logo{height:62px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));}
   .brand-text{display:flex;flex-direction:column;line-height:1;font-family:Georgia,serif;
@@ -134,20 +136,21 @@
      its size can't obscure the suspect; the weapon stays above but cornered. */
   .cell-object{position:absolute;bottom:1px;left:1px;width:66%;height:66%;max-width:44px;max-height:44px;z-index:1;
     object-fit:contain;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));}
-  .cell-weapon{position:absolute;top:1px;right:1px;width:66%;height:66%;max-width:44px;max-height:44px;z-index:6;
-    object-fit:contain;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7));}
-  .cell-victim{position:absolute;bottom:1px;right:1px;width:50%;height:50%;max-width:30px;max-height:30px;z-index:5;
-    padding:1px;border-radius:50%;background:rgba(11,13,18,.72);box-shadow:0 1px 3px rgba(0,0,0,.75);
-    object-fit:cover;object-position:center top;pointer-events:none;filter:grayscale(.25);}
+  .cell-weapon{position:absolute;top:1px;right:1px;width:52%;height:52%;max-width:34px;max-height:34px;z-index:6;
+    object-fit:contain;pointer-events:none;filter:drop-shadow(0 0 1px rgba(0,0,0,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.6));}
+  /* victim DOMINATES the scene cell so it reads clearly as "this square is taken (by the body)" */
+  .cell-victim{position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);width:74%;height:74%;max-width:45px;max-height:45px;z-index:5;
+    padding:1px;border-radius:50%;background:rgba(11,13,18,.6);box-shadow:0 1px 4px rgba(0,0,0,.8);
+    object-fit:cover;object-position:center top;pointer-events:none;filter:grayscale(.25);transition:opacity .4s,filter .4s;}
   /* object ALWAYS visible: a decent floor landmark when the cell is empty; once a suspect token
      occupies the cell it becomes a small always-on-top CORNER BADGE (top-left, dark chip, z above
      the token) so object-anchored sighting clues stay verifiable. Clean swap via a quick size fade. */
   .cell-object{transition:width .15s ease,height .15s ease,background .15s ease;}
   .cell-object.badge{top:1px;left:1px;bottom:auto;width:40%;height:40%;max-width:25px;max-height:25px;
-    z-index:7;padding:2px;border-radius:6px;background:rgba(11,13,18,.82);
-    box-shadow:0 1px 3px rgba(0,0,0,.7),inset 0 0 0 1px rgba(231,185,77,.4);}
-  /* scene weapon: gains a dark chip backing while a token sits under it, so it stays legible */
-  .cell-weapon.chip{background:rgba(11,13,18,.72);border-radius:6px;padding:1px;}
+    z-index:7;padding:2px;border-radius:6px;background:rgba(11,13,18,.42);
+    box-shadow:0 1px 2px rgba(0,0,0,.5),inset 0 0 0 1px rgba(231,185,77,.4);}
+  /* scene weapon: clean transparent cutout (drop-shadow only) — no dark backing box, even when covered */
+  .cell-weapon.chip{background:none;}
   /* ---- suspect token: colored disc + per-case ring + portrait/letter ---- */
   .token{position:relative;width:82%;height:82%;border-radius:50%;z-index:2;  /* above the room object (z1), below scene weapon/victim */
     display:flex;align-items:center;justify-content:center;
@@ -179,16 +182,22 @@
   /* selected suspect lights up: every matching token gets a bright full-colour ring + glow,
      a strong jump from the dim default so it's obvious even at mobile token size */
   .cell.match{z-index:3;}
+  /* matching placed suspects: a GENTLE breathing pulse of the lit ring/glow while selected.
+     The declared box-shadow below is the resting/static lit ring — shown as-is when Motion is off
+     (body.no-motion / reduced-motion disable the animation), so it degrades to a solid lit ring. */
   .cell.match .token{box-shadow:0 0 0 calc(var(--ring-w) + 2px) var(--ring,#fff),
     0 0 18px 5px var(--ring,#fff), 0 0 0 6px color-mix(in srgb, var(--ring,#fff) 48%, transparent), 0 2px 4px rgba(0,0,0,.55);
-    filter:brightness(1.06);}
+    filter:brightness(1.06);animation:matchPulse 1.8s ease-in-out infinite;}
+  @keyframes matchPulse{
+    0%,100%{box-shadow:0 0 0 calc(var(--ring-w) + 2px) var(--ring,#fff), 0 0 12px 3px var(--ring,#fff), 0 0 0 5px color-mix(in srgb, var(--ring,#fff) 40%, transparent), 0 2px 4px rgba(0,0,0,.55);}
+    50%{box-shadow:0 0 0 calc(var(--ring-w) + 2px) var(--ring,#fff), 0 0 24px 7px var(--ring,#fff), 0 0 0 7px color-mix(in srgb, var(--ring,#fff) 58%, transparent), 0 2px 4px rgba(0,0,0,.55);}}
   /* conflict: red ring layered OUTSIDE the colour ring so it never clashes with it */
   .token.bad{outline:2.5px solid var(--bad);outline-offset:2px;}
 
   /* tray uses the SAME token disc+ring so the picker matches the board; name above */
   .tray{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:100%;padding-top:4px;}
   .susp{display:flex;flex-direction:column;align-items:center;gap:4px;width:62px;cursor:pointer;
-    transition:transform .1s;}
+    transition:transform .16s ease;}   /* smooth lift up/down on select */
   .susp:hover{transform:translateY(-3px);}
   .susp-name{font-size:11px;font-weight:700;color:var(--ink);text-align:center;line-height:1;
     max-width:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -296,14 +305,122 @@
   .pw-label{font-family:"Courier New",monospace;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);margin-bottom:6px;}
   .pw-hint{text-transform:none;letter-spacing:0;font-style:italic;color:var(--ink-dim);font-size:11px;}
   .possible-weapons{display:flex;gap:8px;flex-wrap:wrap;}
-  .wcand{display:flex;align-items:center;gap:6px;background:#171a22;border:1px solid var(--line);border-radius:9px;
-    padding:6px 9px;cursor:pointer;color:var(--ink);font-family:inherit;font-size:13px;transition:.12s;}
-  .wcand .wicon{width:24px;height:24px;}
+  .wcand{position:relative;display:flex;align-items:center;gap:6px;background:#171a22;border:1px solid var(--line);border-radius:9px;
+    padding:6px 9px;cursor:pointer;color:var(--ink);font-family:inherit;font-size:13px;
+    transition:border-color .15s,box-shadow .15s,opacity .15s,filter .15s,background .15s;}
+  .wcand-ico{position:relative;display:inline-flex;border-radius:4px;overflow:hidden;}
+  .wcand .wicon{width:24px;height:24px;display:block;}
   .wcand-name{font-weight:700;}
-  .wcand-mark{font-family:"Courier New",monospace;font-size:8.5px;letter-spacing:1px;text-transform:uppercase;padding:1px 5px;border-radius:4px;}
-  .wcand.mark-possible{border-color:rgba(231,185,77,.5);} .wcand.mark-possible .wcand-mark{background:rgba(231,185,77,.18);color:var(--amber-soft);}
-  .wcand.mark-doubtful{border-color:rgba(225,150,40,.65);} .wcand.mark-doubtful .wcand-mark{background:rgba(225,150,40,.22);color:#e6a04a;}
-  .wcand.mark-cleared{opacity:.5;filter:grayscale(.6);} .wcand.mark-cleared .wcand-name{text-decoration:line-through;} .wcand.mark-cleared .wcand-mark{background:rgba(120,120,120,.22);color:#9aa0ae;}
+  .wcand-mark{font-family:"Courier New",monospace;font-size:8.5px;letter-spacing:1px;text-transform:uppercase;padding:1px 5px;border-radius:4px;display:none;}
+  /* magnifier glint sweep — plays ONCE when Suspected is freshly marked (.just-set), motion-gated */
+  .wlens{position:absolute;inset:0;pointer-events:none;opacity:0;
+    background:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.6) 50%,transparent 62%);transform:translateX(-120%);}
+  .wcand.st-suspected.just-set .wlens{animation:wlensSweep .7s ease-out;}
+  @keyframes wlensSweep{0%{opacity:0;transform:translateX(-120%);}18%{opacity:.85;}100%{opacity:0;transform:translateX(130%);}}
+  /* diagonal CLEARED / CONFIRMED stamp; stamp-in only on a fresh mark (.just-set), motion-gated */
+  .wstamp{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-13deg);
+    font-family:"Courier New",monospace;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;
+    padding:2px 8px;border:2px solid;border-radius:4px;pointer-events:none;white-space:nowrap;display:none;}
+  /* shared mark visuals across weapon chips (.wcand) AND motive cards (.mcand) */
+  :is(.wcand,.mcand).just-set .wstamp{animation:wstampIn .34s cubic-bezier(.2,1.5,.4,1);}
+  @keyframes wstampIn{0%{transform:translate(-50%,-50%) rotate(-13deg) scale(2.4);opacity:0;}55%{opacity:1;}100%{transform:translate(-50%,-50%) rotate(-13deg) scale(1);opacity:1;}}
+  /* SUSPECTED — red outline + tag */
+  :is(.wcand,.mcand).st-suspected .wcand-ico{outline:2px solid rgba(220,70,70,.85);outline-offset:1px;}
+  :is(.wcand,.mcand).st-suspected .wcand-mark{display:inline-block;background:rgba(220,70,70,.18);color:#e88a8a;}
+  .wcand.st-suspected{border-color:rgba(220,70,70,.7);}
+  /* CLEARED — grey + diagonal stamp */
+  :is(.wcand,.mcand).st-cleared .wcand-name{text-decoration:line-through;text-decoration-color:rgba(170,170,180,.6);}
+  :is(.wcand,.mcand).st-cleared .wstamp{display:block;color:rgba(195,195,205,.95);border-color:rgba(175,175,185,.8);background:rgba(18,20,26,.6);}
+  .wcand.st-cleared{opacity:.55;filter:grayscale(.7);}
+  /* CONFIRMED — gold outline + stamp + warm glow */
+  :is(.wcand,.mcand).st-confirmed .wcand-ico{outline:2px solid var(--amber);outline-offset:1px;}
+  :is(.wcand,.mcand).st-confirmed .wstamp{display:block;font-size:9.5px;color:var(--amber-soft);border-color:var(--amber);background:rgba(231,185,77,.1);}
+  .wcand.st-confirmed{border-color:var(--amber);background:#221d10;box-shadow:0 0 0 1px var(--amber),0 0 14px rgba(231,185,77,.35);}
+
+  /* ===== POSSIBLE MOTIVES — aged index cards that flip face-up on a MOTIVE clue, then mark like weapons ===== */
+  .possible-motives-sec{margin-top:11px;}
+  .possible-motives{display:flex;gap:9px;flex-wrap:wrap;}
+  .mcand{position:relative;width:108px;height:66px;padding:0;border:none;background:none;cursor:pointer;
+    perspective:760px;transform:rotate(var(--jit,0deg));font-family:inherit;}
+  .mcard-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .01s;}
+  .mcand.flipped .mcard-inner{transform:rotateY(180deg);}
+  .mcand.flipped.just-flip .mcard-inner{animation:mflipIn .55s cubic-bezier(.3,.7,.3,1);}
+  @keyframes mflipIn{from{transform:rotateY(0deg);}to{transform:rotateY(180deg);}}
+  .mface{position:absolute;inset:0;backface-visibility:hidden;border-radius:7px;box-shadow:0 3px 8px rgba(0,0,0,.45);display:flex;overflow:hidden;}
+  .mback{background:linear-gradient(160deg,#2a2d36,#1b1d24);border:1px solid var(--line);flex-direction:column;align-items:center;justify-content:center;gap:3px;}
+  .mback-q{font-family:Georgia,serif;font-weight:bold;font-size:22px;color:var(--ink-dim);line-height:1;}
+  .mback-conf{font-family:"Courier New",monospace;font-size:7.5px;letter-spacing:1.5px;text-transform:uppercase;
+    color:rgba(193,39,45,.75);border:1px solid rgba(193,39,45,.5);padding:1px 5px;border-radius:3px;transform:rotate(-5deg);}
+  .mfront{transform:rotateY(180deg);background:linear-gradient(165deg,#efe4c6,#dccca0);color:#2a2418;
+    border:1px solid #b8a268;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:6px 9px;}
+  .mglyph{display:inline-flex;color:#3a3020;}
+  .mglyph .gsvg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round;}
+  .mglyph .gsvg.gfill *{fill:currentColor;stroke:none;}
+  .mglyph .gsvg .gfilldot{fill:currentColor;stroke:none;}
+  .mcard-name{font-family:"Courier New",monospace;font-weight:700;font-size:10.5px;line-height:1.15;letter-spacing:.3px;color:#2a2418;text-transform:uppercase;}
+  .mcand .wcand-mark{position:absolute;top:4px;right:5px;}
+  .mcand .wstamp{font-size:10px;}
+  .mcand.st-cleared{filter:grayscale(.5);opacity:.78;}
+  .mcand.st-suspected .mfront{box-shadow:inset 0 0 0 2px rgba(200,55,55,.65);}
+  .mcand.st-confirmed .mfront{box-shadow:inset 0 0 0 2px var(--amber),0 0 12px rgba(231,185,77,.4);}
+
+  /* ===== payoff accusation trio: culprit + weapon + motive pinned side by side, proof beneath ===== */
+  .accuse-trio{display:flex;gap:12px;justify-content:center;align-items:flex-start;margin:8px 0 4px;flex-wrap:wrap;}
+  .trio-cell{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:98px;text-align:center;}
+  /* payoff sequence: cells hidden under .seq, revealed one at a time with a per-role entrance (motion-gated) */
+  .accuse-trio.seq .trio-cell{opacity:0;}
+  .accuse-trio.seq .trio-cell.in{opacity:1;}
+  .accuse-trio.seq .trio-cell.tc-culprit.in{animation:tcFade .42s ease;}
+  .accuse-trio.seq .trio-cell.tc-weapon.in{animation:tcSlide .45s cubic-bezier(.2,.8,.3,1);}
+  .accuse-trio.seq .trio-cell.tc-motive.in{animation:tcFlip .5s ease;}
+  @keyframes tcFade{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  @keyframes tcSlide{from{opacity:0;transform:translateX(46px);}to{opacity:1;transform:none;}}
+  @keyframes tcFlip{from{opacity:0;transform:perspective(520px) rotateY(86deg);}to{opacity:1;transform:perspective(520px) rotateY(0);}}
+  .trio-art{width:62px;height:62px;display:flex;align-items:center;justify-content:center;background:rgba(10,12,18,.5);border:1px solid var(--line);border-radius:10px;}
+  .trio-art .trio-token{width:50px;height:50px;}
+  .trio-weapon{width:44px;height:44px;object-fit:contain;}
+  .trio-motive{color:var(--amber-soft);display:inline-flex;}
+  .trio-motive .gsvg{width:36px;height:36px;fill:none;stroke:currentColor;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round;}
+  .trio-motive .gsvg.gfill *{fill:currentColor;stroke:none;} .trio-motive .gsvg .gfilldot{fill:currentColor;stroke:none;}
+  .trio-label{font-family:"Courier New",monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-dim);}
+  .trio-cell.right .trio-label{color:var(--good);} .trio-cell.wrong .trio-label{color:var(--bad);}
+  .trio-val{font-size:12.5px;color:var(--ink);line-height:1.2;}
+  .trio-val .trio-actual{display:block;color:var(--amber-soft);font-size:11px;font-style:italic;}
+  .trio-proof{text-align:center;font-size:13px;font-style:italic;color:var(--ink);margin:4px auto 4px;max-width:430px;line-height:1.45;}
+  .trio-proof b{font-style:normal;}
+  .trio-proof-label{display:block;font-family:"Courier New",monospace;font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);font-style:normal;margin-bottom:2px;}
+  /* ---- themed payoff stamps (red distressed ink; CSS only; slam in then rest) ---- */
+  .trio-art{position:relative;} .trio-proof{position:relative;} .accuse-suspect{position:relative;}
+  .payoff-stamp{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(var(--st-rot,-11deg));scale:1;
+    font-family:"Courier New",monospace;font-weight:700;font-size:8px;letter-spacing:.5px;text-transform:uppercase;
+    color:#ea5450;border:2px solid rgba(205,48,48,.85);border-radius:4px;padding:2px 4px;white-space:nowrap;
+    background:rgba(30,12,12,.22);text-shadow:0 0 1px rgba(0,0,0,.55);pointer-events:none;z-index:8;opacity:.95;}
+  .payoff-stamp.pre{opacity:0;}
+  .payoff-stamp.slam{animation:stampSlam .42s cubic-bezier(.3,1.3,.5,1);}
+  @keyframes stampSlam{0%{scale:2.7;opacity:0;}52%{opacity:.95;}72%{scale:.9;}100%{scale:1;opacity:.95;}}
+  .stamp-proof{top:5px;left:auto;right:8px;transform:translate(0,0) rotate(-7deg);}
+  /* ---- Feature B: discovered-extra marking + the discovery ceremony ---- */
+  .disc-mark{color:var(--good);font-size:12px;margin-right:3px;}
+  .ev-clue .disc-mark{opacity:.9;}
+  .clues li.discovered{background:rgba(76,175,125,.05);}
+  .ev-card{position:relative;}
+  /* the unmissable discovery moment: a brief centered FOREGROUND card naming the new evidence */
+  .disc-overlay{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:rgba(4,5,9,.66);padding:20px;}
+  .disc-overlay.show{display:flex;}
+  .disc-card{position:relative;max-width:360px;width:100%;text-align:center;background:linear-gradient(180deg,#1e222e,#14161f);
+    border:1px solid var(--amber);border-radius:14px;padding:24px 22px 18px;box-shadow:0 22px 64px rgba(0,0,0,.72);}
+  .disc-overlay.show .disc-card{animation:discCardIn .34s cubic-bezier(.25,1.2,.4,1);}
+  @keyframes discCardIn{0%{transform:translateY(16px) scale(.9);opacity:0;}100%{transform:translateY(0) scale(1);opacity:1;}}
+  .disc-banner{display:inline-block;font-family:"Courier New",monospace;font-weight:700;font-size:21px;letter-spacing:4px;text-transform:uppercase;
+    color:#ef5b56;border:3px solid rgba(205,48,48,.85);border-radius:7px;padding:7px 16px;transform:rotate(-2.5deg);scale:1;
+    background:rgba(30,12,12,.25);text-shadow:0 0 2px rgba(0,0,0,.5);}
+  .disc-card.slam .disc-banner{animation:stampSlam .46s cubic-bezier(.3,1.3,.5,1);}
+  .disc-text{font-size:15px;line-height:1.55;color:var(--ink);margin:16px 4px 2px;}
+  .disc-text .ev-tag{vertical-align:middle;}
+  .disc-hint{font-family:"Courier New",monospace;font-size:10px;letter-spacing:1px;color:var(--ink-dim);margin-top:12px;opacity:.8;}
+  /* after the card dismisses, flash the stepper counter so the eye lands where the clue now lives */
+  .disc-flash{display:inline-block;animation:discFlash 1.05s ease-out;}
+  @keyframes discFlash{0%{color:var(--good);text-shadow:0 0 12px rgba(76,175,125,.95);transform:scale(1.35);}60%{color:var(--good);}100%{color:inherit;text-shadow:none;transform:scale(1);}}
   /* accusation weapon picker */
   .accuse-weapons{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:2px;}
   .accuse-weapon{display:flex;align-items:center;gap:6px;background:#171a22;border:1px solid var(--line);border-radius:9px;padding:7px 10px;cursor:pointer;color:var(--ink);font-size:13px;}
@@ -343,7 +460,7 @@
   .ev-mount{width:100%;max-width:calc(9 * var(--cell));}
   .ev-mount[hidden]{display:none;}
   .ev-mount .ev-block{width:100%;margin:0;}
-  .susp.sel{transform:translateY(-3px) scale(1.06);}
+  .susp.sel{transform:translateY(-8px) scale(1.06);}   /* selected suspect lifts higher and stays up while selected */
   .susp.sel .susp-name{color:var(--amber-soft);}
   .susp.sel .count{background:var(--amber);color:#1a1a22;border-color:var(--amber);}
   /* Focus / Atmosphere mode (P4) — reduce texture competition during play */
@@ -456,6 +573,9 @@
   .news-masthead{font-family:Georgia,serif;font-weight:bold;font-size:12px;letter-spacing:3px;text-transform:uppercase;
     border-bottom:2px solid #1a1a22;padding-bottom:4px;margin-bottom:6px;}
   .news-headline{font-family:Georgia,serif;font-weight:bold;font-size:20px;line-height:1.15;text-transform:uppercase;letter-spacing:.5px;}
+  .news-headline.typing::after{content:"";display:inline-block;width:3px;height:.92em;background:currentColor;
+    margin-left:2px;vertical-align:-1px;animation:hlCaret .6s steps(1) infinite;}
+  @keyframes hlCaret{50%{opacity:0;}}
   .news-stamp{position:absolute;right:-10px;top:-14px;width:78px;transform:rotate(9deg);pointer-events:none;
     filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));}
   .payoff-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;text-align:left;}
@@ -481,6 +601,7 @@
     border-top:1px dashed var(--line);padding-top:6px;}
   .star-legend .keymark{color:var(--amber);}
   .star-legend b{color:var(--amber-soft);}
+  .star-legend .disc-mark{color:var(--good);font-size:12px;} .star-legend b.disc-leg{color:var(--good);}
   .reasoning-details summary{cursor:pointer;color:var(--ink-dim);font-size:13px;font-family:"Courier New",monospace;
     letter-spacing:1px;text-transform:uppercase;padding:4px 0;}
   .payoff-actions{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap;}
@@ -489,9 +610,86 @@
   .trophy{width:54px;height:54px;border-radius:9px;background:#171a22;border:1px solid var(--line);
     display:flex;align-items:center;justify-content:center;padding:5px;}
   .trophy img{max-width:100%;max-height:100%;}
+  /* ---- trophy collection: Archive gallery (tabs + grid) + post-case strip ---- */
+  .trophy-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 10px;}
+  .trophy-tab{padding:5px 10px;border-radius:7px;border:1px solid var(--line);background:#171a22;color:var(--ink-dim);
+    font-size:12px;font-family:"Courier New",monospace;letter-spacing:.5px;cursor:pointer;}
+  .trophy-tab.on{color:var(--amber-soft);border-color:var(--amber);background:#20232e;}
+  .tg-prog{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-dim);margin-bottom:9px;}
+  .tg-prog b{color:var(--ink);}
+  .tg-cards,.ts-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:8px;}
+  .tg-cards{max-height:360px;overflow:auto;padding-right:2px;}
+  .tcard{display:flex;gap:9px;background:#171a22;border:1px solid var(--line);border-radius:9px;padding:8px 9px;align-items:flex-start;position:relative;overflow:hidden;}
+  .tcard.unlocked{border-color:rgba(196,160,90,.4);}
+  .tcard.locked{opacity:.94;}
+  .tc-art{width:46px;height:46px;flex:none;border-radius:7px;background:#10131a;border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .tc-img{max-width:100%;max-height:100%;}
+  .tc-img.locked{filter:brightness(0);opacity:.42;}            /* locked weapon = dark silhouette */
+  .tc-emoji{font-size:24px;line-height:1;}
+  .tc-emoji.locked{font-family:Georgia,serif;font-weight:700;color:var(--ink-dim);opacity:.6;}   /* locked relic/perfect = "?" */
+  .tc-glyph{color:var(--amber-soft);display:inline-flex;}
+  .tc-glyph .gsvg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round;}
+  .tc-glyph .gsvg.gfill *{fill:currentColor;stroke:none;} .tc-glyph .gsvg .gfilldot{fill:currentColor;stroke:none;}
+  .tc-glyph.locked{color:var(--ink-dim);opacity:.6;}           /* locked motive = face-down confidential card */
+  .tc-body{min-width:0;flex:1;}
+  .tc-name{font-weight:700;font-size:12.5px;color:var(--ink);margin-bottom:2px;line-height:1.2;}
+  .tcard.locked .tc-name{color:var(--ink-dim);font-style:italic;font-weight:600;}
+  .tc-rar{display:inline-block;font-size:8.5px;letter-spacing:.6px;text-transform:uppercase;font-family:"Courier New",monospace;
+    border:1px solid currentColor;border-radius:4px;padding:1px 4px;margin-bottom:3px;}
+  .tcard.r-common .tc-rar{color:#9aa3b2;} .tcard.r-uncommon .tc-rar{color:#5fae74;}
+  .tcard.r-rare .tc-rar{color:#5b96e0;} .tcard.r-masterwork .tc-rar{color:#b884e0;} .tcard.r-legendary .tc-rar{color:#e0b24f;}
+  .tcard.unlocked.r-legendary{border-color:rgba(224,178,79,.55);box-shadow:inset 0 0 0 1px rgba(224,178,79,.18);}
+  .tc-desc{font-size:11.5px;color:var(--ink);line-height:1.4;}
+  .tc-hint{font-size:11.5px;color:var(--ink-dim);font-style:italic;line-height:1.4;}
+  .tc-src{font-size:10px;color:var(--ink-dim);margin-top:4px;font-family:"Courier New",monospace;}
+  .trophy-strip{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px;text-align:left;}
+  .ts-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-family:"Courier New",monospace;
+    font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-dim);}
+  .ts-prog{color:var(--amber-soft);white-space:nowrap;}
+  .ts-new{font-size:12.5px;color:var(--good);font-weight:700;margin:7px 0 5px;}
+  .ts-none{font-size:12px;color:var(--ink-dim);font-style:italic;margin-top:5px;}
+  .ts-tease{margin-top:9px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--amber-soft);}
+  .ts-card{animation:tsIn .5s both;animation-delay:var(--d,0ms);}
+  @keyframes tsIn{0%{opacity:0;transform:translateY(12px) scale(.96);}100%{opacity:1;transform:translateY(0) scale(1);}}
+  .ts-card::after{content:"";position:absolute;inset:0;border-radius:9px;pointer-events:none;
+    background:linear-gradient(105deg,transparent 32%,rgba(255,245,210,.22) 48%,transparent 64%);
+    background-size:250% 100%;background-position:120% 0;animation:tsShine .9s ease-out both;animation-delay:var(--d,0ms);}
+  @keyframes tsShine{0%{background-position:120% 0;}100%{background-position:-40% 0;}}
+  /* dossier portraits + room seals + memorial (trophy expansion) */
+  .tc-portrait{width:100%;height:100%;object-fit:cover;border-radius:5px;}
+  .tc-portrait.locked,.mc-art .tc-img.locked{filter:grayscale(1) brightness(.22);opacity:.5;}   /* a soft, tasteful silhouette for faces */
+  .tc-seal{font-size:22px;} .tc-emoji.tc-seal.locked{opacity:.4;}
+  .tc-rar.seal-bronze{color:#c0894c;} .tc-rar.seal-silver{color:#b8bfca;} .tc-rar.seal-gold{color:#e0b24f;} .tc-rar.seal-none{color:#7c8494;}
+  .ts-memorial{margin:7px 0 3px;font-size:12px;color:var(--ink);} .ts-memorial b{color:var(--amber-soft);}
+  .memorial-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:8px;max-height:300px;overflow:auto;padding-right:2px;}
+  .mcard{display:flex;gap:9px;background:#171a22;border:1px solid var(--line);border-radius:9px;padding:8px 9px;align-items:flex-start;}
+  .mcard.unlocked{border-color:rgba(150,150,170,.32);}
+  .mc-art{width:46px;height:46px;flex:none;border-radius:7px;overflow:hidden;background:#10131a;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;}
+  .mc-art .tc-img{width:100%;height:100%;object-fit:cover;}
+  .mc-body{min-width:0;flex:1;} .mc-name{font-weight:700;font-size:12.5px;color:var(--ink);margin-bottom:2px;}
+  .mcard.locked .mc-name{color:var(--ink-dim);font-style:italic;font-weight:600;}
+  .mc-note{font-size:11px;color:var(--ink-dim);line-height:1.4;} .mc-note b{color:var(--amber-soft);} .mc-rip{font-style:italic;color:var(--amber-soft);}
+  body.phone .trophy-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:3px;}   /* 8 tabs -> horizontal scroll on phone */
+  body.phone .trophy-tab{flex:none;}
   .archive-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto;}
   .arch-row{background:#171a22;border:1px solid var(--line);border-radius:8px;padding:8px 11px;}
   .arch-row b{color:var(--amber-soft);} .arch-meta{display:block;font-size:12px;color:var(--ink-dim);margin-top:2px;}
+  /* personal leaderboard (per-difficulty fastest wins) */
+  .rec-tabs{display:flex;gap:4px;margin:2px 0 8px;flex-wrap:wrap;}
+  .rec-tab{flex:1;min-width:68px;background:#171a22;border:1px solid var(--line);color:var(--ink-dim);
+    font-family:"Courier New",monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:6px 4px;border-radius:7px;cursor:pointer;}
+  .rec-tab.on{background:linear-gradient(180deg,#262b38,#1b1f2a);border-color:var(--amber);color:var(--amber-soft);}
+  .rec-table{display:flex;flex-direction:column;}
+  .rec-row{display:grid;grid-template-columns:20px 58px 1fr auto;gap:8px;align-items:center;padding:6px 6px;border-bottom:1px dashed var(--line);}
+  .rec-row.head{font-family:"Courier New",monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-dim);border-bottom:1px solid var(--line);}
+  .rec-rank{font-family:"Courier New",monospace;color:var(--amber);text-align:center;}
+  .rec-table .rec-row:nth-child(2) .rec-rank{color:#ffd86b;}   /* #1 highlighted */
+  .rec-time{font-family:"Courier New",monospace;font-weight:700;color:var(--ink);}
+  .rec-meta{color:var(--ink-dim);font-size:11px;}
+  .rec-acc{font-family:"Courier New",monospace;color:var(--ink-dim);text-align:right;}
+  .rec-acc.perfect{color:var(--good);}
+  .rec-empty{color:var(--ink-dim);font-style:italic;font-size:12.5px;padding:8px 4px;}
   .muted{color:var(--ink-dim);font-style:italic;font-size:13px;}
   .chain{list-style:none;padding:0;margin:14px 0;text-align:left;}
   .chain li{padding:8px 10px 8px 14px;border-left:2px solid var(--amber);background:rgba(231,185,77,.06);
@@ -524,7 +722,7 @@
   /* COMPACT header: flatten brand + top-controls into one flowing flex (display:contents) so the
      small logo sits inline with the pills, then everything wraps into ~2 tight rows — no logo row,
      so the board starts high on the first screen. */
-  body.phone header.app{gap:calc(6px * var(--ps,1)) calc(7px * var(--ps,1));margin-bottom:calc(8px * var(--ps,1));justify-content:flex-start;align-items:center;}
+  body.phone header.app{gap:calc(6px * var(--ps,1)) calc(7px * var(--ps,1));margin-bottom:calc(8px * var(--ps,1));justify-content:flex-start;align-items:center;width:auto;}   /* phone stays full-width (override the desktop fit-content) */
   body.phone .brand,body.phone .top-controls{display:contents;}
   body.phone header.app img.logo{height:calc(26px * var(--ps,1));}
   body.phone .pill{padding:calc(6px * var(--ps,1)) calc(9px * var(--ps,1));font-size:calc(14px * var(--ps,1));gap:4px;min-height:0;}
@@ -641,12 +839,125 @@
   @keyframes jBgIn{0%{opacity:0}100%{opacity:1}}
   .modal-bg.show{animation:jBgIn .18s ease-out;}
   .btn:active{transform:translateY(1px) scale(.97);}   /* subtle press feedback */
+  /* Feature A: the Accuse button glows once the board (minus the scene) is complete, or as a nudge */
+  #accuseBtn.nudge{box-shadow:0 0 0 2px var(--amber),0 0 14px rgba(231,185,77,.55)!important;animation:accuseNudge 1.5s ease-in-out infinite;}
+  @keyframes accuseNudge{0%,100%{box-shadow:0 0 0 2px var(--amber),0 0 10px rgba(231,185,77,.4)!important;}50%{box-shadow:0 0 0 2px var(--amber),0 0 20px rgba(231,185,77,.85)!important;}}
+  .btn.j-pulse{animation:jPulse .5s cubic-bezier(.34,1.56,.64,1);}
+  @keyframes jPulse{0%{transform:scale(1)}45%{transform:scale(1.12)}100%{transform:scale(1)}}
+  /* the killer slams into the dashed scene on a correct accusation; the body recedes */
+  .cell.scene-filled .token{z-index:8;}
+  .cell.scene-filled .cell-victim{opacity:.4;filter:grayscale(.6) brightness(.78);}
+  .token.j-slamin{animation:jSlamIn .42s cubic-bezier(.3,1.3,.5,1);}
+  @keyframes jSlamIn{0%{transform:scale(2.5);opacity:0}60%{transform:scale(.92)}100%{transform:scale(1);opacity:1}}
   .code-hint{font-size:12.5px;color:var(--ink-dim);margin:2px 0 2px;min-height:16px;text-align:center;}
   .code-hint b{color:var(--amber-soft);font-family:"Courier New",monospace;letter-spacing:1px;cursor:pointer;}
   .code-hint.err{color:var(--bad);font-style:italic;}
   /* Motion OFF or reduced-motion -> disable every animation (snap straight to final state) */
   body.no-motion *, body.no-motion *::before, body.no-motion *::after{animation:none !important;}
   @media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation:none !important;} }
+
+  /* ---- case intro card (shown at case start; always skippable) ---- */
+  .intro-card{max-width:520px;position:relative;perspective:1400px;}
+  .intro-card .x{z-index:6;}                                    /* close X stays above the folder flap */
+  .intro-evidence{display:flex;gap:20px;align-items:flex-start;justify-content:center;margin:2px auto 10px;}
+  .intro-victim,.intro-found{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .intro-portrait{width:96px;height:96px;border-radius:10px;object-fit:cover;object-position:center top;
+    border:2px solid var(--blood);background:#10131a;filter:grayscale(.25) brightness(.95);box-shadow:0 3px 12px rgba(0,0,0,.55);}
+  .intro-object{width:80px;height:80px;object-fit:contain;filter:drop-shadow(0 2px 5px rgba(0,0,0,.5));}
+  .intro-object.img-missing{visibility:hidden;}
+  .intro-found .victim-tag{color:var(--amber-soft);}
+  .intro-title{font-size:24px;color:var(--blood);font-variant:small-caps;letter-spacing:1px;margin:2px 0 10px;min-height:1.2em;}
+  .intro-body{font-size:16px;line-height:1.65;color:var(--ink);text-align:left;max-width:430px;
+    border-left:3px solid rgba(231,185,77,.5);padding:4px 0 4px 14px;margin:0 auto 8px;}
+  .intro-body .intro-cta{display:block;margin-top:10px;color:var(--amber-soft);font-style:italic;font-weight:700;}
+  .intro-skip-note{font-size:11px;color:var(--ink-dim);font-style:italic;margin-top:10px;}
+  .intro-scene-note{font-size:12.5px;color:var(--amber-soft);font-style:italic;margin:8px auto 0;max-width:430px;
+    border-top:1px dashed rgba(231,185,77,.35);padding-top:8px;}
+  /* ===== case-open animation sequence (only added when motionOK; default state = fully revealed) ===== */
+  .intro-reveal{position:relative;}
+  .intro-flap{position:absolute;inset:-6px -6px 0;z-index:3;display:none;transform-origin:top center;
+    background:linear-gradient(180deg,#dac99b,#c6af72);border:1px solid #a8915a;border-radius:9px;
+    box-shadow:inset 0 -12px 26px rgba(120,96,40,.35),0 6px 16px rgba(0,0,0,.45);
+    align-items:center;justify-content:center;backface-visibility:hidden;}
+  .iflap-tab{position:absolute;top:-13px;left:26px;background:#dac99b;border:1px solid #a8915a;border-bottom:none;
+    border-radius:7px 7px 0 0;padding:3px 16px;font-family:"Courier New",monospace;font-size:11px;letter-spacing:2px;
+    text-transform:uppercase;color:#5b4a22;}
+  .iflap-stamp{transform:rotate(-8deg);border:2px solid rgba(150,32,32,.55);color:rgba(150,32,32,.62);
+    font-family:"Courier New",monospace;font-weight:700;font-size:16px;letter-spacing:3px;padding:5px 14px;border-radius:4px;text-transform:uppercase;}
+  /* folder slides up/in */
+  .intro-card.seq{animation:introSlide .5s cubic-bezier(.2,.7,.3,1) both;}
+  @keyframes introSlide{from{transform:translateY(48px) scale(.96);opacity:0;}to{transform:translateY(0) scale(1);opacity:1;}}
+  /* flap shown closed during the sequence, then swings open */
+  .intro-card.seq .intro-flap{display:flex;transform:rotateX(0deg);transition:transform .55s ease,opacity .35s ease .2s;}
+  .intro-card.seq.s-open .intro-flap{transform:rotateX(-112deg);opacity:0;}
+  /* staged reveals: hidden while sequencing, faded in per stage */
+  .intro-card.seq .intro-victim,.intro-card.seq .intro-found,.intro-card.seq .intro-title,.intro-card.seq .intro-body{opacity:0;}
+  .intro-card.seq.s-victim .intro-victim{opacity:1;transition:opacity .5s ease;}
+  .intro-card.seq.s-found .intro-found{opacity:1;transition:opacity .5s ease;}
+  .intro-card.seq.s-title .intro-title{opacity:1;transition:opacity .3s ease;}
+  .intro-card.seq.s-body .intro-body{opacity:1;transition:opacity .6s ease;}
+  /* scene object: dark silhouette while sequencing, resolves to the art after a beat */
+  .intro-card.seq .intro-object{filter:brightness(0);}
+  .intro-card.seq.s-found .intro-object{filter:brightness(1);transition:filter .9s ease .3s;}
+  /* title typewriter caret */
+  .intro-title.typing::after{content:"";display:inline-block;width:2px;height:1em;background:var(--amber-soft);
+    margin-left:3px;vertical-align:-2px;animation:introCaret .7s steps(1) infinite;}
+  @keyframes introCaret{50%{opacity:0;}}
+  /* ---- resolution closer on the payoff (beginning -> middle -> end) ---- */
+  .resolution{font-size:14.5px;line-height:1.6;color:var(--ink);text-align:left;background:rgba(231,185,77,.06);
+    border-left:3px solid rgba(231,185,77,.5);border-radius:0 8px 8px 0;padding:10px 13px;margin:4px 0 10px;}
+  .resolution[hidden]{display:none;}
+  .modal.failed .resolution{border-left-color:rgba(193,39,45,.6);background:rgba(193,39,45,.08);}
+
+  /* ===== ambient background life — BEHIND the content (z-index:-1, above the bg image), never over
+     the board. pointer-events:none. Every layer animates transform/opacity ONLY (compositor thread,
+     ~0 main-thread cost). JS only toggles which layers are visible; pausing is animation-play-state. ===== */
+  #amb{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;display:none;}
+  #amb.amb-on{display:block;}
+  #amb.amb-focus{opacity:.82;}   /* Focus/Low: a touch lighter than High, but the effects still show */
+  #amb .amb-layer{position:absolute;inset:0;display:none;}
+  #amb.amb-paused .amb-layer,#amb.amb-paused .mote,#amb.amb-paused .streak{animation-play-state:paused !important;}
+  /* vignette breathing — constant base layer; transparent centre so the board stays clear */
+  #amb.fx-vignette .amb-vignette{display:block;
+    background:radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,.5) 100%);
+    animation:ambVignette 13s ease-in-out infinite alternate;}
+  @keyframes ambVignette{from{opacity:.55;}to{opacity:1;}}
+  /* faint falling rain — MANY short, thin, diagonal streaks, scattered & desynced (built in JS),
+     NOT full-width lines. Each streak ~12-22px long, ~1.2px wide; transform/opacity only. */
+  #amb.fx-rain .amb-rain{display:block;}
+  #amb .amb-rain .streak{position:absolute;top:-6%;width:1.2px;border-radius:1px;
+    background:linear-gradient(to bottom, transparent, rgba(190,206,232,.55), transparent);
+    opacity:0;animation:ambRainFall linear infinite;}
+  @keyframes ambRainFall{0%{opacity:0;transform:translateY(0) rotate(12deg);}
+    12%{opacity:.45;}88%{opacity:.45;}100%{opacity:0;transform:translateY(116vh) rotate(12deg);}}
+  body.phone #amb .amb-rain .streak:nth-child(n+14){display:none;}   /* phone: fewer streaks */
+  /* slow candle flicker — warm glow that breathes near a lamp corner */
+  #amb.fx-candle .amb-candle{display:block;
+    background:radial-gradient(circle at 88% 22%, rgba(231,185,77,.26), transparent 48%);
+    animation:ambCandle 6.5s ease-in-out infinite;}
+  @keyframes ambCandle{0%{opacity:.55;}18%{opacity:.85;}33%{opacity:.62;}52%{opacity:.95;}68%{opacity:.7;}84%{opacity:.9;}100%{opacity:.58;}}
+  /* one thin smoke wisp curling slowly upward */
+  #amb.fx-smoke .amb-smoke{display:block;inset:auto;left:12%;bottom:-60px;width:160px;height:340px;
+    background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(208,208,218,.15), transparent 70%);
+    filter:blur(9px);animation:ambSmoke 24s ease-in-out infinite;}
+  @keyframes ambSmoke{0%{transform:translateY(0) scale(1) rotate(0);opacity:0;}
+    14%{opacity:.85;}50%{transform:translateY(-42vh) scale(1.4) rotate(7deg);opacity:.5;}
+    86%{opacity:.18;}100%{transform:translateY(-82vh) scale(1.9) rotate(-5deg);opacity:0;}}
+  /* barely-there paper grain that drifts (SVG turbulence data-URI — no asset file) */
+  #amb.fx-grain .amb-grain{display:block;opacity:.09;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation:ambGrain 7s steps(6) infinite;}
+  @keyframes ambGrain{from{transform:translate(0,0);}to{transform:translate(-12px,9px);}}
+  /* a few drifting dust motes (≤12; created in JS with per-mote drift) */
+  #amb.fx-dust .amb-dust{display:block;}
+  #amb .amb-dust .mote{position:absolute;width:4px;height:4px;border-radius:50%;
+    background:radial-gradient(circle, rgba(233,223,198,.85), rgba(233,223,198,.3) 55%, transparent 72%);
+    opacity:0;animation:ambMote linear infinite;}
+  @keyframes ambMote{0%{opacity:0;transform:translate(0,0) scale(.8);}15%{opacity:.7;}
+    50%{transform:translate(calc(var(--dx)/2),calc(var(--dy)/2)) scale(1.15);}85%{opacity:.55;}
+    100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.8);}}
+  /* phone: lighter — keep at most 7 motes */
+  body.phone #amb .amb-dust .mote:nth-child(n+8){display:none;}
 
   /* ===================== DEMO BUILD additions ===================== */
   /* small DEMO badge near the logo */
@@ -664,6 +975,7 @@
   .cs-logo{height:74px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));margin-bottom:6px;}
   .cs-logo[hidden]{display:none;}
   .cs-wordmark{font-family:Georgia,serif;font-weight:bold;font-size:34px;color:var(--amber-soft);letter-spacing:3px;}
+  .cs-wordmark[hidden]{display:none;}
   .cs-title{font-family:"Courier New",monospace;letter-spacing:4px;text-transform:uppercase;color:var(--ink-dim);
     font-size:13px;margin:6px 0 2px;}
   .cs-tagline{color:var(--ink);font-style:italic;font-size:15px;max-width:560px;text-align:center;margin:4px 0 22px;line-height:1.5;}
@@ -671,7 +983,7 @@
   .cs-grid{display:grid;grid-template-columns:repeat(2,minmax(240px,310px));gap:18px;width:100%;max-width:680px;}
   .cs-card{position:relative;text-align:left;cursor:pointer;color:var(--ink);
     background:linear-gradient(180deg,#1c1f29,#15171f);border:1px solid var(--line);border-radius:12px;
-    padding:18px 18px 16px;box-shadow:0 14px 40px rgba(0,0,0,.55);transition:.14s;overflow:hidden;}
+    padding:18px 18px 16px;box-shadow:0 14px 40px rgba(0,0,0,.55);transition:.14s;overflow:hidden;font-family:inherit;}
   .cs-card:hover{border-color:var(--amber);transform:translateY(-3px);box-shadow:0 18px 48px rgba(0,0,0,.6);}
   .cs-card::before{content:"CASE FILE";position:absolute;top:12px;right:-8px;transform:rotate(8deg);
     border:2px solid rgba(193,39,45,.5);color:rgba(193,39,45,.65);font-family:"Courier New",monospace;
@@ -728,25 +1040,18 @@
     border-radius:14px;max-width:440px;padding:28px 26px;box-shadow:0 20px 60px rgba(0,0,0,.7);}
   .desktop-notice h2{color:var(--amber-soft);font-variant:small-caps;letter-spacing:2px;margin:.1em 0 .3em;}
   .desktop-notice p{color:var(--ink);font-size:15px;line-height:1.55;margin:0 0 16px;}
-
-  /* ---- case intro card (shown at case start; always skippable) ---- */
-  .intro-card{max-width:520px;}
-  .intro-victim{display:flex;flex-direction:column;align-items:center;gap:4px;margin:2px auto 8px;}
-  .intro-portrait{width:96px;height:96px;border-radius:10px;object-fit:cover;object-position:center top;
-    border:2px solid var(--blood);background:#10131a;filter:grayscale(.25) brightness(.95);box-shadow:0 3px 12px rgba(0,0,0,.55);}
-  .intro-title{font-size:24px;color:var(--blood);font-variant:small-caps;letter-spacing:1px;margin:2px 0 10px;}
-  .intro-body{font-size:16px;line-height:1.65;color:var(--ink);text-align:left;max-width:430px;
-    border-left:3px solid rgba(231,185,77,.5);padding:4px 0 4px 14px;margin:0 auto 8px;}
-  .intro-body .intro-cta{display:block;margin-top:10px;color:var(--amber-soft);font-style:italic;font-weight:700;}
-  .intro-skip-note{font-size:11px;color:var(--ink-dim);font-style:italic;margin-top:10px;}
-  /* ---- resolution closer on the payoff (beginning -> middle -> end) ---- */
-  .resolution{font-size:14.5px;line-height:1.6;color:var(--ink);text-align:left;background:rgba(231,185,77,.06);
-    border-left:3px solid rgba(231,185,77,.5);border-radius:0 8px 8px 0;padding:10px 13px;margin:4px 0 10px;}
-  .resolution[hidden]{display:none;}
-  .modal.failed .resolution{border-left-color:rgba(193,39,45,.6);background:rgba(193,39,45,.08);}
 </style>
 </head>
 <body>
+  <!-- ambient background life (behind everything; pointer-events:none; toggled by applyAmbient) -->
+  <div id="amb" aria-hidden="true">
+    <div class="amb-layer amb-vignette"></div>
+    <div class="amb-layer amb-rain" id="ambRain"></div>
+    <div class="amb-layer amb-candle"></div>
+    <div class="amb-layer amb-smoke"></div>
+    <div class="amb-layer amb-grain"></div>
+    <div class="amb-layer amb-dust" id="ambDust"></div>
+  </div>
   <header class="app">
     <div class="brand">
       <img class="logo" id="brandLogo" alt="Casedoku" hidden />
@@ -791,6 +1096,7 @@
         <button class="btn" id="introBtn" title="Show the case intro card at the start of each case">📖 Intro: On</button>
         <button class="btn" id="introSkipBtn" title="After you've read one intro, skip the rest automatically (still in the case file)">⏭ Auto-skip: Off</button>
         <button class="btn" id="caseTextBtn" title="Case briefing length: Short intro, or Full atmospheric text">📝 Case text: Short</button>
+        <button class="btn" id="evidenceBtn" title="Discover corroborating evidence as you complete rows/columns/rooms, or show it all up front">🔎 Evidence: Discover</button>
       </div>
       <!-- mobile-only: opens the tabbed case-file overlay (the side panel is hidden on phones) -->
       <button class="case-file-btn" id="caseFileBtn">📁 Case File <span class="cf-sub">Evidence · Weapons · People · Case</span></button>
@@ -843,7 +1149,7 @@
           <summary>All evidence <span class="req">★ = key</span></summary>
           <ul class="clues" id="clueList"></ul>
         </details>
-        <p class="star-legend"><span class="keymark">★</span> <b>Key evidence</b> — required to crack the case. The rest corroborate. <b>Every clue is true.</b></p>
+        <p class="star-legend"><span class="keymark">★</span> <b>Key evidence</b> — required to crack the case. <span class="disc-mark">✦</span> <b class="disc-leg">Discovered</b> during your investigation. <b>Every clue is true.</b></p>
         <p class="ev-note" id="evProgress"></p>
       </div>
 
@@ -851,8 +1157,12 @@
       <div class="cf-group" id="grpWeapons">
         <div class="scene-obj-info" id="sceneObjInfo"></div>
         <div class="possible-weapons-sec">
-          <div class="pw-label">Possible Weapons <span class="pw-hint">— tap to mark: possible → doubtful → cleared</span></div>
+          <div class="pw-label">Possible Weapons <span class="pw-hint">— tap to mark: Suspected → Cleared → Confirmed</span></div>
           <div class="possible-weapons" id="possibleWeapons"></div>
+        </div>
+        <div class="possible-weapons-sec possible-motives-sec">
+          <div class="pw-label">Possible Motives <span class="pw-hint">— read a MOTIVE clue to reveal, then tap to mark</span></div>
+          <div class="possible-weapons possible-motives" id="possibleMotives"></div>
         </div>
       </div>
 
@@ -875,7 +1185,7 @@
     <div class="co-bar">
       <div class="co-tabs" id="coTabs">
         <button class="co-tab on" data-tab="evidence">Evidence</button>
-        <button class="co-tab" data-tab="weapons">Weapons</button>
+        <button class="co-tab" data-tab="weapons">Leads</button>
         <button class="co-tab" data-tab="people">People</button>
         <button class="co-tab" data-tab="case">Case</button>
       </div>
@@ -890,6 +1200,161 @@
   </div>
 
   <footer>Casedoku · sudoku backbone + load-bearing evidence · procedural &amp; seeded · placeholder art in <code>/assets</code></footer>
+
+  <!-- New case modal -->
+  <div class="modal-bg" id="newModal">
+    <div class="modal center">
+      <button class="x" id="newClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
+      <h2>Open a New Case</h2>
+      <p style="color:var(--ink-dim);font-style:italic;margin:.2em 0 0">Choose the difficulty of the investigation.</p>
+      <div class="diff-row" id="diffRow">
+        <button class="btn diff-opt" data-diff="easy"><img class="diff-badge" src="../assets/ui/badge-easy.png" alt=""/><span>Routine Case<small>6×6</small></span></button>
+        <button class="btn diff-opt" data-diff="medium"><img class="diff-badge" src="../assets/ui/badge-medium.png" alt=""/><span>Troubling Case<small>9×9</small></span></button>
+        <button class="btn diff-opt" data-diff="hard"><img class="diff-badge" src="../assets/ui/badge-hard.png" alt=""/><span>Grim Case<small>9×9</small></span></button>
+        <button class="btn diff-opt" data-diff="extreme"><img class="diff-badge" src="../assets/ui/badge-extreme.png" alt=""/><span>Cold Case<small>9×9</small></span></button>
+      </div>
+      <div class="field">
+        <input id="seedInput" placeholder="paste a case code, e.g. M1ttuyjz" maxlength="12"/>
+        <button class="btn" id="loadCodeBtn"><img src="../assets/ui/icon-check.png" alt=""/>Load code</button>
+      </div>
+      <div class="code-hint" id="codeHint"></div>
+      <div class="field" style="margin-top:4px">
+        <button class="btn" id="dailyBtn">Daily Case</button>
+        <button class="btn" id="randomBtn"><img src="../assets/ui/icon-redo.png" alt=""/>Random case</button>
+      </div>
+      <button class="btn" id="newBack" style="margin-top:6px"><img src="../assets/ui/icon-back.png" alt=""/>Keep current case</button>
+      <p style="color:var(--ink-dim);font-size:12px;font-style:italic;margin-top:10px">
+        A case code reproduces the exact same mystery. Share it.</p>
+    </div>
+  </div>
+
+  <!-- How to Play -->
+  <div class="modal-bg" id="howtoModal">
+    <div class="modal">
+      <button class="x" id="howtoClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
+      <h2 style="text-align:center">How to Play</h2>
+      <p class="howto-lead">A sudoku you finish with detective work. The starting clues are <b>intentionally not enough</b> on their own — sudoku logic and the evidence work <b>together</b>, interleaved.</p>
+      <ol class="howto-steps">
+        <li><b>Place the suspects</b> so each appears exactly once in every <b>row</b>, every <b>column</b>, and every <b>room</b> (3×3 block).</li>
+        <li><b>Use the evidence</b> to resolve what sudoku alone can't — the clues break the ties the grid leaves open. (You can't finish by sudoku alone.)</li>
+        <li><b>Make your accusation</b> once every other guest is seated: name the culprit, the proof, and the motive. <b>The dashed scene belongs to the victim — only your accusation fills it.</b></li>
+      </ol>
+      <p class="howto-foot">Tap a cell to select it, then tap a suspect to place them. <b>★</b> marks <b>key</b> evidence (required); the rest corroborate. <b>Every clue is true.</b><br>You may <b>Accuse</b> at any time — but you get only <b>3 guesses</b>, and each wrong accusation adds <b>+1:00</b> to your time. Three misses and the case goes cold.</p>
+      <button class="btn primary" id="howtoGo" style="margin-top:6px">Start sleuthing</button>
+    </div>
+  </div>
+
+  <!-- Final Deduction — the player makes the accusation -->
+  <div class="modal-bg" id="accuseModal">
+    <div class="modal">
+      <button class="x" id="accuseClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
+      <h2 style="text-align:center">Final Deduction</h2>
+      <p class="accuse-intro">Name the killer. You don't have to finish the grid first — but you get only <b>3 guesses</b>, and a wrong accusation adds <b>+1:00</b> to your time.</p>
+      <div class="accuse-guesses" id="accuseGuesses"></div>
+      <div class="accuse-q">1 · Who is the culprit? <span class="accuse-q-hint">(decides the case)</span></div>
+      <div class="accuse-suspects" id="accuseSuspects"></div>
+      <div class="accuse-q">2 · What was the <b>true</b> weapon? <span class="accuse-q-hint">([WEAPON] clues)</span></div>
+      <div class="accuse-weapons" id="accuseWeapons"></div>
+      <div class="accuse-q">3 · What was the motive? <span class="accuse-q-hint">([MOTIVE] clues)</span></div>
+      <select id="accuseMotive" class="accuse-select"></select>
+      <div class="accuse-q">4 · Which evidence proves it? <span class="accuse-q-hint">(the decisive clue)</span></div>
+      <select id="accuseEvidence" class="accuse-select"></select>
+      <div class="accuse-feedback" id="accuseFeedback"></div>
+      <button class="btn primary" id="accuseSubmit" style="margin-top:8px;width:100%">J'accuse — name the killer</button>
+    </div>
+  </div>
+
+  <!-- Discovery ceremony: a brief centered moment naming newly-uncovered evidence (Feature B) -->
+  <div class="disc-overlay" id="discOverlay" aria-hidden="true">
+    <div class="disc-card">
+      <span class="disc-banner">New Evidence</span>
+      <p class="disc-text" id="discText">—</p>
+      <div class="disc-hint">tap to continue</div>
+    </div>
+  </div>
+
+  <!-- Case Complete payoff -->
+  <div class="modal-bg" id="winModal">
+    <div class="modal center">
+      <button class="x" id="winClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
+      <div class="newspaper">
+        <img class="news-stamp" src="../assets/ui/stamp-caseclosed.png" alt="" />
+        <div class="news-masthead">The Blackwood Herald</div>
+        <div class="news-headline" id="newsHeadline">—</div>
+      </div>
+      <div class="reveal-wrap" id="revealWrap"><div class="reveal-token" id="revealToken"></div><div class="reveal-bars" id="revealBars"></div></div>
+      <div class="killer-name" id="killerName">—</div>
+      <p id="killerMotive" style="color:var(--ink-dim);font-style:italic;margin:4px 0 8px"></p>
+      <p class="resolution" id="resolution" hidden></p>
+      <div class="payoff-grid">
+        <div class="po-cell"><span class="po-label">Key evidence</span><span class="po-val" id="poEvidence">—</span></div>
+        <div class="po-cell"><span class="po-label">Trophy unlocked</span><span class="po-val" id="poTrophy">—</span></div>
+      </div>
+      <div id="accuseScore" class="accuse-score"></div>
+      <div class="trophy-strip" id="trophyStrip" hidden></div>
+      <details class="reasoning-details">
+        <summary>The chain of reasoning</summary>
+        <ul class="chain" id="chain"></ul>
+        <p id="winStory" style="line-height:1.5"></p>
+      </details>
+      <div class="demo-cta" id="winCta"></div>
+      <div class="payoff-actions">
+        <button class="btn" id="winArchive"><img src="../assets/ui/icon-notebook.png" alt=""/>Evidence Archive</button>
+        <button class="btn primary" id="winNew"><img src="../assets/ui/icon-back.png" alt=""/>Back to Cases</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Case intro card (shown at case start; always skippable; same text stays in the case file) -->
+  <div class="modal-bg" id="introModal">
+    <div class="modal intro-card center" id="introCard">
+      <button class="x" id="introClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
+      <div class="intro-reveal">
+        <!-- closed case-file flap that swings open (CSS 3D) to reveal the stack beneath -->
+        <div class="intro-flap" id="introFlap"><span class="iflap-tab">Case File</span><span class="iflap-stamp">Confidential</span></div>
+        <div class="intro-stack">
+          <div class="intro-evidence">
+            <div class="intro-victim">
+              <img class="intro-portrait img-missing" id="introPortrait" alt=""/>
+              <span class="victim-tag">The Victim</span>
+            </div>
+            <div class="intro-found">
+              <img class="intro-object img-missing" id="introObject" alt=""/>
+              <span class="victim-tag">Found at the scene</span>
+            </div>
+          </div>
+          <h2 class="intro-title" id="introTitle">—</h2>
+          <p class="intro-body" id="introBody"></p>
+          <p class="intro-scene-note">The dashed scene belongs to the victim — only your accusation fills it.</p>
+        </div>
+      </div>
+      <button class="btn primary" id="introBegin" style="margin-top:6px">Begin Investigation</button>
+      <p class="intro-skip-note">Tap anywhere to skip · the full file stays in the case panel</p>
+    </div>
+  </div>
+
+  <!-- Evidence Archive -->
+  <div class="modal-bg" id="archiveModal">
+    <div class="modal">
+      <button class="x" id="archiveClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
+      <h2 style="text-align:center">Evidence Archive</h2>
+      <div class="sec">Records <span class="req">— fastest wins per difficulty</span></div>
+      <div class="rec-tabs" id="recTabs">
+        <button class="rec-tab" data-tier="easy">Routine</button>
+        <button class="rec-tab" data-tier="medium">Troubling</button>
+        <button class="rec-tab" data-tier="hard">Grim</button>
+        <button class="rec-tab" data-tier="extreme">Cold</button>
+      </div>
+      <div class="rec-table" id="recTable"></div>
+      <div class="sec">Trophies <span class="req" id="trophyCount"></span></div>
+      <div class="trophy-tabs" id="trophyTabs"></div>
+      <div class="trophy-grid" id="trophyGrid"></div>
+      <div class="sec">Victim Memorial <span class="req" id="memorialCount"></span></div>
+      <div class="memorial-grid" id="memorialGrid"></div>
+      <div class="sec">Solved Cases <span class="req" id="archiveCount"></span></div>
+      <div class="archive-list" id="archiveList"></div>
+    </div>
+  </div>
 
   <!-- ===== DEMO: Case Select — the only way into a case (4 fixed cases) ===== -->
   <div class="case-select" id="caseSelect" hidden>
@@ -920,100 +1385,6 @@
       <h2>Best on Desktop</h2>
       <p>This Casedoku demo is designed for a <b>desktop / Steam-sized</b> screen. On a small or touch display the two-column case file won't fit comfortably.</p>
       <button class="btn primary" id="desktopNoticeOk">Continue anyway</button>
-    </div>
-  </div>
-
-  <!-- How to Play -->
-  <div class="modal-bg" id="howtoModal">
-    <div class="modal">
-      <button class="x" id="howtoClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
-      <h2 style="text-align:center">How to Play</h2>
-      <p class="howto-lead">A sudoku you finish with detective work. The starting clues are <b>intentionally not enough</b> on their own — sudoku logic and the evidence work <b>together</b>, interleaved.</p>
-      <ol class="howto-steps">
-        <li><b>Place the suspects</b> so each appears exactly once in every <b>row</b>, every <b>column</b>, and every <b>room</b> (3×3 block).</li>
-        <li><b>Use the evidence</b> to resolve what sudoku alone can't — the clues break the ties the grid leaves open. (You can't finish by sudoku alone.)</li>
-        <li><b>Make your accusation</b> once the grid is complete: name the culprit, the proof, and the motive.</li>
-      </ol>
-      <p class="howto-foot">Tap a cell to select it, then tap a suspect to place them. <b>★</b> marks <b>key</b> evidence (required); the rest corroborate. <b>Every clue is true.</b><br>You may <b>Accuse</b> at any time — but you get only <b>3 guesses</b>, and each wrong accusation adds <b>+1:00</b> to your time. Three misses and the case goes cold.</p>
-      <button class="btn primary" id="howtoGo" style="margin-top:6px">Start sleuthing</button>
-    </div>
-  </div>
-
-  <!-- Final Deduction — the player makes the accusation -->
-  <div class="modal-bg" id="accuseModal">
-    <div class="modal">
-      <button class="x" id="accuseClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
-      <h2 style="text-align:center">Final Deduction</h2>
-      <p class="accuse-intro">Name the killer. You don't have to finish the grid first — but you get only <b>3 guesses</b>, and a wrong accusation adds <b>+1:00</b> to your time.</p>
-      <div class="accuse-guesses" id="accuseGuesses"></div>
-      <div class="accuse-q">1 · Who is the culprit? <span class="accuse-q-hint">(decides the case)</span></div>
-      <div class="accuse-suspects" id="accuseSuspects"></div>
-      <div class="accuse-q">2 · What was the <b>true</b> weapon? <span class="accuse-q-hint">([WEAPON] clues)</span></div>
-      <div class="accuse-weapons" id="accuseWeapons"></div>
-      <div class="accuse-q">3 · What was the motive? <span class="accuse-q-hint">([MOTIVE] clues)</span></div>
-      <select id="accuseMotive" class="accuse-select"></select>
-      <div class="accuse-q">4 · Which evidence proves it? <span class="accuse-q-hint">(the decisive clue)</span></div>
-      <select id="accuseEvidence" class="accuse-select"></select>
-      <div class="accuse-feedback" id="accuseFeedback"></div>
-      <button class="btn primary" id="accuseSubmit" style="margin-top:8px;width:100%">J'accuse — name the killer</button>
-    </div>
-  </div>
-
-  <!-- Case Complete payoff -->
-  <div class="modal-bg" id="winModal">
-    <div class="modal center">
-      <button class="x" id="winClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
-      <div class="newspaper">
-        <img class="news-stamp" src="../assets/ui/stamp-caseclosed.png" alt="" />
-        <div class="news-masthead">The Blackwood Herald</div>
-        <div class="news-headline" id="newsHeadline">—</div>
-      </div>
-      <div class="reveal-wrap" id="revealWrap"><div class="reveal-token" id="revealToken"></div><div class="reveal-bars" id="revealBars"></div></div>
-      <div class="killer-name" id="killerName">—</div>
-      <p id="killerMotive" style="color:var(--ink-dim);font-style:italic;margin:4px 0 8px"></p>
-      <p class="resolution" id="resolution" hidden></p>
-      <div class="payoff-grid">
-        <div class="po-cell"><span class="po-label">Key evidence</span><span class="po-val" id="poEvidence">—</span></div>
-        <div class="po-cell"><span class="po-label">Trophy unlocked</span><span class="po-val" id="poTrophy">—</span></div>
-      </div>
-      <div id="accuseScore" class="accuse-score"></div>
-      <details class="reasoning-details">
-        <summary>The chain of reasoning</summary>
-        <ul class="chain" id="chain"></ul>
-        <p id="winStory" style="line-height:1.5"></p>
-      </details>
-      <div class="demo-cta" id="winCta"></div>
-      <div class="payoff-actions">
-        <button class="btn" id="winArchive"><img src="../assets/ui/icon-notebook.png" alt=""/>Evidence Archive</button>
-        <button class="btn primary" id="winNew"><img src="../assets/ui/icon-back.png" alt=""/>Back to Cases</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Case intro card (shown at case start; always skippable; same text stays in the case file) -->
-  <div class="modal-bg" id="introModal">
-    <div class="modal intro-card center">
-      <button class="x" id="introClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
-      <div class="intro-victim">
-        <img class="intro-portrait img-missing" id="introPortrait" alt=""/>
-        <span class="victim-tag">The Victim</span>
-      </div>
-      <h2 class="intro-title" id="introTitle">—</h2>
-      <p class="intro-body" id="introBody"></p>
-      <button class="btn primary" id="introBegin" style="margin-top:6px">Begin Investigation</button>
-      <p class="intro-skip-note">Tap anywhere to skip · the full file stays in the case panel</p>
-    </div>
-  </div>
-
-  <!-- Evidence Archive -->
-  <div class="modal-bg" id="archiveModal">
-    <div class="modal">
-      <button class="x" id="archiveClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
-      <h2 style="text-align:center">Evidence Archive</h2>
-      <div class="sec">Trophies <span class="req" id="trophyCount"></span></div>
-      <div class="trophies" id="trophyShelf"></div>
-      <div class="sec">Solved Cases <span class="req" id="archiveCount"></span></div>
-      <div class="archive-list" id="archiveList"></div>
     </div>
   </div>
 
@@ -1455,6 +1826,11 @@ function selfTest(o){
       const preds=C.clues.map(cl=>makePred(cfg,cl.type,cl.p));
       const withC=without.sols.filter(g=>preds.every(p=>p(g)));
       if(!(withC.length===1 && withC[0].every((v,i)=>v===C.solution[i]))) fails.push("givens+clues NOT uniquely the solution (got "+withC.length+")");
+      // 4b. the REQUIRED (★ key) clues ALONE force the solution — so the milestone-discovery UI can
+      //     safely gate the non-key corroborating extras without ever making a case unsolvable.
+      const keyPreds=C.clues.filter(cl=>cl.key).map(cl=>makePred(cfg,cl.type,cl.p));
+      const withKey=without.sols.filter(g=>keyPreds.every(p=>p(g)));
+      if(!(withKey.length===1 && withKey[0].every((v,i)=>v===C.solution[i]))) fails.push("required (key) clues alone do NOT force the solution (got "+withKey.length+") — extras must never be required");
       // 5. every clue is true of the solution
       if(!preds.every(p=>p(C.solution))) fails.push("a clue is false for the solution");
       // 6. killer provably forced: >=2 candidates at scene without clues, exactly killer with clues
@@ -1559,23 +1935,27 @@ GLOBAL.CludokuEngine = {
 const MANOR = {
   id:"manor", name:"Blackwood Manor (Classic Whodunit)", place:"Blackwood Manor",
   // each suspect carries a `role` slug -> ../assets/themes/manor/suspects/suspect-<role>.png
+  // each suspect carries an `mtag` (one of the 12 motive tags) + a `motive` phrase (unique per
+  // suspect). The 12 tags are spread across the 16 roles so any case cast carries several distinct
+  // motives for the accusation's 3 options. Tags: money, inheritance, revenge, secret, reputation,
+  // jealousy, debt, blackmail, betrayal, forbidden, coverup, grudge.
   suspects:[
     {role:"colonel",     L:"A", name:"The Colonel",     color:"#D4A017", gender:"male",   mtag:"secret",      motive:"a buried war secret"},
     {role:"widow",       L:"B", name:"The Widow",       color:"#7D3C98", gender:"female", mtag:"inheritance", motive:"a contested inheritance"},
-    {role:"butler",      L:"C", name:"The Butler",      color:"#5D6D7E", gender:"male",   mtag:"revenge",     motive:"years of unpaid loyalty"},
+    {role:"butler",      L:"C", name:"The Butler",      color:"#5D6D7E", gender:"male",   mtag:"grudge",      motive:"years of unpaid loyalty soured to spite"},
     {role:"chef",        L:"D", name:"The Chef",        color:"#C0392B", gender:"male",   mtag:"reputation",  motive:"a stolen recipe"},
-    {role:"professor",   L:"E", name:"The Professor",   color:"#1E8449", gender:"male",   mtag:"reputation",  motive:"a discredited theory"},
+    {role:"professor",   L:"E", name:"The Professor",   color:"#1E8449", gender:"male",   mtag:"coverup",     motive:"a discredited theory he had to bury"},
     {role:"heiress",     L:"F", name:"The Heiress",     color:"#C2407A", gender:"female", mtag:"inheritance", motive:"a cut from the will"},
-    {role:"gardener",    L:"G", name:"The Gardener",    color:"#D86A1E", gender:"female", mtag:"revenge",     motive:"a dismissed grievance"},
-    {role:"captain",     L:"H", name:"The Captain",     color:"#2471A3", gender:"male",   mtag:"revenge",     motive:"a mutinous grudge"},
-    {role:"doctor",      L:"I", name:"The Doctor",      color:"#17A2A2", gender:"female", mtag:"secret",      motive:"a malpractice cover-up"},
-    {role:"actress",     L:"J", name:"The Actress",     color:"#B03060", gender:"female", mtag:"reputation",  motive:"a ruined reputation"},
-    {role:"inspector",   L:"K", name:"The Inspector",   color:"#3A4250", gender:"male",   mtag:"secret",      motive:"a case gone wrong"},
+    {role:"gardener",    L:"G", name:"The Gardener",    color:"#D86A1E", gender:"female", mtag:"revenge",     motive:"a dismissed grievance, repaid"},
+    {role:"captain",     L:"H", name:"The Captain",     color:"#2471A3", gender:"male",   mtag:"betrayal",    motive:"a mutinous betrayal"},
+    {role:"doctor",      L:"I", name:"The Doctor",      color:"#17A2A2", gender:"female", mtag:"coverup",     motive:"a malpractice cover-up"},
+    {role:"actress",     L:"J", name:"The Actress",     color:"#B03060", gender:"female", mtag:"jealousy",    motive:"a jealous rivalry"},
+    {role:"inspector",   L:"K", name:"The Inspector",   color:"#3A4250", gender:"male",   mtag:"blackmail",   motive:"a blackmailer's hold over him"},
     {role:"maid",        L:"L", name:"The Maid",        color:"#4FA3D1", gender:"female", mtag:"money",       motive:"a withheld wage"},
-    {role:"heir",        L:"M", name:"The Heir",        color:"#7A8B3C", gender:"male",   mtag:"inheritance", motive:"an impatient fortune"},
+    {role:"heir",        L:"M", name:"The Heir",        color:"#7A8B3C", gender:"male",   mtag:"debt",        motive:"gambling debts and an impatient fortune"},
     {role:"magician",    L:"N", name:"The Magician",    color:"#3D348B", gender:"male",   mtag:"reputation",  motive:"an exposed trick"},
     {role:"antiquarian", L:"O", name:"The Antiquarian", color:"#9C6B30", gender:"male",   mtag:"money",       motive:"a priceless forgery"},
-    {role:"nurse",       L:"P", name:"The Nurse",       color:"#D98C9A", gender:"female", mtag:"secret",      motive:"a fatal prescription"},
+    {role:"nurse",       L:"P", name:"The Nurse",       color:"#D98C9A", gender:"female", mtag:"forbidden",   motive:"a forbidden love affair"},
   ],
   victims:["Lord Blackwood","the Dowager Countess","Sir Hugh Pennington","the family solicitor","old Mr. Ashford"],
   // each weapon: `slug` -> ../assets/themes/manor/weapons/weapon-<slug>.png; `traits` drive the
@@ -1614,8 +1994,15 @@ const MANOR = {
     money:["This killing was about money — someone stood to gain.","Follow the coin: greed was the only motive that fits."],
     inheritance:["A name in a will was worth killing for here.","Someone's share of the estate drove this."],
     secret:["The killer was burying a secret that would have ruined them.","This was done to keep a damning truth from coming out."],
-    revenge:["This was personal — an old grudge finally repaid.","Someone settled a long-nursed score."],
+    revenge:["This was personal — a wrong avenged in kind.","Someone struck back to settle a score that had been done to them."],
     reputation:["Someone killed to protect their good name.","A reputation was on the line — and worth a life."],
+    jealousy:["This was the work of jealousy — someone could not bear to be passed over.","Green-eyed envy guided the killer's hand."],
+    debt:["A debt that could never be repaid is at the heart of this.","Someone was drowning in money owed — and killed to escape it."],
+    blackmail:["The killer was being bled dry by blackmail.","Someone murdered to break a blackmailer's grip."],
+    betrayal:["This was a betrayal repaid in blood.","Someone was double-crossed — and answered treachery with murder."],
+    forbidden:["A forbidden love lies behind this killing.","Someone killed to protect a love that was never allowed."],
+    coverup:["The killer was burying a blunder that would have ended them.","This was done to cover up a ruinous mistake."],
+    grudge:["A wrong suffered long ago was finally answered here.","An old grudge, nursed for years, at last boiled over."],
   },
   times:["just before midnight","at the stroke of nine","during the thunderstorm","at supper","as the clock struck two"],
   // victim cast — a SEPARATE roster from the playable suspects (never placeable, never a
@@ -1720,13 +2107,16 @@ const MANOR = {
     ],
   },
   // rooms indexed by box id (need >=9). slug -> room floor png; icon -> object png on the room tag
+  // `icon` = the room's default landmark object; `icons` (optional) = a per-case pool so a room
+  // can show different objects across cases. Across the 9 rooms the pools cover all 12 objects:
+  // plant, table, chair, bush, tv, bookshelf, rug, lamp, bed, painting, fireplace, vase.
   rooms:[
     {name:"the Study", slug:"study", icon:"bookshelf", hue:35},
     {name:"the Library", slug:"library", icon:"lamp", hue:48},
-    {name:"the Conservatory", slug:"conservatory", icon:"plant", hue:140},
+    {name:"the Conservatory", slug:"conservatory", icon:"plant", icons:["plant","bush"], hue:140},
     {name:"the Billiard Room", slug:"billiard", icon:"chair", hue:175},
-    {name:"the Grand Hall", slug:"hall", icon:"rug", hue:0},
-    {name:"the Lounge", slug:"lounge", icon:"tv", hue:265},
+    {name:"the Grand Hall", slug:"hall", icon:"rug", icons:["rug","vase"], hue:0},
+    {name:"the Lounge", slug:"lounge", icon:"tv", icons:["tv","fireplace"], hue:265},
     {name:"the Kitchen", slug:"kitchen", icon:"table", hue:200},
     {name:"the Bedroom", slug:"bedroom", icon:"bed", hue:320},
     {name:"the Dining Room", slug:"dining", icon:"painting", hue:20},
@@ -1783,6 +2173,9 @@ function spotName(cfg,theme,cell){
 /* render a structured clue to English */
 let CASE_OBJECTS=[];                       // box -> object landmark cell, for "next to the X" clue text
 function setCaseObjects(arr){ CASE_OBJECTS=Array.isArray(arr)?arr:[]; }
+let CASE_OBJECT_SLUGS=[];                  // box -> per-case object slug (rooms can vary their landmark object across cases)
+function setCaseObjectSlugs(arr){ CASE_OBJECT_SLUGS=Array.isArray(arr)?arr:[]; }
+function roomObjectSlug(theme,box){ const s=CASE_OBJECT_SLUGS[box]; return s!=null?s:theme.rooms[box%theme.rooms.length].icon; }
 const OBJ_NAME={tv:"television"};          // slug -> readable; default = the slug itself
 function objName(slug){ return OBJ_NAME[slug]||slug; }
 function renderClue(cfg,theme,clue){
@@ -1794,7 +2187,7 @@ function renderClue(cfg,theme,clue){
       const E=GLOBAL.CludokuEngine, N=cfg.N, r=Math.floor(p.cell/N), c=p.cell%N, box=E.boxOf(cfg,r,c), oc=CASE_OBJECTS[box];
       if(oc!=null){ const dr=r-Math.floor(oc/N), dc=c-(oc%N);
         if(Math.abs(dr)+Math.abs(dc)===1)
-          return `A witness places <b>${S(p.val)}</b> ${DIRWORD(dr,dc)} the ${objName(theme.rooms[box%theme.rooms.length].icon)} in ${x.room}.`; }
+          return `A witness places <b>${S(p.val)}</b> ${DIRWORD(dr,dc)} the ${objName(roomObjectSlug(theme,box))} in ${x.room}.`; }
       return `A witness places <b>${S(p.val)}</b> in ${x.spot} of ${x.room}.`; }
     case "exclusion":{ const x=spotName(cfg,theme,p.cell);
       return `Whoever stood in ${x.spot} of ${x.room}, it was <b>not</b> ${S(p.val)}.`; }
@@ -1838,7 +2231,7 @@ function renderStory(theme, facts, rng){
 GLOBAL.CLUDOKU_THEMES={manor:MANOR};
 GLOBAL.CludokuSkin={ renderClue, renderStory, roomName, spotName, sName, setCast, vocab, TYPE_LABEL,
   EV_TAG, weaponBySlug, renderWeaponClue, renderMotiveClue,
-  setCaseObjects, objName, pick:(rng,arr)=>arr[Math.floor(rng()*arr.length)] };
+  setCaseObjects, setCaseObjectSlugs, roomObjectSlug, objName, pick:(rng,arr)=>arr[Math.floor(rng()*arr.length)] };
 })(typeof window!=="undefined" ? window : globalThis);
 </script>
 
@@ -1874,15 +2267,17 @@ const boardEl=$("board"), trayEl=$("tray");
 const caseMQ=window.matchMedia("(max-width:700px)");   // "mobile" — game-first screen + case-file overlay + bolder footprints
 
 let C=null, cfg=null, board=null, given=null, sel=-1, selSuspect=-1;
-let undoStack=[], redoStack=[], hintsUsed=0, solved=false, story=null, cluesUsed=new Set();
+let undoStack=[], redoStack=[], hintsUsed=0, solved=false, story=null, cluesUsed=new Set(), mistakes=0;   // mistakes: incorrect placements this case (for the Clean Case trophy)
 let accuseCulprit=-1, accuseWeapon="", guessesLeft=3, clueStep=0, hintLevel=0, hintTarget=-1;
 const MAX_GUESSES=3;
 let notesMode=false, candidates=[];   // candidates[i] = Set of suspect values pencilled into cell i
 
 /* ---- persistence (localStorage; runs locally) ---- */
+/* DEMO: namespace ALL persistence under "casedoku.demo." so the demo's settings, trophies,
+   records, memorial and case-completion never collide with the main game on the same origin. */
 const LS={
-  get(k,d){ try{ const v=localStorage.getItem("casedoku."+k); return v?JSON.parse(v):d; }catch(e){ return d; } },
-  set(k,v){ try{ localStorage.setItem("casedoku."+k, JSON.stringify(v)); }catch(e){} }
+  get(k,d){ try{ const v=localStorage.getItem("casedoku.demo."+k); return v?JSON.parse(v):d; }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem("casedoku.demo."+k, JSON.stringify(v)); }catch(e){} }
 };
 let settings=LS.get("settings",{atmosphere:"low"});   // Focus(low) by default
 if(settings.motion===undefined) settings.motion=true;   // animations ON by default
@@ -1891,6 +2286,7 @@ if(settings.music===undefined) settings.music=true;     // background music ON b
 if(settings.intro===undefined) settings.intro=true;            // show the case intro card by default
 if(settings.introAutoskip===undefined) settings.introAutoskip=false;  // don't auto-skip until the player opts in
 if(settings.caseText===undefined) settings.caseText="short";   // tight intro in the case-file briefing by default
+if(settings.evidence===undefined) settings.evidence="discover";   // extras surface as you complete units (vs "all" up front)
 /* ---- flavor labels ---- */
 const TIER_FLAVOR={easy:"Routine Case",medium:"Troubling Case",hard:"Grim Case",extreme:"Cold Case"};
 function cap(s){ return s? s.charAt(0).toUpperCase()+s.slice(1) : s; }
@@ -2054,16 +2450,49 @@ function maybeShowIntro(){
   const hm=$("howtoModal"); if(hm && hm.classList.contains("show")){ setTimeout(maybeShowIntro,400); return; }
   showIntro();
 }
+/* ---- case-open animation sequence (folder slides in -> opens -> victim -> object -> title types) ---- */
+let introTimers=[], introAnimating=false;
+function clearIntroTimers(){ while(introTimers.length) clearTimeout(introTimers.pop()); }
+const SEQ_CLASSES=["seq","s-open","s-victim","s-found","s-title","s-body"];
+function introTypeTitle(text){                                    // typewriter, char by char, with a caret
+  const el=$("introTitle"); if(!el) return; el.textContent=""; el.classList.add("typing"); let i=0;
+  (function step(){ el.textContent=text.slice(0,i);
+    if(i++ < text.length){ introTimers.push(setTimeout(step,34)); } else { el.classList.remove("typing"); } })();
+}
+function introRevealAll(){                                        // skip -> jump straight to the fully-revealed card
+  clearIntroTimers(); introAnimating=false;
+  const card=$("introCard"); if(card) card.classList.remove(...SEQ_CLASSES);
+  const t=$("introTitle"); if(t){ t.classList.remove("typing"); if(story) t.textContent=story.title; }
+}
+function introAnimate(){                                          // the full sequence (~3s, then fully readable)
+  const card=$("introCard"); if(!card){ return; }
+  clearIntroTimers(); card.classList.remove(...SEQ_CLASSES);
+  $("introTitle").textContent=""; $("introTitle").classList.remove("typing");
+  void card.offsetWidth; card.classList.add("seq");              // restart the slide-in
+  introAnimating=true; sfx("paper");                              // soft slide sound (only if Sound is on)
+  const T=(ms,fn)=>introTimers.push(setTimeout(fn,ms));
+  T(560, ()=>{ card.classList.add("s-open"); sfx("paper"); });    // folder flap opens
+  T(1080,()=> card.classList.add("s-victim"));                    // victim portrait fades in
+  T(1380,()=> card.classList.add("s-found"));                     // scene-object silhouette -> resolves to art
+  T(1760,()=>{ card.classList.add("s-title"); introTypeTitle(story.title); });   // title types in
+  T(2680,()=> card.classList.add("s-body"));                      // intro sentences fade in
+  T(3120,()=>{ introAnimating=false; });                          // sequence complete
+}
 function showIntro(){ if(!story) return;
-  $("introTitle").textContent=story.title;
   const p=$("introPortrait"); if(p){ p.classList.add("img-missing"); p.removeAttribute("src");
     if(story.victimSlug) loadOptionalImg(p, tAsset('victims','victim-'+story.victimSlug+'.png')); }
+  const ob=$("introObject"); if(ob){ ob.classList.add("img-missing"); ob.removeAttribute("src");   // the found-beside object (NOT "the weapon")
+    if(story.sceneObject) loadOptionalImg(ob, tAsset('weapons','weapon-'+story.sceneObject+'.png')); }
   const arr=story.intro||[]; const body=arr.slice(0,-1).join(" "), cta=arr[arr.length-1]||"";
   $("introBody").innerHTML=`${body} <span class="intro-cta">${cta}</span>`;
+  $("introTitle").textContent=story.title;
   $("introModal").classList.add("show");
   LS.set("introSeen",true);                                       // the player has now read at least one intro
+  if(motionOK()) introAnimate(); else introRevealAll();           // full sequence vs. instant static card
 }
-function hideIntro(){ const m=$("introModal"); if(m) m.classList.remove("show"); }
+function hideIntro(){ clearIntroTimers(); introAnimating=false;
+  const m=$("introModal"); if(m) m.classList.remove("show");
+  const c=$("introCard"); if(c) c.classList.remove(...SEQ_CLASSES); }
 
 function dressStory(){
   const rng=E.makeRNG((C.seed ^ E.hashStr("story"))>>>0);
@@ -2089,16 +2518,16 @@ function dressStory(){
   for(let i=others.length-1;i>0;i--){ const j=Math.floor(mrng()*(i+1)); [others[i],others[j]]=[others[j],others[i]]; }
   const dist=[], usedTags=new Set([killerTag]);
   for(const o of others){ if(dist.length>=2) break; if(!usedTags.has(o.mtag) && !dist.some(d=>d.motive===o.motive)){ dist.push(o); usedTags.add(o.mtag); } }
-  for(const o of others){ if(dist.length>=2) break; if(!dist.some(d=>d.motive===o.motive) && o.motive!==killer.motive) dist.push(o); }   // fallback fill
-  const motiveOptions=[{motive:killer.motive, correct:true}, ...dist.map(d=>({motive:d.motive, correct:false}))];
+  for(const o of others){ if(dist.length>=2) break; if(o.mtag!==killerTag && !dist.some(d=>d.motive===o.motive)) dist.push(o); }   // fallback fill — never a distractor sharing the killer's tag (keeps the motive unambiguous)
+  const motiveOptions=[{motive:killer.motive, correct:true, tag:killerTag}, ...dist.map(d=>({motive:d.motive, correct:false, tag:d.mtag}))];
   for(let i=motiveOptions.length-1;i>0;i--){ const j=Math.floor(mrng()*(i+1)); [motiveOptions[i],motiveOptions[j]]=[motiveOptions[j],motiveOptions[i]]; }
 
   story={ victim:vsel.name, victimDisplay:vsel.name, victimSlug:vsel.slug, victimTags:vsel,
     sceneObject:wcase.sceneObject, trueWeapon:wcase.trueWeapon, weaponCandidates:wcase.candidates,
-    weaponClues:wcase.clues, weaponPlanted:wcase.planted, weaponMarks:{},
+    weaponClues:wcase.clues, weaponPlanted:wcase.planted, weaponMarks:loadWeaponMarks(C.code),
     motiveClues, motiveOptions, killerTag,
     time:pick(THEME.times), atmosphere, sceneRoom, alibiRoom, killer, caseNo:100+(C.seed%900) };
-  wcase.candidates.forEach(s=>story.weaponMarks[s]="possible");   // per-case player marks (not persisted)
+  { const ms=loadMotiveState(C.code); story.motiveRevealed=ms.revealed; story.motiveMarks=ms.marks; }   // per-case motive notebook + reveal flag
   story.title=`The Murder of ${vsel.name}`;
   // unified evidence list: position clues (solve WHO) + [WEAPON] (solve WHAT) + [MOTIVE] (solve WHY), each tagged
   story.evidence=[];
@@ -2106,12 +2535,21 @@ function dressStory(){
     text:Skin.renderClue(cfg,THEME,cl), key:cl.key, proof:C.proofClues.includes(i), kind:"pos", clueIdx:i }));
   story.weaponClues.forEach(wc=>story.evidence.push({ tag:"WEAPON", text:Skin.renderWeaponClue(THEME,wc), key:true, proof:false, kind:"weapon" }));
   story.motiveClues.forEach(mc=>story.evidence.push({ tag:"MOTIVE", text:Skin.renderMotiveClue(THEME,mc), key:true, proof:false, kind:"motive" }));
+  // scene objects this case actually references (a SIGHTING landing beside a room's object landmark) — for Scene Marker trophies
+  story.referencedObjects=(function(){ const set=new Set(), N=cfg.N;
+    (C.clues||[]).forEach(cl=>{ if(cl.type!=="sighting"||!cl.p) return; const cell=cl.p.cell, r=Math.floor(cell/N), c=cell%N, box=E.boxOf(cfg,r,c), oc=C.objectCells?C.objectCells[box]:null;
+      if(oc!=null){ const dr=r-Math.floor(oc/N), dc=c-(oc%N); if(Math.abs(dr)+Math.abs(dc)===1) set.add((C.objectSlugs&&C.objectSlugs[box])||THEME.rooms[box%THEME.rooms.length].icon); } });
+    return [...set]; })();
+  story.extraOrder = story.evidence.map((e,i)=>e.key?-1:i).filter(i=>i>=0);   // discoverable corroborating extras, in their (seeded) order
+  const _es=loadEvidenceState(C.code); story.discoveredExtras=_es.discovered; // restored on reload; gated by the Evidence setting
+  _unitCredited=new Set(_es.credited);                                        // restore which units already granted a discovery (permanent, no re-credit)
   // cozy-mystery narrative intro (own rng stream); names the SCENE object (what was found by the body)
   const srng=E.makeRNG((C.seed ^ E.hashStr("narrative"))>>>0);
   story.narrative=Skin.renderStory(THEME, {
     place:THEME.place||"the manor", victim:story.victim, victimDesc:vsel.slug?victimDescriptor(vsel):"",
     room:story.sceneRoom, time:story.time, weapon:wName(wcase.sceneObject), n:cfg.N, atmosphere }, srng);
   story.intro=buildCaseIntro(story, cfg.N);   // tight, spoiler-free intro for the card + (Short) briefing
+  story.ambient=pickAmbient(story);            // story-driven ambient effect set (seeded fallback)
 }
 
 /* seeded playable cast: a random N-subset of the 16-role roster, deterministic from the case
@@ -2131,7 +2569,9 @@ function startCase(opts){
   C=E.generateCase(opts); cfg=C.cfg;
   Skin.setCast(pickCaseCast(C.seed, cfg.N));                // shuffle the playable cast for this case
   board=C.givens.slice(); given=C.givens.map(v=>v!==0);
-  sel=-1; selSuspect=-1; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false; cluesUsed=new Set();
+  sel=-1; selSuspect=-1; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false; cluesUsed=new Set(); mistakes=0;
+  _sceneMsgShown=false; _nudged=false;   // reset Feature A per-case state
+  _discQueue=[]; _discPlaying=false; _discCount=0; endDiscovery();   // reset Feature B transient ceremony state (_unitCredited is loaded per-case by dressStory)
   accuseCulprit=-1; guessesLeft=MAX_GUESSES; hintLevel=0; hintTarget=-1; updateGuessPill();
   candidates=Array.from({length:cfg.N*cfg.N},()=>new Set());
   notesMode=false; applyNotesMode();
@@ -2139,6 +2579,9 @@ function startCase(opts){
   RING=assignRings(cfg.N);                                    // distinct ring colour per active suspect
   document.documentElement.style.setProperty("--disc-cream",DISC_CREAM);
   Skin.setCaseObjects(C.objectCells);                         // object landmarks for "next to the X" clues
+  { const orng=E.makeRNG((C.seed ^ E.hashStr("objects"))>>>0);   // seeded per-case object per room (from each room's pool) — deterministic, replays match
+    C.objectSlugs=THEME.rooms.map(rm=>{ const pool=(rm.icons&&rm.icons.length)?rm.icons:[rm.icon]; return pool[Math.floor(orng()*pool.length)]; });
+    Skin.setCaseObjectSlugs(C.objectSlugs); }
   dressStory();
   setVar("--cell-max", cfg.N<=6 ? "72px" : "62px"); setVar("--ncols", cfg.N);  // CSS derives --cell (mobile fits to width)
   boardEl.style.gridTemplateColumns=`repeat(${cfg.N}, var(--cell))`;
@@ -2152,6 +2595,7 @@ function startCase(opts){
   setStatus(`Case No. ${story.caseNo} opened — ${board.filter(v=>!v).length} positions to place.`,"");
   startTimer();
   maybeShowIntro();   // case intro card (subject to settings; skippable)
+  applyAmbient();     // ambient background life keyed to this case's atmosphere
 }
 function setVar(k,v){ document.documentElement.style.setProperty(k,v); }
 /* ---- simple MM:SS case timer (freezes on solve/accusation; resets each case) ---- */
@@ -2180,7 +2624,7 @@ function renderBoard(){
     if(r%cfg.bh===0 && r!==0 && c%cfg.bw===cfg.bw-1)            cell.classList.add("door-h"); // gap in the horizontal wall
     if(c%cfg.bw===0 && c!==0 && r%cfg.bh===Math.floor(cfg.bh/2)) cell.classList.add("door-v"); // gap in the vertical wall
     if(i===C.murderCell) cell.classList.add("scene");
-    const box=E.boxOf(cfg,r,c), room=THEME.rooms[box%THEME.rooms.length];
+    const box=E.boxOf(cfg,r,c), room=THEME.rooms[box%THEME.rooms.length], objSlug=Skin.roomObjectSlug(THEME,box);
     const sr=r%cfg.bh, sc=c%cfg.bw;                                  // sub-position within the room
     const fx=cfg.bw>1?(sc/(cfg.bw-1))*100:0, fy=cfg.bh>1?(sr/(cfg.bh-1))*100:0;
     cell.style.backgroundColor=`hsla(${room.hue},38%,50%,0.12)`;      // fallback tint if the floor image is missing
@@ -2189,10 +2633,10 @@ function renderBoard(){
     cell.style.backgroundPosition=`${fx}% ${fy}%`;
     cell.dataset.i=i;
     if(r%cfg.bh===0 && c%cfg.bw===0){ const tag=document.createElement("span"); tag.className="room-tag";
-      tag.innerHTML=`<img src="${tAsset('objects','object-'+room.icon+'.png')}" alt="">`+room.name.replace(/^the /i,""); cell.appendChild(tag); }
+      tag.innerHTML=`<img src="${tAsset('objects','object-'+objSlug+'.png')}" alt="">`+room.name.replace(/^the /i,""); cell.appendChild(tag); }
     // object landmark for this room (behind the token) — gives the furniture art a purpose
     if(C.objectCells && C.objectCells[box]===i){ const o=document.createElement("img"); o.className="cell-object"+(board[i]!==0?" badge":"");
-      o.src=tAsset('objects','object-'+room.icon+'.png'); o.alt=""; cell.appendChild(o); }
+      o.src=tAsset('objects','object-'+objSlug+'.png'); o.alt=""; cell.appendChild(o); }
     if(board[i]!==0) cell.appendChild(tokenEl(board[i]));
     else if(candidates[i] && candidates[i].size) cell.appendChild(candGrid(i));
     // crime-scene (dashed) cell: the victim's body + the SCENE OBJECT found beside it (may be planted)
@@ -2239,21 +2683,12 @@ function renderCase(){
   const so=Skin.weaponBySlug(THEME,story.sceneObject);
   $("caseSub").innerHTML=`Case No. ${story.caseNo} · <b>${TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label}</b> · ${THEME.place}`+
     ` · Found beside victim: <img class="wicon" src="${tAsset('weapons','weapon-'+story.sceneObject+'.png')}" alt="">${so.n}.`;
-  // evidence list — each clue prefixed with a TYPE TAG chip (★ = key; every clue is true)
-  const list=$("clueList"); list.innerHTML="";
-  story.evidence.forEach((ev,idx)=>{
-    const li=document.createElement("li"); li.dataset.n=(idx+1);
-    if(ev.key) li.classList.add("key");
-    const star=ev.key?`<span class="keymark" title="key evidence">★</span>`:"";
-    li.innerHTML=`<span class="ev-tag tag-${ev.tag.toLowerCase()}">${ev.tag}</span>${star}${ev.text}`;
-    li.style.cursor="pointer"; li.title="Click: show it on the board · Double-click: mark as used";
-    li.addEventListener("click",()=>highlightClue(ev));   // pulse what this clue references
-    li.addEventListener("dblclick",()=>{ li.classList.toggle("used"); if(li.classList.contains("used"))cluesUsed.add(idx); else cluesUsed.delete(idx); });
-    list.appendChild(li);
-  });
+  // evidence list — each clue prefixed with a TYPE TAG chip (★ = key required; ✦ = discovered extra)
+  renderClueList();
   if($("sceneObjInfo")) $("sceneObjInfo").innerHTML=`<span class="soi-label">Found beside the body</span>`+
     `<img class="wicon" src="${tAsset('weapons','weapon-'+story.sceneObject+'.png')}" alt="">${so.n} — but is it the real weapon? Weigh it against the <span class="tag-weapon ev-tag" style="margin:0">WEAPON</span> evidence.`;
   renderPossibleWeapons();
+  renderPossibleMotives();
   // current-evidence stepper + tactical progress readout
   clueStep=0; renderEvCurrent();
   $("evProgress").innerHTML=`<b>${C.completionsWithout}</b> arrangements fit the sudoku alone — the evidence finds the one. `+
@@ -2265,35 +2700,238 @@ function renderCase(){
       `<span><span class="nm">${s.name}</span> — <span class="mo">${s.motive}</span></span>`;
     ros.appendChild(d); }
 }
+/* ===== Feature B: milestone evidence discovery — ★ required clues are visible from the start;
+   the non-key corroborating extras stay hidden and surface one at a time as the player correctly
+   completes a row / column / room. Persisted per case; setting toggles to "all up front". ===== */
+function loadEvidenceState(code){ const all=LS.get("evidenceState",{})||{}; const s=all[code]||{}; return { discovered:s.discovered|0, credited:Array.isArray(s.credited)?s.credited:[] }; }
+function saveEvidenceState(){ if(!C||!story) return; const all=LS.get("evidenceState",{})||{}; all[C.code]={ discovered:story.discoveredExtras|0, credited:[..._unitCredited] };
+  const ks=Object.keys(all); while(ks.length>40){ delete all[ks.shift()]; } LS.set("evidenceState",all); }
+function effectiveDiscovered(){ if(!story) return 0; return (settings.evidence==="all") ? story.extraOrder.length : (story.discoveredExtras|0); }
+function evidenceVisible(idx){ if(!story) return true; const e=story.evidence[idx]; if(!e) return false;
+  if(e.key) return true;                                  // ★ required clue — always visible
+  const pos=story.extraOrder.indexOf(idx); return pos>=0 && pos<effectiveDiscovered(); }   // extra — visible once discovered
+function visibleEv(){ return (story&&story.evidence||[]).map((e,i)=>({e,i})).filter(x=>evidenceVisible(x.i)); }
+function renderClueList(){
+  const list=$("clueList"); if(!list) return; list.innerHTML="";
+  (story&&story.evidence||[]).forEach((ev,idx)=>{
+    if(!evidenceVisible(idx)) return;
+    const li=document.createElement("li"); li.dataset.n=(idx+1);
+    if(ev.key) li.classList.add("key"); else li.classList.add("discovered");
+    const star=ev.key?`<span class="keymark" title="key evidence">★</span>`:`<span class="disc-mark" title="discovered during the investigation">✦</span>`;
+    li.innerHTML=`<span class="ev-tag tag-${ev.tag.toLowerCase()}">${ev.tag}</span>${star}${ev.text}`;
+    li.style.cursor="pointer"; li.title="Click: show it on the board · Double-click: mark as used";
+    li.addEventListener("click",()=>highlightClue(ev));
+    li.addEventListener("dblclick",()=>{ li.classList.toggle("used"); if(li.classList.contains("used"))cluesUsed.add(idx); else cluesUsed.delete(idx); });
+    list.appendChild(li);
+  });
+}
+function renderEvidenceUI(){ renderClueList(); renderEvCurrent(); }
 function renderEvCurrent(){
-  const ev=story&&story.evidence||[]; const n=ev.length; if(!n){ $("evClue").textContent="—"; $("evStep").textContent=""; return; }
+  const vis=visibleEv(); const n=vis.length; if(!n){ $("evClue").textContent="—"; $("evStep").textContent=""; return; }
   clueStep=((clueStep%n)+n)%n;
-  const e=ev[clueStep];
-  const star=e.key?`<span class="keymark" title="key evidence">★</span>`:"";
+  const e=vis[clueStep].e;
+  const star=e.key?`<span class="keymark" title="key evidence">★</span>`:`<span class="disc-mark">✦</span>`;
   $("evClue").innerHTML=`<span class="ev-tag tag-${e.tag.toLowerCase()}">${e.tag}</span>${star}${e.text}`;
   $("evStep").textContent=`${clueStep+1} / ${n}`;
+  revealMotivesIfMotiveClue(e);   // stepper landing on a MOTIVE clue flips the motive cards
 }
-/* Possible Weapons: the 3 candidates; tap a chip to cycle the player's mark possible -> doubtful -> cleared */
-const WMARK_NEXT={possible:"doubtful", doubtful:"cleared", cleared:"possible"};
+/* unit milestones: each newly-completed (correct) row/column/room surfaces the next hidden extra.
+   A unit can ever grant ONE discovery per case — credited units live in a permanent, per-case
+   persisted set (never removed), so undo / redo / erase+replace / clear / hint re-completing the
+   same unit can never credit a second discovery. */
+let _unitCredited=new Set(), _discQueue=[], _discPlaying=false, _discCount=0;
+function checkUnitMilestones(){
+  if(solved || !C || !story || settings.evidence==="all") return;
+  if(story.discoveredExtras>=story.extraOrder.length) return;   // nothing left to discover
+  const N=cfg.N;
+  const test=(key,idxs)=>{ if(_unitCredited.has(key) || story.discoveredExtras>=story.extraOrder.length) return;
+    if(idxs.every(i=>board[i]===C.solution[i])){ _unitCredited.add(key); discoverNextExtra(); } };   // discoverNextExtra() persists (incl. the credited set)
+  for(let r=0;r<N;r++){ const a=[]; for(let c=0;c<N;c++)a.push(r*N+c); test("r"+r,a); }
+  for(let c=0;c<N;c++){ const a=[]; for(let r=0;r<N;r++)a.push(r*N+c); test("c"+c,a); }
+  for(let b=0;b<N;b++){ const {r0,c0}=E.rcOfBox(cfg,b); const a=[]; for(let i=0;i<cfg.bh;i++)for(let j=0;j<cfg.bw;j++)a.push((r0+i)*N+(c0+j)); test("b"+b,a); }
+}
+function syncUnitsSilently(){ if(!C||!story) return; const N=cfg.N;   // mark currently-complete units CREDITED without discovering (so a mode toggle never retroactively grants)
+  const mark=(key,idxs)=>{ if(idxs.every(i=>board[i]===C.solution[i])) _unitCredited.add(key); };
+  for(let r=0;r<N;r++){ const a=[]; for(let c=0;c<N;c++)a.push(r*N+c); mark("r"+r,a); }
+  for(let c=0;c<N;c++){ const a=[]; for(let r=0;r<N;r++)a.push(r*N+c); mark("c"+c,a); }
+  for(let b=0;b<N;b++){ const {r0,c0}=E.rcOfBox(cfg,b); const a=[]; for(let i=0;i<cfg.bh;i++)for(let j=0;j<cfg.bw;j++)a.push((r0+i)*N+(c0+j)); mark("b"+b,a); }
+  saveEvidenceState();
+}
+function discoverNextExtra(){
+  if(!story || story.discoveredExtras>=story.extraOrder.length) return;
+  story.discoveredExtras++; saveEvidenceState();
+  const newIdx=story.extraOrder[story.discoveredExtras-1];           // the evidence index just revealed
+  const e=story.evidence[newIdx];
+  renderEvidenceUI();
+  const vis=visibleEv().findIndex(x=>x.i===newIdx); if(vis>=0){ clueStep=vis; renderEvCurrent(); }   // step to the new clue
+  const eb=$("evBlock"); if(eb) eb.open=true;   // surface the stepper so the new clue is in view
+  maybeDiscoverHint();                          // one-time: explain what the ✦ marker means
+  queueDiscovery(e);
+}
+function maybeDiscoverHint(){ if(LS.get("seenDiscoverHint",false)) return; LS.set("seenDiscoverHint",true);
+  assist(`<span class="disc-mark">✦</span> marks evidence you <b>uncovered</b> during your investigation — completing a row, column, or room surfaces a new corroborating clue.`); }
+/* discovery ceremony: a brief CENTERED foreground card naming the new evidence — the words
+   "NEW EVIDENCE" prominent + the actual clue text, held long enough to read (~1.3s) or until tap,
+   with a stamp-style slam on the banner. On dismiss the stepper counter flashes so the eye lands
+   where the clue now lives. Queued one-at-a-time, tap-to-dismiss, motion/sound gated (Motion off =
+   instant: the clue is already revealed in the list, so we just flash, no card). */
+let _discTimer=null, _discSkip=null;
+function discTextHTML(e){ if(!e) return ""; return `<span class="ev-tag tag-${e.tag.toLowerCase()}">${e.tag}</span><span class="disc-mark">✦</span>${e.text}`; }
+function queueDiscovery(e){ _discQueue.push(discTextHTML(e)); runDiscoveryQueue(); }
+function runDiscoveryQueue(){
+  if(_discPlaying || !_discQueue.length) return;
+  _discPlaying=true; _discCount++;
+  const html=_discQueue.shift();
+  sfx("paper");                                   // soft paper rustle (Sound-gated inside sfx)
+  const ov=$("discOverlay");
+  if(!motionOK() || !ov){ flashCounter(); _discPlaying=false; runDiscoveryQueue(); return; }   // Motion off: clue already in the list — just flash, no card
+  const txt=$("discText"); if(txt) txt.innerHTML=html;
+  ov.classList.add("show"); ov.setAttribute("aria-hidden","false");
+  const card=ov.querySelector(".disc-card"); if(card) restartAnim(card,"slam");   // card slides in + the NEW EVIDENCE banner slams (scale)
+  const hold=_discCount>2 ? 1150 : 1400;          // hold long enough to read; a touch shorter after the first couple in a case
+  _discTimer=setTimeout(endDiscovery, hold);
+  _discSkip=()=>endDiscovery(); setTimeout(()=>{ if(_discSkip&&ov) ov.addEventListener("pointerdown",_discSkip,{once:true}); },80);   // tap anywhere to dismiss (defer so the triggering click doesn't insta-skip)
+}
+function endDiscovery(){
+  if(_discTimer){ clearTimeout(_discTimer); _discTimer=null; }
+  const ov=$("discOverlay");
+  if(_discSkip&&ov){ ov.removeEventListener("pointerdown",_discSkip); } _discSkip=null;
+  if(ov){ ov.classList.remove("show"); ov.setAttribute("aria-hidden","true"); const card=ov.querySelector(".disc-card"); if(card) card.classList.remove("slam"); }
+  flashCounter();                                 // draw the eye to where the clue landed
+  _discPlaying=false;
+  if(_discQueue.length) setTimeout(runDiscoveryQueue, 180);   // small breath between queued moments
+  else runDiscoveryQueue();
+}
+function flashCounter(){ const eb=$("evBlock"); if(eb) eb.open=true; const s=$("evStep"); if(s && motionOK()) restartAnim(s,"disc-flash"); }
+/* Possible Weapons — the player's notebook. Tap a chip to cycle:
+   none -> Suspected (red outline + magnifier sweep) -> Cleared (grey + diagonal stamp + thud)
+   -> Confirmed (gold outline + stamp + glow) -> none. Player-only marking, no validation.
+   Marks persist per case (by case code, in localStorage) and re-render statically (entrance
+   animations replay only on a fresh tap, never on a plain re-render / reload / panel reparent). */
+const WMARK_NEXT={none:"suspected", suspected:"cleared", cleared:"confirmed", confirmed:"none"};
+const WMARK_TAG={suspected:"Suspected"};
+const WMARK_STAMP={cleared:"Cleared", confirmed:"Confirmed Weapon"};
+function loadWeaponMarks(code){ const all=LS.get("weaponMarks",{})||{}; return Object.assign({}, all[code]||{}); }
+function saveWeaponMarks(){ if(!C) return; const all=LS.get("weaponMarks",{})||{}; all[C.code]=story.weaponMarks;
+  const ks=Object.keys(all); while(ks.length>40){ delete all[ks.shift()]; } LS.set("weaponMarks",all); }
+let _wmarkJustSet=null;   // the slug whose entrance animation should play this render (cleared after one render)
 function renderPossibleWeapons(){
   const host=$("possibleWeapons"); if(!host||!story) return; host.innerHTML="";
   story.weaponCandidates.forEach(slug=>{
-    const w=Skin.weaponBySlug(THEME,slug), mark=story.weaponMarks[slug]||"possible";
-    const chip=document.createElement("button"); chip.className="wcand mark-"+mark; chip.dataset.slug=slug;
-    chip.title="Tap to mark: possible → doubtful → cleared";
-    chip.innerHTML=`<img class="wicon" src="${tAsset('weapons','weapon-'+slug+'.png')}" alt="">`+
-      `<span class="wcand-name">${w.n.replace(/^(the|a|an)\s+/i,"")}</span><span class="wcand-mark">${mark}</span>`;
-    chip.onclick=()=>{ story.weaponMarks[slug]=WMARK_NEXT[story.weaponMarks[slug]||"possible"]; renderPossibleWeapons(); };
+    const w=Skin.weaponBySlug(THEME,slug), st=story.weaponMarks[slug]||"none";
+    const chip=document.createElement("button"); chip.className="wcand st-"+st+(_wmarkJustSet===slug?" just-set":""); chip.dataset.slug=slug;
+    chip.title="Your notebook — tap to mark: Suspected → Cleared → Confirmed → clear";
+    chip.innerHTML=`<span class="wcand-ico"><img class="wicon" src="${tAsset('weapons','weapon-'+slug+'.png')}" alt=""><span class="wlens"></span></span>`+
+      `<span class="wcand-name">${w.n.replace(/^(the|a|an)\s+/i,"")}</span>`+
+      `<span class="wcand-mark">${WMARK_TAG[st]||""}</span>`+
+      `<span class="wstamp">${WMARK_STAMP[st]||""}</span>`;
+    chip.onclick=()=>{
+      const next=WMARK_NEXT[story.weaponMarks[slug]||"none"];
+      story.weaponMarks[slug]=next; saveWeaponMarks();
+      _wmarkJustSet=slug;                          // animate only this chip's new state
+      if(next==="cleared") sfx("stamp");           // soft thud (Sound-gated; the stamp-in animation is motion-gated via CSS)
+      else if(next==="confirmed") sfx("confirm");  // soft warm confirm
+      renderPossibleWeapons();
+    };
     host.appendChild(chip);
   });
+  _wmarkJustSet=null;                              // consumed -> later re-renders don't replay entrance animations
+}
+
+/* ===== Possible Motives — aged index cards. Face-DOWN until the player engages a [MOTIVE] clue,
+   then FLIP face-up (motion-gated). Markable like weapons (none/Suspected/Cleared/Confirmed).
+   Reveal flag + marks persist per case (localStorage). Player-only notebook, no validation. ===== */
+const MMARK_TAG={suspected:"Suspected"};
+const MMARK_STAMP={cleared:"Cleared", confirmed:"Confirmed"};
+const MOTIVE_GLYPH={money:"coin", inheritance:"scroll", revenge:"dagger", secret:"envelope", reputation:"mask",
+  jealousy:"eye", debt:"ledger", blackmail:"lock", betrayal:"chainbreak", forbidden:"heart", coverup:"shroud", grudge:"fist"};
+const GLYPH_SVG={
+  coin:'<svg viewBox="0 0 18 18" class="gsvg"><circle cx="9" cy="9" r="6.4"/><path d="M9 5.2v7.6M7.3 6.7h3a1.4 1.4 0 0 1 0 2.8H8.2a1.4 1.4 0 0 0 0 2.8h3"/></svg>',
+  scroll:'<svg viewBox="0 0 18 18" class="gsvg"><rect x="4.2" y="3" width="9.6" height="12" rx="1.4"/><path d="M6.6 6h4.8M6.6 9h4.8M6.6 12h3"/></svg>',
+  dagger:'<svg viewBox="0 0 18 18" class="gsvg gfill"><path d="M9 2l1.3 8.4H7.7z"/><rect x="6" y="10.3" width="6" height="1.6" rx=".8"/><rect x="8.2" y="11.7" width="1.6" height="4.3" rx=".8"/></svg>',
+  envelope:'<svg viewBox="0 0 18 18" class="gsvg"><rect x="3" y="4.6" width="12" height="8.8" rx="1"/><path d="M3.6 5.6L9 10l5.4-4.4"/></svg>',
+  mask:'<svg viewBox="0 0 18 18" class="gsvg"><path d="M4 4.2c0 6.6 2.4 9.8 5 9.8s5-3.2 5-9.8c-3-1-7-1-10 0z"/><circle cx="7" cy="7.6" r="1" class="gfilldot"/><circle cx="11" cy="7.6" r="1" class="gfilldot"/></svg>',
+  file:'<svg viewBox="0 0 18 18" class="gsvg"><path d="M4.5 3h5l4 4v8h-9z"/><path d="M9.5 3v4h4M6.8 10.2h4.4M6.8 12.6h4.4"/></svg>',
+  eye:'<svg viewBox="0 0 18 18" class="gsvg"><path d="M2.5 9S5.1 4.8 9 4.8 15.5 9 15.5 9 12.9 13.2 9 13.2 2.5 9 2.5 9z"/><circle cx="9" cy="9" r="2"/></svg>',
+  ledger:'<svg viewBox="0 0 18 18" class="gsvg"><rect x="4" y="3" width="10" height="12" rx="1"/><path d="M6.4 6h5.2M6.4 8.3h5.2M6.4 10.6h3"/><circle cx="11.2" cy="11.4" r="1.3"/></svg>',
+  lock:'<svg viewBox="0 0 18 18" class="gsvg"><rect x="4.6" y="8" width="8.8" height="6.4" rx="1.2"/><path d="M6.4 8V6.4a2.6 2.6 0 0 1 5.2 0V8"/><circle cx="9" cy="11.2" r=".9" class="gfilldot"/></svg>',
+  chainbreak:'<svg viewBox="0 0 18 18" class="gsvg"><path d="M7.4 6.6a2.3 2.3 0 0 0 0 4.6h.8M10.6 11.4a2.3 2.3 0 0 0 0-4.6h-.8"/><path d="M6.6 4.4l1 1.6M11.4 13.6l-1-1.6"/></svg>',
+  heart:'<svg viewBox="0 0 18 18" class="gsvg gfill"><path d="M9 14.6S3.2 11 3.2 6.9A2.85 2.85 0 0 1 9 5.5a2.85 2.85 0 0 1 5.8 1.4C14.8 11 9 14.6 9 14.6z"/></svg>',
+  shroud:'<svg viewBox="0 0 18 18" class="gsvg"><path d="M3.6 13.4C3.6 8.6 6 5 9 5s5.4 3.6 5.4 8.4"/><path d="M3.6 13.4h10.8"/><path d="M6 13.4v1.6M9 13.4v1.6M12 13.4v1.6"/></svg>',
+  fist:'<svg viewBox="0 0 18 18" class="gsvg"><rect x="5" y="7.6" width="8" height="5.6" rx="1.5"/><path d="M6.6 7.6V6.1a1 1 0 0 1 2 0v1.5M8.6 7.6V5.7a1 1 0 0 1 2 0v1.9M10.6 7.6V6.3a1 1 0 0 1 2 0v1.3"/></svg>'
+};
+function motiveGlyphSVG(tag){ return GLYPH_SVG[MOTIVE_GLYPH[tag]] || GLYPH_SVG.file; }
+function loadMotiveState(code){ const all=LS.get("motiveState",{})||{}; const s=all[code]||{}; return { revealed:!!s.revealed, marks:Object.assign({}, s.marks||{}) }; }
+function saveMotiveState(){ if(!C) return; const all=LS.get("motiveState",{})||{}; all[C.code]={ revealed:!!story.motiveRevealed, marks:story.motiveMarks||{} };
+  const ks=Object.keys(all); while(ks.length>40){ delete all[ks.shift()]; } LS.set("motiveState",all); }
+let _mmarkJustSet=null, _mflipNow=false;
+function renderPossibleMotives(){
+  const host=$("possibleMotives"); if(!host||!story) return; host.innerHTML="";
+  const revealed=!!story.motiveRevealed;
+  (story.motiveOptions||[]).forEach((opt,i)=>{
+    const st=(story.motiveMarks&&story.motiveMarks[i])||"none";
+    const card=document.createElement("button");
+    card.className="mcand st-"+st+(revealed?" flipped":"")+(_mmarkJustSet===i?" just-set":"")+(_mflipNow?" just-flip":"");
+    card.dataset.i=i; card.style.setProperty("--jit",(((i*37)%7)-3)+"deg");   // small deterministic rotation jitter
+    card.title=revealed?"Your notebook — tap to mark: Suspected → Cleared → Confirmed → clear":"Read a MOTIVE clue to reveal this lead";
+    card.innerHTML=`<span class="mcard-inner">`+
+      `<span class="mface mback"><span class="mback-q">?</span><span class="mback-conf">Confidential</span></span>`+
+      `<span class="mface mfront"><span class="wcand-ico mglyph">${motiveGlyphSVG(opt.tag)}</span>`+
+        `<span class="wcand-name mcard-name">${cap(opt.motive)}</span>`+
+        `<span class="wcand-mark">${MMARK_TAG[st]||""}</span><span class="wstamp">${MMARK_STAMP[st]||""}</span></span>`+
+    `</span>`;
+    if(revealed) card.onclick=()=>{
+      const next=WMARK_NEXT[(story.motiveMarks&&story.motiveMarks[i])||"none"];
+      story.motiveMarks[i]=next; saveMotiveState(); _mmarkJustSet=i;
+      if(next==="cleared") sfx("stamp"); else if(next==="confirmed") sfx("confirm");
+      renderPossibleMotives();
+    };
+    host.appendChild(card);
+  });
+  _mmarkJustSet=null; _mflipNow=false;   // consumed -> plain re-renders / reloads don't replay flip or stamp animations
+}
+function revealMotivesIfMotiveClue(ev){   // flip the cards face-up the FIRST time a [MOTIVE] clue is engaged
+  if(!ev || ev.kind!=="motive" || !story || story.motiveRevealed) return;
+  story.motiveRevealed=true; saveMotiveState(); _mflipNow=true; renderPossibleMotives();
 }
 
 /* ---- interactions (cell-first: tap a cell to select, then tap a suspect to place) ---- */
-function onCell(i){ if(solved)return; sel=i; refresh(); renderTray(); fxPulse(boardEl.children[i]); }   // select only — never auto-places
+function onCell(i){ if(solved)return;
+  if(C && i===C.murderCell){ sceneTap(); return; }   // the dashed scene belongs to the victim — tapping it is a shortcut to the accusation
+  sel=i; refresh(); renderTray(); fxPulse(boardEl.children[i]); playFootsteps(); }   // select only — never auto-places
 function selectSuspect(v){ if(solved)return;
   if(sel<0){ setStatus("Tap a cell on the board first — then tap a suspect to place them there.",""); return; }
+  if(C && sel===C.murderCell){ sceneRejectPlace(); return; }   // the scene cell is only ever filled by the accusation
   if(given[sel]){ fxShake(boardEl.children[sel]); sfx("buzz"); setStatus("That cell is fixed by the evidence — pick an open cell.",""); return; }
   if(notesMode) toggleNote(sel,v); else place(sel,v);
+}
+/* ===== Feature A: the crime-scene cell is accusation-only (never placed normally) ===== */
+let _sceneMsgShown=false, _nudged=false;
+function sceneTap(){ if(!C) return;
+  fxShake(boardEl.children[C.murderCell]); sfx("buzz");   // the square is "taken" — a gentle shake
+  if(!_sceneMsgShown){ _sceneMsgShown=true;               // first time: explain + pulse the Accuse button (once)
+    assist("The scene belongs to the victim. Only your accusation can place the killer here.");
+    pulseAccuse(); }
+  // …and offer the shortcut: tapping the scene is the fastest route to the Final Deduction
+  if(confirm("Ready to name the killer? The dashed scene belongs to the victim — only your accusation fills it.")) openAccusation();
+}
+function sceneRejectPlace(){ if(!C) return;   // defensive: any place attempt on the scene shakes + explains once
+  fxShake(boardEl.children[C.murderCell]); sfx("buzz");
+  if(!_sceneMsgShown){ _sceneMsgShown=true;
+    assist("The scene belongs to the victim. Only your accusation can place the killer here."); pulseAccuse(); }
+}
+function pulseAccuse(){ const b=$("accuseBtn"); if(b && motionOK()) restartAnim(b,"j-pulse"); }
+function maybeNudge(){   // all OTHER cells correct -> nudge the player to accuse (never auto-opens)
+  const done = !solved && !!C && gridComplete() && !$("accuseModal").classList.contains("show");
+  const b=$("accuseBtn"); if(b) b.classList.toggle("nudge", done);
+  if(done && !_nudged){ _nudged=true; setStatus("Every guest is accounted for. Name the killer.","good"); pulseAccuse(); }
+  if(!done) _nudged=false;
+}
+function placeKillerInScene(won){   // the accusation places the final piece into the dashed cell
+  if(!C || board[C.murderCell]===C.killer) return;
+  board[C.murderCell]=C.killer; paint(C.murderCell);
+  const cell=boardEl.children[C.murderCell]; if(!cell) return; cell.classList.add("scene-filled");
+  const tok=cell.querySelector(".token"); if(tok && won && motionOK()){ restartAnim(tok,"j-slamin"); fxShake(cell); }   // slam in on a win
 }
 /* ---- undo/redo capture board value AND candidate set for every cell an action touches ---- */
 function snapCells(cells){ return [...new Set(cells)].map(c=>({c, v:board[c], cand:[...candidates[c]]})); }
@@ -2304,16 +2942,17 @@ function applyAction(cells, mutate){
   undoStack.push({before, after}); redoStack=[];
   for(const c of list) paint(c);
 }
-function toggleNote(i,v){ if(board[i]!==0) return;       // notes only on empty cells
+function toggleNote(i,v){ if(board[i]!==0 || (C&&i===C.murderCell)) return;       // notes only on empty cells; never the scene cell
   applyAction([i], ()=>{ if(candidates[i].has(v)) candidates[i].delete(v); else candidates[i].add(v); });
   refresh(); }
-function place(i,v){ if(given[i]||board[i]===v)return;
+function place(i,v){ if(given[i]||board[i]===v||(C&&i===C.murderCell))return;   // the scene cell is accusation-only
   // every cell this action changes: the target + peers holding this suspect as a pencil mark
   const cells=[i];
   for(let j=0;j<cfg.N*cfg.N;j++) if(j!==i && candidates[j] && candidates[j].has(v) && isPeer(j,i)) cells.push(j);
   applyAction(cells, ()=>{ board[i]=v; candidates[i].clear();
     for(const j of cells) if(j!==i) candidates[j].delete(v); });   // tidy: clear this suspect's notes from peers
   clearHints(); refresh(); renderTray(); updateBtns();
+  if(C && C.solution && board[i]!==C.solution[i]) mistakes++;   // committing a wrong suspect to a cell = a "mistake" (Clean Case trophy)
   if(conflicts().has(i)){ fxShake(boardEl.children[i]); fxFlash(boardEl.children[i]); sfx("buzz"); }  // duplicate -> shake + red flash
   else sfx("place");
   checkWin(); }
@@ -2366,10 +3005,14 @@ function clearClueHighlight(){ if(clueHlTimer){ clearTimeout(clueHlTimer); clueH
 function clueBoardTargets(clue){
   const N=cfg.N, p=clue.p, T={cells:[],boxes:[],object:null,line:null};
   switch(clue.type){
-    case "sighting":{ T.cells.push(p.cell);
+    case "sighting":{
       const box=E.boxOf(cfg,Math.floor(p.cell/N),p.cell%N), oc=C.objectCells&&C.objectCells[box];
+      let anchored=false;
       if(oc!=null){ const dr=Math.floor(p.cell/N)-Math.floor(oc/N), dc=(p.cell%N)-(oc%N);
-        if(Math.abs(dr)+Math.abs(dc)===1) T.object=oc; }   // object-anchored sighting -> pulse the landmark too
+        if(Math.abs(dr)+Math.abs(dc)===1) anchored=true; }
+      // object-anchored sighting ("left of the table") -> ROOM ONLY (don't give away the exact cell or the object);
+      // a plain spot sighting names its cell, so highlight that cell
+      if(anchored) T.boxes.push(box); else T.cells.push(p.cell);
       break; }
     case "exclusion": T.cells.push(p.cell); break;
     case "position": T.boxes.push(p.box); T.line={box:p.box,axis:p.axis,band:p.band}; break;   // room + the line band
@@ -2392,6 +3035,7 @@ function applyClueHighlight(T){ const N=cfg.N;
   clueHlTimer=setTimeout(clearClueHighlight,1800);   // pulse ~1.6s, then clear (static when motion off)
 }
 function highlightClue(ev){ if(!ev||!C) return;
+  revealMotivesIfMotiveClue(ev);   // tapping a [MOTIVE] clue flips the motive cards face-up
   // on phones the case-file overlay covers the board — close it so the pulse is visible
   if(typeof closeCaseFile==="function" && document.body.classList.contains("co-open")) closeCaseFile();
   clearClueHighlight();
@@ -2436,6 +3080,9 @@ function hint(){ if(solved)return;
     boardEl.children[i].classList.add("hint-cell"); sel=i; refresh();
     assist(`This exact spot (highlighted) is the one to settle next. The evidence and elimination decide it.`);
   } else {
+    if(i===C.murderCell){   // the hint NEVER auto-places the scene — it points the player at the accusation
+      assist("Only your accusation can place the killer in the scene. Name them in the Final Deduction.");
+      pulseAccuse(); hintLevel=0; hintTarget=-1; clearHints(); return; }
     sel=i; place(i, C.solution[i]);    // routed through the undoable placement (also tidies peer notes)
     assist(`Confirmed — <b>${correct.name}</b> belongs here. One more piece of the file in place.`);
     hintLevel=0; hintTarget=-1; clearHints(); checkWin();
@@ -2445,7 +3092,8 @@ function hint(){ if(solved)return;
 function check(){ if(solved)return;
   if(gridComplete()){ openAccusation(); return; }   // complete & correct -> straight to the accusation
   let wrong=0, empty=0;
-  for(let i=0;i<cfg.N*cfg.N;i++){ const cell=boardEl.children[i]; const tok=cell.querySelector(".token"); if(tok)tok.classList.remove("bad");
+  for(let i=0;i<cfg.N*cfg.N;i++){ if(i===C.murderCell) continue;   // Check ignores the accusation-only scene cell
+    const cell=boardEl.children[i]; const tok=cell.querySelector(".token"); if(tok)tok.classList.remove("bad");
     if(board[i]===0){empty++;continue;} if(board[i]!==C.solution[i]){ wrong++; if(tok)tok.classList.add("bad"); } }
   if(wrong===0 && empty>0){
     // also surface whether the *evidence* is already contradicted (teaches that clues bind)
@@ -2496,11 +3144,14 @@ function refresh(){ const bad=conflicts(); const N=cfg.N;
     }
     if(i===sel)cell.classList.add("sel");
     if(selVal>0 && board[i]===selVal)cell.classList.add("match");       // same suspect elsewhere
-    const t=cell.querySelector(".token"); if(t)t.classList.toggle("bad",bad.has(i)); } }
+    const t=cell.querySelector(".token"); if(t)t.classList.toggle("bad",bad.has(i)); }
+  maybeNudge();   // keep the Accuse glow in sync with completion (handles erase/undo too)
+  checkUnitMilestones();   // surface a hidden extra when a row/column/room is newly completed
+}
 
 /* ---- grid complete -> player makes the accusation -> payoff ---- */
-function gridComplete(){ for(let i=0;i<cfg.N*cfg.N;i++) if(board[i]!==C.solution[i]) return false; return true; }
-function checkWin(){ if(solved) return; if(gridComplete() && !$("accuseModal").classList.contains("show")) openAccusation(); }
+function gridComplete(){ for(let i=0;i<cfg.N*cfg.N;i++){ if(i===C.murderCell) continue; if(board[i]!==C.solution[i]) return false; } return true; }   // all cells EXCEPT the scene
+function checkWin(){ if(solved) return; maybeNudge(); }   // never auto-opens — the player makes the accusation
 function updateGuessPill(){ const p=$("guessPill"); if(!p)return; p.textContent=`Guesses: ${guessesLeft}`;
   p.style.color = guessesLeft<=1 ? "var(--bad)" : (guessesLeft<=2 ? "var(--amber-soft)" : ""); }
 
@@ -2528,7 +3179,8 @@ function openAccusation(){
   story.motiveOptions.forEach((opt,i)=>{ const o=document.createElement("option"); o.value=i; o.textContent=cap(opt.motive); mo.appendChild(o); });
   // (4) evidence — the displayed clues; correct = a position proof clue
   const ev=$("accuseEvidence"); ev.innerHTML='<option value="-1">— choose the decisive clue —</option>';
-  story.evidence.forEach((e,idx)=>{ const o=document.createElement("option"); o.value=idx;
+  story.evidence.forEach((e,idx)=>{ if(!evidenceVisible(idx)) return;   // only offer clues the player has actually seen
+    const o=document.createElement("option"); o.value=idx;
     o.textContent=`#${idx+1} [${e.tag}]: ${stripTags(e.text)}`; ev.appendChild(o); });
   const placed=board.filter(v=>v).length, total=cfg.N*cfg.N;
   $("accuseGuesses").innerHTML=`<b>${guessesLeft}</b> guess${guessesLeft===1?"":"es"} left`+
@@ -2546,6 +3198,10 @@ function submitAccusation(){
       payoff(null, false);
       return;
     }
+    // a wrong accusation proves them innocent -> slam a "SUSPECT CLEARED" stamp on the accused
+    const sb=document.querySelector(`#accuseSuspects .accuse-suspect[data-v="${accuseCulprit}"]`);
+    if(sb && !sb.querySelector(".payoff-stamp")){ sb.insertAdjacentHTML("beforeend", mkStampHTML("Suspect Cleared","stamp-suspect",-9));
+      const st=sb.querySelector(".payoff-stamp"); if(st && motionOK()) restartAnim(st,"slam"); }
     setAccuseFeedback(`Wrong accusation. +1:00 added to your time. ${guessesLeft} guess${guessesLeft===1?"":"es"} left.`,"bad");
     return;
   }
@@ -2554,13 +3210,47 @@ function submitAccusation(){
   const grade={ weaponRight: accuseWeapon!=="" && accuseWeapon===story.trueWeapon,           // Q2: true weapon
                 motiveRight: moPick>=0 && !!(story.motiveOptions[moPick]&&story.motiveOptions[moPick].correct),  // Q3: killer's motive
                 evidenceRight: evPick>=0 && !!(story.evidence[evPick]&&story.evidence[evPick].proof),            // Q4: a position proof clue
-                evPick };
+                evPick, weaponPick:accuseWeapon, motivePick:moPick };
   $("accuseModal").classList.remove("show");
   payoff(grade, true);
 }
 
+/* payoff accusation trio: culprit + weapon + motive pinned side by side (✓/✗ on a win; the truth on a fail) */
+function mkStampHTML(text, cls, rot){ return `<span class="payoff-stamp ${cls}" style="--st-rot:${rot}deg">${text}</span>`; }
+function trioCell(label, ok, valHTML){
+  const cell=document.createElement("div"); cell.className="trio-cell"+(ok===true?" right":(ok===false?" wrong":""));
+  const mark=ok===true?" ✓":(ok===false?" ✗":"");
+  cell.innerHTML=`<div class="trio-art"></div><div class="trio-label">${label}${mark}</div><div class="trio-val">${valHTML}</div>`;
+  return cell;
+}
+function buildAccuseTrio(grade, won){
+  const k=Skin.sName(THEME,C.killer), wrap=document.createElement("div"); wrap.className="accuse-trio";
+  const wnm=s=>cap(Skin.weaponBySlug(THEME,s).n.replace(/^(the|a|an)\s+/i,""));
+  // CULPRIT — on a win, their alibi crumbled -> FALSE ALIBI stamp
+  const c1=trioCell("Culprit", won?true:null, k.name.replace(/^The\s+/i,"")); c1.classList.add("tc-culprit");
+  const tok=makeToken(C.killer); tok.classList.add("trio-token"); c1.querySelector(".trio-art").appendChild(tok);
+  if(won) c1.querySelector(".trio-art").insertAdjacentHTML("beforeend", mkStampHTML("False Alibi","stamp-falsealibi",-12));
+  // WEAPON — WEAPON CONFIRMED stamp if right
+  const trueW=story.trueWeapon, pickW=(won && grade.weaponPick)?grade.weaponPick:trueW;
+  let wVal=wnm(pickW); if(won && !grade.weaponRight) wVal+=`<span class="trio-actual">actually ${wnm(trueW)}</span>`;
+  const c2=trioCell("Weapon", won?grade.weaponRight:null, wVal); c2.classList.add("tc-weapon");
+  c2.querySelector(".trio-art").innerHTML=`<img class="trio-weapon" src="${tAsset('weapons','weapon-'+pickW+'.png')}" alt="">`;
+  if(won && grade.weaponRight) c2.querySelector(".trio-art").insertAdjacentHTML("beforeend", mkStampHTML("Weapon Confirmed","stamp-weapon",-9));
+  // MOTIVE — MOTIVE CONFIRMED stamp if right
+  const trueM=story.motiveOptions.find(o=>o.correct)||{motive:k.motive, tag:story.killerTag};
+  const pickM=(won && grade.motivePick>=0 && story.motiveOptions[grade.motivePick])?story.motiveOptions[grade.motivePick]:trueM;
+  let mVal=cap(pickM.motive); if(won && !grade.motiveRight) mVal+=`<span class="trio-actual">actually ${cap(trueM.motive)}</span>`;
+  const c3=trioCell("Motive", won?grade.motiveRight:null, mVal); c3.classList.add("tc-motive");
+  c3.querySelector(".trio-art").innerHTML=`<span class="trio-motive">${motiveGlyphSVG((won?pickM:trueM).tag)}</span>`;
+  if(won && grade.motiveRight) c3.querySelector(".trio-art").insertAdjacentHTML("beforeend", mkStampHTML("Motive Confirmed","stamp-motive",-10));
+  wrap.appendChild(c1); wrap.appendChild(c2); wrap.appendChild(c3);
+  return wrap;
+}
 function payoff(grade, won){
   solved=true; freezeTimer();
+  if($("trophyStrip")){ $("trophyStrip").hidden=true; $("trophyStrip").innerHTML=""; }   // clear any prior trophy strip
+  const an=$("accuseBtn"); if(an) an.classList.remove("nudge");   // clear the nudge glow
+  placeKillerInScene(won);   // the accusation places the killer into the dashed scene (slam on a win; static on a fail)
   let isPerfect=false;
   const k=Skin.sName(THEME,C.killer), modal=$("winModal").querySelector(".modal");
   modal.classList.toggle("failed", !won);
@@ -2577,31 +3267,34 @@ function payoff(grade, won){
   const totalTime=fmtTime(elapsedMs()), guessesUsed=MAX_GUESSES-guessesLeft;
   const penaltyStr=penaltyMs?` · penalty +${fmtTime(penaltyMs)}`:"";
   if(won){
-    $("newsHeadline").textContent=makeHeadline(k.name);
     $("poTrophy").innerHTML=`<img class="wicon" src="${tAsset('weapons','weapon-'+story.trueWeapon+'.png')}" alt="">${cap(tw.n.replace(/^(the|a|an)\s+/i,""))}`;
     const acc=1+(grade.weaponRight?1:0)+(grade.motiveRight?1:0)+(grade.evidenceRight?1:0), perfect=acc===4; isPerfect=perfect;
     const plantNote=story.weaponPlanted?` (the ${Skin.weaponBySlug(THEME,story.sceneObject).n} by the body was planted)`:"";
-    $("accuseScore").innerHTML=
-      `<div class="acc-stars">${"★".repeat(acc)}${"☆".repeat(4-acc)} <span class="acc-num">Accuracy ${acc}/4</span></div>`+
-      `<div class="acc-bits">Culprit ✓ · Weapon ${grade.weaponRight?"✓":"✗"} · Motive ${grade.motiveRight?"✓":"✗"} · Proof ${grade.evidenceRight?"✓":"✗"} · ⏱ ${totalTime}${penaltyStr} · ${guessesUsed+1}/${MAX_GUESSES} guesses</div>`+
-      (perfect ? `<div class="acc-correct good">Flawless deduction.${plantNote}</div>`
-               : `<div class="acc-correct">`+(grade.weaponRight?"":`The weapon was <b>${tw.n}</b>${plantNote}. `)+(grade.motiveRight?"":`The motive was ${cap(k.motive)}. `)+(grade.evidenceRight?"":`The proof was “${correctProof}”.`)+`</div>`);
+    const sc=$("accuseScore"); sc.innerHTML=
+      `<div class="acc-stars">${"★".repeat(acc)}${"☆".repeat(4-acc)} <span class="acc-num">Accuracy ${acc}/4 · ⏱ ${totalTime}${penaltyStr} · ${guessesUsed+1}/${MAX_GUESSES} guesses</span></div>`+
+      (perfect?`<div class="acc-correct good">Flawless deduction.${plantNote}</div>`:``);
+    sc.appendChild(buildAccuseTrio(grade,true));
+    sc.insertAdjacentHTML("beforeend",`<div class="trio-proof"><span class="trio-proof-label">Proof</span>“${correctProof}”${grade.evidenceRight?mkStampHTML("Evidence Found","stamp-proof",-7):""}</div>`);
     recordSolved(makeHeadline(k.name), perfect);
+    recordLeaderboard({ tier:C.tier, ms:elapsedMs(), timeStr:totalTime, no:story.caseNo, code:C.code,
+      attempts:guessesUsed+1, acc, perfect:acc===4, date:nowStr() });   // personal best (time incl. penalties)
+    const tr=evalTrophiesOnWin(grade); _payoffStrip={fresh:tr.fresh, ctx:tr.ctx, teases:missedTeases(grade), memorial:tr.memorial};   // claim trophies + queue the post-case strip
+    $("poTrophy").innerHTML=tr.fresh.length?`<b style="color:var(--amber-soft)">${tr.fresh.length}</b> new ${tr.fresh.length>1?"trophies":"trophy"} 🏆`:`<span class="muted">${tr.memorial?"memorial added":"none new"}</span>`;
     setStatus(`Case closed — ${k.name} arrested.`,"good");
   } else {
-    $("newsHeadline").textContent=failHeadline();
+    _payoffStrip=null;
     $("poTrophy").innerHTML=`<span class="muted">none — case unsolved</span>`;
-    $("accuseScore").innerHTML=
-      `<div class="acc-stars" style="color:var(--bad)">CASE UNSOLVED</div>`+
-      `<div class="acc-bits">Out of guesses — the killer walked free. ⏱ ${totalTime}${penaltyStr} · ${MAX_GUESSES}/${MAX_GUESSES} guesses used</div>`+
-      `<div class="acc-correct">The culprit was <b>${k.name}</b>. The proof: “${correctProof}”. Motive: ${cap(k.motive)}.</div>`;
+    const sc=$("accuseScore"); sc.innerHTML=
+      `<div class="acc-stars" style="color:var(--bad)">CASE UNSOLVED <span class="acc-num" style="color:var(--ink-dim)">⏱ ${totalTime}${penaltyStr} · ${MAX_GUESSES}/${MAX_GUESSES} guesses used</span></div>`;
+    sc.appendChild(buildAccuseTrio(null,false));   // the truth, pinned up
+    sc.insertAdjacentHTML("beforeend",`<div class="trio-proof"><span class="trio-proof-label">The proof</span>“${correctProof}”</div>`);
     setStatus(`Case unsolved — ${k.name} got away.`,"bad");
   }
   setResolution(won);   // 2-3 sentence story closer (different flavor on a fail)
   buildChain();
-  onDemoPayoff(won);            // DEMO: mark completion + show the call-to-action block
   $("winModal").classList.add("show");
-  playReveal(won, isPerfect);   // flashbulb -> bars slam -> stamp thunk + dust -> confetti (3/3); tap to skip
+  playPayoff(grade, won, isPerfect, won?makeHeadline(k.name):failHeadline());   // sequenced stamp reveal -> CASE CLOSED -> headline
+  onDemoPayoff(won);            // DEMO: mark this fixed case solved + show the call-to-action block
 }
 function failHeadline(){
   const opts=["THE KILLER WALKS FREE — CASE GOES COLD","NO ARREST AT {PLACE}: KILLER ESCAPES","{PLACE} MURDER LEFT UNSOLVED"];
@@ -2646,16 +3339,34 @@ function recordSolved(headline, perfect){
       culprit:Skin.sName(THEME,C.killer).name, weapon:story.trueWeapon, headline, perfect:!!perfect, date:nowStr() });
     LS.set("archive", archive.slice(0,200));
   }
-  const trophies=LS.get("trophies",[]);
-  if(!trophies.includes(story.trueWeapon)){ trophies.push(story.trueWeapon); LS.set("trophies", trophies); }
+  // (weapon trophies are now claimed by the trophy system in evalTrophiesOnWin, with full source metadata)
+}
+/* personal leaderboard: per-tier fastest WON cases (time incl. penalties), kept to the top 10 */
+function recordLeaderboard(entry){
+  const all=LS.get("leaderboard",{})||{}; const list=(all[entry.tier]||[]).slice();
+  list.push(entry); list.sort((a,b)=>a.ms-b.ms);
+  all[entry.tier]=list.slice(0,10); LS.set("leaderboard",all);
+}
+const REC_TIERS=["easy","medium","hard","extreme"];
+function renderRecords(tier){
+  const tbl=$("recTable"); if(!tbl) return;
+  document.querySelectorAll("#recTabs .rec-tab").forEach(t=>t.classList.toggle("on", t.dataset.tier===tier));
+  const all=LS.get("leaderboard",{})||{}; const list=(all[tier]||[]).slice().sort((a,b)=>a.ms-b.ms);
+  tbl.innerHTML="";
+  if(!list.length){ tbl.innerHTML=`<div class="rec-empty">No ${TIER_FLAVOR[tier]||tier} records yet — win one to set a time.</div>`; return; }
+  tbl.insertAdjacentHTML("beforeend",`<div class="rec-row head"><span></span><span>Time</span><span>Case</span><span>Acc</span></div>`);
+  list.forEach((e,i)=>{ const tries=e.attempts+(e.attempts===1?" try":" tries");
+    tbl.insertAdjacentHTML("beforeend",
+      `<div class="rec-row"><span class="rec-rank">${i+1}</span>`+
+      `<span class="rec-time">${e.timeStr}</span>`+
+      `<span class="rec-meta">No. ${e.no} · ${tries} · ${e.date}</span>`+
+      `<span class="rec-acc${e.perfect?' perfect':''}">${e.acc}/4${e.perfect?' ✓':''}</span></div>`); });
 }
 function openArchive(){
-  const archive=LS.get("archive",[]), trophies=LS.get("trophies",[]);
-  const shelf=$("trophyShelf"); shelf.innerHTML="";
-  $("trophyCount").textContent=trophies.length?`${trophies.length}`:"";
-  if(!trophies.length) shelf.innerHTML='<span class="muted">No trophies yet — solve a case to claim its weapon as evidence.</span>';
-  trophies.forEach(slug=>{ const d=document.createElement("div"); d.className="trophy"; d.title=slug;
-    d.innerHTML=`<img src="${tAsset('weapons','weapon-'+slug+'.png')}" alt="${slug}">`; shelf.appendChild(d); });
+  renderRecords((C&&C.tier&&REC_TIERS.includes(C.tier))?C.tier:"medium");   // leaderboard, defaulting to the current tier
+  renderTrophies(_trophyFilter||"all");                                     // tabbed trophy gallery
+  renderMemorial();                                                         // victim memorial gallery (separate)
+  const archive=LS.get("archive",[]);
   $("archiveCount").textContent=archive.length?`${archive.length} closed`:"";
   const list=$("archiveList"); list.innerHTML="";
   if(!archive.length) list.innerHTML='<div class="muted">No solved cases yet. Close a case to start your archive.</div>';
@@ -2665,25 +3376,301 @@ function openArchive(){
   $("archiveModal").classList.add("show");
 }
 
+/* =====================================================================
+   TROPHY COLLECTION SYSTEM — a detective's archive (~90 trophies) plus a
+   separate Victim Memorial Gallery.
+   Categories: weapon (12) / motive (12) / scene (12 Scene Markers) /
+   room (9 Room Seals, tiered) / dossier (16) / relic (10) / badge (~21) /
+   daily (hidden, reserved for a future daily mode — never evaluated).
+   Persisted state, all migrating cleanly:
+     trophyUnlocks = { id:{date,no,code,title} }   binary unlocks
+     roomSeals     = { slug:{wins,gold,date,no,code,title} }   tiered seals
+     trophyStats   = cumulative counters (wins, perfectWins, ...)
+     victimMemorial= { slug:{name,date,no,code,title,room,weapon} }
+   Adapted strictly to existing content (12 weapons, 12 motive tags, 12 board
+   objects, 9 rooms, 16 suspect roles, 49 victims). Rarity is display-only.
+   "Mistake" (Clean Case) = committing a suspect to a cell whose value isn't
+   the unique solution for it (see place()); a wrong accusation guess counts.
+   ===================================================================== */
+const TROPHY_RARITY={
+  common:    {label:"Common",     cls:"r-common"},
+  uncommon:  {label:"Uncommon",   cls:"r-uncommon"},
+  rare:      {label:"Rare",       cls:"r-rare"},
+  masterwork:{label:"Masterwork", cls:"r-masterwork"},
+  legendary: {label:"Legendary",  cls:"r-legendary"},
+};
+const TROPHY_CATS=[                       // order drives the Archive tabs (Daily hidden)
+  {key:"weapon",  label:"Weapons",       room:"The Armory"},
+  {key:"motive",  label:"Motives",       room:"The Study"},
+  {key:"scene",   label:"Scene Markers", room:"The Conservatory"},
+  {key:"room",    label:"Rooms",         room:"The Manor"},
+  {key:"dossier", label:"Dossiers",      room:"The Records Room"},
+  {key:"relic",   label:"Relics",        room:"The Evidence Room"},
+  {key:"badge",   label:"Badges",        room:"The Trophy Hall"},
+  {key:"daily",   label:"Daily",         room:"The Almanac", hidden:true},
+];
+const SWIFT_TARGET_MS={easy:180000, medium:420000, hard:900000, extreme:1800000};   // per-tier "Swift Justice" par
+const MOTIVE_TITLE={money:"Greed", inheritance:"Inheritance", revenge:"Revenge", secret:"A Buried Secret", reputation:"Reputation",
+  jealousy:"Jealousy", debt:"Debt", blackmail:"Blackmail", betrayal:"Betrayal", forbidden:"Forbidden Love", coverup:"Cover-Up", grudge:"Old Grudge"};
+const MOTIVE_ORDER=["money","inheritance","revenge","secret","reputation","jealousy","debt","blackmail","betrayal","forbidden","coverup","grudge"];
+// the 12 board objects (Scene Markers) — noir display names over the existing object art
+const SCENE_OBJECTS=[
+  {slug:"plant",name:"Potted Fern"},   {slug:"table",name:"Card Table"},     {slug:"chair",name:"Wingback Chair"},
+  {slug:"bush",name:"Topiary"},        {slug:"tv",name:"Wireless Set"},      {slug:"bookshelf",name:"Bookcase"},
+  {slug:"rug",name:"Persian Rug"},     {slug:"lamp",name:"Reading Lamp"},    {slug:"bed",name:"Four-Poster Bed"},
+  {slug:"painting",name:"Oil Portrait"},{slug:"fireplace",name:"The Hearth"},{slug:"vase",name:"Porcelain Vase"},
+];
+/* ~10 noir case relics, each mapped to an achievable existing condition. ctx is built in evalTrophiesOnWin(). */
+const RELIC_DEFS=[
+  {id:"relic-note",     name:"Detective's Note",         glyph:"📝", hint:"Close your very first case.",                                     test:c=>c.won&&c.firstWin},
+  {id:"relic-diary",    name:"Torn Diary Page",          glyph:"📄", hint:"Win a Routine (Easy) case.",                                       test:c=>c.won&&c.tier==="easy"},
+  {id:"relic-will",     name:"Burned Will",              glyph:"📜", hint:"Win a Troubling (Medium) case.",                                   test:c=>c.won&&c.tier==="medium"},
+  {id:"relic-watch",    name:"Cracked Pocket Watch",     glyph:"⏱️", hint:"Win a Grim (Hard) case.",                                          test:c=>c.won&&c.tier==="hard"},
+  {id:"relic-locket",   name:"Broken Locket",            glyph:"💔", hint:"Win a Cold (Extreme) case.",                                       test:c=>c.won&&c.tier==="extreme"},
+  {id:"relic-key",      name:"Missing Key",              glyph:"🔑", hint:"Name the killer with the board less than four-fifths filled.",      test:c=>c.won&&c.fillFrac<0.8},
+  {id:"relic-hankie",   name:"Bloodless Handkerchief",   glyph:"🧣", hint:"Win a case without a single time penalty.",                        test:c=>c.won&&c.penaltyMs===0},
+  {id:"relic-letter",   name:"Sealed Letter",            glyph:"✉️", hint:"Solve a case where the weapon by the body was planted — and name the true one.", test:c=>c.won&&c.weaponPlanted&&c.weaponRight},
+  {id:"relic-news",     name:"Old Newspaper Clipping",   glyph:"📰", hint:"Uncover every corroborating clue in a case, then solve it.",        test:c=>c.won&&c.extrasAll},
+  {id:"relic-portrait", name:"Family Portrait Fragment", glyph:"🖼️", hint:"Win a 6×6 and a 9×9 case on the same day.",                         test:c=>c.won&&c.dayBothSizes},
+];
+/* BADGES — performance + milestone achievements. The original five "Perfect Deductions" keep their
+   ids (perfect-*) so existing unlocks migrate; they simply live under the Badges tab now. */
+const BADGE_DEFS=[
+  {id:"perfect-case",     name:"Perfect Case",          rarity:"rare",       glyph:"🎯", desc:"A flawless 4-for-4 accusation: culprit, weapon, motive and evidence.", hint:"Get all four parts of an accusation right.",            test:c=>c.won&&c.acc===4},
+  {id:"perfect-flawless", name:"Flawless Detective",    rarity:"masterwork", glyph:"🔍", desc:"Solved without once asking the Clerk for a hint.",                      hint:"Win a case using no hints.",                            test:c=>c.won&&c.hintsUsed===0},
+  {id:"perfect-clean",    name:"Clean Case",            rarity:"masterwork", glyph:"🧼", desc:"No wrong accusations and no incorrect placements.",                     hint:"Win without a single mistake on the board or in the dock.", test:c=>c.won&&c.guessesUsed===0&&c.mistakes===0},
+  {id:"perfect-swift",    name:"Swift Justice",         rarity:"rare",       glyph:"⚡", desc:"Closed the case under the par time for its difficulty.",                hint:"Win quickly — beat the par time for the tier.",         test:c=>c.won&&c.elapsedMs<(SWIFT_TARGET_MS[c.tier]||Infinity)},
+  {id:"perfect-fullset",  name:"Full Set",              rarity:"legendary",  glyph:"👑", desc:"Closed a case at every difficulty — Routine, Troubling, Grim and Cold.",hint:"Win at least one case on all four difficulties.",       test:c=>c.allTiersWon},
+  {id:"badge-first",      name:"First Case Closed",     rarity:"common",     glyph:"🗂️", desc:"Your very first closed case.",                                          hint:"Close your first case.",                                test:c=>c.won&&c.firstWin},
+  {id:"badge-firstperfect",name:"First Perfect Deduction",rarity:"rare",     glyph:"🌟", desc:"Your first flawless 4/4 accusation.",                                   hint:"Land your first 4/4 accusation.",                       test:c=>c.won&&c.acc===4&&c.stats.perfectWins===1},
+  {id:"badge-tier-easy",  name:"Routine Detective",     rarity:"common",     glyph:"🥉", desc:"Closed a Routine (Easy) case.",                                         hint:"Win an Easy case.",                                     test:c=>c.won&&c.tier==="easy"},
+  {id:"badge-tier-medium",name:"Troubling Detective",   rarity:"common",     glyph:"🥈", desc:"Closed a Troubling (Medium) case.",                                     hint:"Win a Medium case.",                                    test:c=>c.won&&c.tier==="medium"},
+  {id:"badge-tier-hard",  name:"Grim Detective",        rarity:"uncommon",   glyph:"🥇", desc:"Closed a Grim (Hard) case.",                                            hint:"Win a Hard case.",                                      test:c=>c.won&&c.tier==="hard"},
+  {id:"badge-tier-extreme",name:"Cold-Case Detective",  rarity:"rare",       glyph:"🏅", desc:"Closed a Cold (Extreme) case.",                                         hint:"Win an Extreme case.",                                  test:c=>c.won&&c.tier==="extreme"},
+  {id:"badge-cases-10",   name:"Ten Cases Closed",      rarity:"common",     glyph:"📁", desc:"Ten cases solved.",                                                     hint:"Solve 10 cases.",                                       test:c=>c.stats.wins>=10},
+  {id:"badge-cases-25",   name:"Twenty-Five Closed",    rarity:"uncommon",   glyph:"🗃️", desc:"Twenty-five cases solved.",                                             hint:"Solve 25 cases.",                                       test:c=>c.stats.wins>=25},
+  {id:"badge-cases-50",   name:"Fifty Closed",          rarity:"rare",       glyph:"🏛️", desc:"Fifty cases solved.",                                                   hint:"Solve 50 cases.",                                       test:c=>c.stats.wins>=50},
+  {id:"badge-cases-100",  name:"Century of Cases",      rarity:"legendary",  glyph:"🏆", desc:"One hundred cases solved.",                                             hint:"Solve 100 cases.",                                      test:c=>c.stats.wins>=100},
+  {id:"badge-perfect-5",  name:"Five Perfect Cases",    rarity:"rare",       glyph:"✨", desc:"Five flawless 4/4 cases.",                                              hint:"Land five perfect deductions.",                         test:c=>c.stats.perfectWins>=5},
+  {id:"badge-early-5",    name:"Quick Study",           rarity:"uncommon",   glyph:"🐎", desc:"Five wins by early accusation (board under four-fifths filled).",       hint:"Win five times by early accusation.",                   test:c=>c.stats.earlyWins>=5},
+  {id:"badge-zeropen-10", name:"Steady Hands",          rarity:"uncommon",   glyph:"🕊️", desc:"Ten wins with no time penalty.",                                        hint:"Win ten cases with no penalty.",                        test:c=>c.stats.zeroPenWins>=10},
+  {id:"badge-extras-5",   name:"Thorough Investigator", rarity:"uncommon",   glyph:"🔬", desc:"Uncovered every corroborating clue in five cases.",                     hint:"Uncover all the extras in five cases.",                 test:c=>c.stats.extrasWins>=5},
+  {id:"badge-allweapons", name:"Master of the Armory",  rarity:"legendary",  glyph:"🗡️", desc:"Identified all twelve weapons.",                                        hint:"Claim every weapon trophy.",                            test:c=>c.ownedCount("weapon")>=12},
+  {id:"badge-allmotives", name:"Reader of Hearts",      rarity:"legendary",  glyph:"🩸", desc:"Proved all twelve motives.",                                            hint:"Claim every motive trophy.",                            test:c=>c.ownedCount("motive")>=12},
+];
+let _trophyReg=null;
+function trophyRegistry(){
+  if(_trophyReg) return _trophyReg;
+  const reg=[];
+  (THEME.weapons||[]).forEach((w,i)=>reg.push({ id:"weapon-"+w.slug, cat:"weapon", rarity:"uncommon", slug:w.slug, num:i+1,
+    name:cap(w.n.replace(/^(the|a|an)\s+/i,"")), desc:"The murder weapon, claimed as evidence.",
+    hint:"Identify the true weapon in a winning accusation to claim it.",
+    test:c=>c.won&&c.weaponRight&&c.trueWeapon===w.slug }));
+  MOTIVE_ORDER.forEach((tag,i)=>{ if(!(THEME.motiveClues&&THEME.motiveClues[tag])) return;
+    reg.push({ id:"motive-"+tag, cat:"motive", rarity:"uncommon", tag, num:i+1, name:MOTIVE_TITLE[tag]||cap(tag),
+      desc:(THEME.motiveClues[tag]&&THEME.motiveClues[tag][0])||"A motive proven in the dock.",
+      hint:"Name this motive correctly in a winning accusation to claim it.",
+      test:c=>c.won&&c.motiveRight&&c.killerMotiveTag===tag }); });
+  SCENE_OBJECTS.forEach((o,i)=>reg.push({ id:"scene-"+o.slug, cat:"scene", rarity:"uncommon", slug:o.slug, num:i+1, name:o.name,
+    desc:"A scene marker — an object a witness placed someone beside.",
+    hint:"Win a case where a clue places a suspect beside this object.",
+    test:c=>c.won&&c.referencedObjects.indexOf(o.slug)>=0 }));
+  (THEME.rooms||[]).forEach(rm=>reg.push({ id:"room-"+rm.slug, cat:"room", rarity:"uncommon", slug:rm.slug,
+    name:rm.name.replace(/^the\s+/i,"The ") }));   // tiered Room Seals — state lives in roomSeals, not the unlock map
+  (THEME.suspects||[]).forEach(su=>reg.push({ id:"dossier-"+su.role, cat:"dossier", rarity:"uncommon", role:su.role, name:su.name,
+    desc:"Their case file — closed the day you correctly named them the killer.",
+    hint:"Correctly accuse this suspect when they are the culprit.",
+    test:c=>c.won&&c.killerRole===su.role }));
+  RELIC_DEFS.forEach(r=>reg.push({ id:r.id, cat:"relic", rarity:"common", name:r.name, glyph:r.glyph,
+    desc:r.hint, hint:r.hint, test:r.test }));
+  BADGE_DEFS.forEach(b=>reg.push({ id:b.id, cat:"badge", rarity:b.rarity, name:b.name, glyph:b.glyph,
+    desc:b.desc, hint:b.hint, test:b.test }));
+  _trophyReg=reg; return reg;
+}
+function loadTrophyUnlocks(){
+  let map=LS.get("trophyUnlocks",null);
+  if(!map){ map={}; const old=LS.get("trophies",null);          // migrate the legacy weapon-slug array (keeps existing players' progress)
+    if(Array.isArray(old)) old.forEach(slug=>{ map["weapon-"+slug]={date:"",no:0,code:"",title:""}; });
+    LS.set("trophyUnlocks",map); }
+  return map;
+}
+function saveTrophyUnlocks(map){ LS.set("trophyUnlocks",map); }
+function loadRoomSeals(){ return LS.get("roomSeals",{})||{}; }
+function roomTier(rs){ if(!rs||!rs.wins) return null; return rs.gold?"gold":(rs.wins>=5?"silver":"bronze"); }
+function noteDayWin(){ const day=nowStr(), size=(cfg.N===6)?6:9;   // track which grid sizes were won today (for the "one day" relic)
+  let d=LS.get("dayWins",{})||{}; if(d.day!==day) d={day, sizes:{}};
+  d.sizes[size]=true; LS.set("dayWins",d); return !!(d.sizes[6]&&d.sizes[9]); }
+function sceneRoomSlug(){ return THEME.rooms[E.boxOf(cfg, Math.floor(C.murderCell/cfg.N), C.murderCell%cfg.N) % THEME.rooms.length].slug; }
+/* is this trophy unlocked? (rooms read their tiered seal, everything else the binary unlock map) */
+function isUnlocked(t, map, seals){ if(t.cat==="room"){ const rs=seals[t.slug]; return !!(rs&&rs.wins); } return !!map[t.id]; }
+function trophyUnlock(t, map, seals){ if(t.cat==="room"){ const rs=seals[t.slug]; if(!rs||!rs.wins) return null;
+    return {tier:roomTier(rs), wins:rs.wins, date:rs.date, no:rs.no, code:rs.code, title:rs.title}; } return map[t.id]||null; }
+/* Evaluate every trophy against this win, persist newly-unlocked ones + tier upgrades + the memorial. */
+function evalTrophiesOnWin(grade){
+  const tw=LS.get("tierWins",{})||{}; const firstWin=!Object.keys(tw).length; tw[C.tier]=true; LS.set("tierWins",tw);
+  const allTiersWon=REC_TIERS.every(t=>tw[t]);
+  const dayBothSizes=noteDayWin();
+  let filled=0,total=0; for(let i=0;i<cfg.N*cfg.N;i++){ if(i===C.murderCell) continue; total++; if(board[i]!==0) filled++; }
+  const acc=1+(grade.weaponRight?1:0)+(grade.motiveRight?1:0)+(grade.evidenceRight?1:0);
+  const fillFrac=total?filled/total:1, extrasAll=!!(story.extraOrder&&story.extraOrder.length>0&&story.discoveredExtras>=story.extraOrder.length);
+  const kt=(story.motiveOptions.find(o=>o.correct)||{}).tag;
+  // cumulative stats (incremented for THIS win first, so milestone badges see the new totals)
+  const stats=LS.get("trophyStats",{})||{};
+  stats.wins=(stats.wins||0)+1;
+  if(acc===4) stats.perfectWins=(stats.perfectWins||0)+1;
+  if(fillFrac<0.8) stats.earlyWins=(stats.earlyWins||0)+1;
+  if(penaltyMs===0) stats.zeroPenWins=(stats.zeroPenWins||0)+1;
+  if(extrasAll) stats.extrasWins=(stats.extrasWins||0)+1;
+  if(elapsedMs()<(SWIFT_TARGET_MS[C.tier]||Infinity)) stats.swiftWins=(stats.swiftWins||0)+1;
+  if(hintsUsed===0) stats.flawlessWins=(stats.flawlessWins||0)+1;
+  if((MAX_GUESSES-guessesLeft)===0 && mistakes===0) stats.cleanWins=(stats.cleanWins||0)+1;
+  LS.set("trophyStats",stats);
+  const map=loadTrophyUnlocks(), seals=loadRoomSeals(), reg=trophyRegistry(), fresh=[];
+  const ctx={ won:true, firstWin, tier:C.tier, code:C.code, no:story.caseNo, title:story.title,
+    weaponRight:!!grade.weaponRight, motiveRight:!!grade.motiveRight, evidenceRight:!!grade.evidenceRight, acc,
+    trueWeapon:story.trueWeapon, killerMotiveTag:kt, killerRole:Skin.sName(THEME,C.killer).role,
+    referencedObjects:story.referencedObjects||[], weaponPlanted:!!story.weaponPlanted,
+    hintsUsed, guessesUsed:MAX_GUESSES-guessesLeft, mistakes, penaltyMs, fillFrac, elapsedMs:elapsedMs(),
+    extrasAll, allTiersWon, dayBothSizes, stats,
+    ownedCount:cat=>Object.keys(map).filter(id=>id.indexOf(cat+"-")===0).length };
+  // ROOM SEAL: track wins whose murder scene was in this room; bronze(1)/silver(5)/gold(a 4/4 here)
+  const srSlug=sceneRoomSlug(); const rs=seals[srSlug]||{wins:0,gold:false}; const tierBefore=roomTier(rs);
+  rs.wins=(rs.wins||0)+1; if(acc===4) rs.gold=true;
+  if(!rs.code){ rs.date=nowStr(); rs.no=story.caseNo; rs.code=C.code; rs.title=story.title; }   // first seal here = the source case
+  seals[srSlug]=rs; LS.set("roomSeals",seals);
+  const roomTrophy=reg.find(t=>t.id==="room-"+srSlug);
+  if(roomTrophy && roomTier(rs)!==tierBefore) fresh.push(roomTrophy);   // a fresh seal or a tier upgrade
+  // binary trophies (weapons, motives, scene markers, dossiers, relics, then badges LAST so ownedCount sees this win)
+  reg.forEach(t=>{ if(t.cat==="daily"||t.cat==="room"||map[t.id]) return; let ok=false; try{ ok=!!t.test(ctx); }catch(e){ ok=false; }
+    if(ok){ map[t.id]={date:nowStr(), no:story.caseNo, code:C.code, title:story.title}; fresh.push(t); } });
+  saveTrophyUnlocks(map);
+  // VICTIM MEMORIAL: remember the victim of every solved case
+  let memorial=null;
+  if(story.victimSlug){ const mem=LS.get("victimMemorial",{})||{};
+    if(!mem[story.victimSlug]){ mem[story.victimSlug]={ name:story.victim, date:nowStr(), no:story.caseNo, code:C.code,
+        title:story.title, room:story.sceneRoom, weapon:story.trueWeapon }; LS.set("victimMemorial",mem); memorial=story.victim; } }
+  return {fresh, ctx, memorial};
+}
+function missedTeases(grade){ const t=[];   // softly tease replayable misses (weapon/motive trophies can be claimed on a replay via the case code)
+  if(!grade.weaponRight) t.push(`Weapon trophy missed — replay this case (code ${C.code}) and name the true weapon to claim it.`);
+  if(!grade.motiveRight) t.push(`Motive trophy missed — replay this case and name the right motive to claim it.`);
+  return t;
+}
+/* ---- trophy card rendering (shared by the Archive grid + the post-case strip) ---- */
+function facedownSVG(){ return '<svg viewBox="0 0 18 18" class="gsvg"><rect x="3" y="2.4" width="12" height="13.2" rx="1.6"/><circle cx="9" cy="9" r="2.5"/><path d="M9 6.6v4.8"/></svg>'; }
+function trophyArtHTML(t, locked){
+  if(t.cat==="weapon") return `<img class="tc-img${locked?' locked':''}" src="${tAsset('weapons','weapon-'+t.slug+'.png')}" alt="">`;
+  if(t.cat==="scene")  return `<img class="tc-img${locked?' locked':''}" src="${tAsset('objects','object-'+t.slug+'.png')}" alt="">`;
+  if(t.cat==="dossier")return `<img class="tc-img tc-portrait${locked?' locked':''}" src="${tAsset('suspects','suspect-'+t.role+'.png')}" alt="">`;
+  if(t.cat==="motive") return `<span class="tc-glyph${locked?' locked':''}">${locked?facedownSVG():motiveGlyphSVG(t.tag)}</span>`;
+  if(t.cat==="room")   return `<span class="tc-emoji tc-seal${locked?' locked':''}">🏛️</span>`;
+  return `<span class="tc-emoji${locked?' locked':''}">${locked?'?':(t.glyph||'🏆')}</span>`;
+}
+function lockedName(t){ if(t.cat==="weapon") return "Unknown Weapon #"+String(t.num).padStart(2,"0");
+  if(t.cat==="scene") return "Unidentified Object";
+  if(t.cat==="dossier") return "Redacted Dossier";
+  if(t.cat==="motive") return "Confidential Motive"; return "Locked Trophy"; }
+function srcLine(u){ return (u.code||u.no)?`<div class="tc-src">Unlocked from Case No. ${u.no||"—"}${u.title?" — "+u.title:(u.code?" — "+u.code:"")}${u.date?" · "+u.date:""}</div>`:`<div class="tc-src">Claimed from an earlier case.</div>`; }
+function trophyCardHTML(t, unlock, opts){
+  opts=opts||{};
+  const style=opts.strip&&opts.idx!=null?` style="--d:${opts.idx*120}ms"`:"";
+  if(t.cat==="room"){   // tiered Room Seal card (always names the room; chip shows the current tier)
+    const tier=unlock?unlock.tier:null, locked=!tier;
+    const chip=tier?`<span class="tc-rar seal-${tier}">${cap(tier)} Seal</span>`:`<span class="tc-rar seal-none">Unsealed</span>`;
+    const body=tier
+      ? `<div class="tc-desc">${unlock.wins} ${unlock.wins===1?"case":"cases"} solved with the scene here${tier==="gold"?" — incl. a flawless 4/4":""}.</div>`+(unlock.code?`<div class="tc-src">First sealed in Case No. ${unlock.no} — ${unlock.title||unlock.code} · ${unlock.date}</div>`:"")
+      : `<div class="tc-hint">Solve a case whose murder scene is in ${t.name}. Bronze = 1, Silver = 5, Gold = a perfect 4/4 here.</div>`;
+    return `<div class="tcard r-uncommon ${locked?'locked':'unlocked'}${opts.strip?' ts-card':''}"${style}>`+
+      `<div class="tc-art">${trophyArtHTML(t,locked)}</div>`+
+      `<div class="tc-body"><div class="tc-name">${t.name}</div>${chip}${body}</div></div>`;
+  }
+  const locked=!unlock, rar=TROPHY_RARITY[t.rarity]||TROPHY_RARITY.common;
+  const name=locked?lockedName(t):t.name;
+  const body=locked ? `<div class="tc-hint">${t.hint}</div>` : `<div class="tc-desc">${t.desc||""}</div>`+srcLine(unlock);
+  return `<div class="tcard ${rar.cls} ${locked?'locked':'unlocked'}${opts.strip?' ts-card':''}"${style}>`+
+    `<div class="tc-art">${trophyArtHTML(t,locked)}</div>`+
+    `<div class="tc-body"><div class="tc-name">${name}</div>`+
+    (locked?"":`<span class="tc-rar">${rar.label}</span>`)+body+`</div></div>`;
+}
+/* the post-case strip: collection progress, newly-unlocked cards (motion-gated slide-in), memorial, teases */
+let _payoffStrip=null;
+function renderTrophyStrip(data){
+  const strip=$("trophyStrip"); if(!strip) return;
+  if(!data){ strip.hidden=true; strip.innerHTML=""; return; }
+  const reg=trophyRegistry(), map=loadTrophyUnlocks(), seals=loadRoomSeals();
+  const pool=reg.filter(t=>t.cat!=="daily"); const have=pool.filter(t=>isUnlocked(t,map,seals)).length;
+  let html=`<div class="ts-head">Detective’s Archive <span class="ts-prog">${have}/${pool.length} trophies</span></div>`;
+  if(data.memorial) html+=`<div class="ts-memorial">🕯️ Memorial added: <b>${data.memorial}</b></div>`;
+  if(data.fresh.length){
+    html+=`<div class="ts-new">${data.fresh.length===1?"New trophy claimed":data.fresh.length+" new trophies claimed"}</div>`;
+    html+=`<div class="ts-cards">`+data.fresh.map((t,i)=>trophyCardHTML(t,trophyUnlock(t,map,seals),{strip:true,idx:i})).join("")+`</div>`;
+    if(motionOK()) sfx("confirm");
+  } else if(!data.memorial){
+    html+=`<div class="ts-none">No new trophies this time — but the case file is closed.</div>`;
+  }
+  if(data.teases&&data.teases.length) html+=`<div class="ts-tease">`+data.teases.map(x=>`<div>🔓 ${x}</div>`).join("")+`</div>`;
+  strip.innerHTML=html; strip.hidden=false;
+}
+/* ---- Archive: tabbed trophy gallery ---- */
+let _trophyFilter="all";
+function renderTrophies(filter){
+  _trophyFilter=filter||_trophyFilter||"all";
+  const reg=trophyRegistry(), map=loadTrophyUnlocks(), seals=loadRoomSeals();
+  const cats=TROPHY_CATS.filter(c=>!c.hidden);                   // Daily is hidden
+  const tabs=$("trophyTabs");
+  if(tabs){ const mk=(k,l)=>`<button class="trophy-tab${_trophyFilter===k?' on':''}" data-f="${k}">${l}</button>`;
+    tabs.innerHTML=mk("all","All")+cats.map(c=>mk(c.key,c.label)).join("");
+    tabs.querySelectorAll(".trophy-tab").forEach(b=>b.onclick=()=>renderTrophies(b.dataset.f)); }
+  const pool=reg.filter(t=>cats.some(c=>c.key===t.cat));
+  const have=pool.filter(t=>isUnlocked(t,map,seals)).length;
+  if($("trophyCount")) $("trophyCount").textContent=`${have}/${pool.length}`;
+  const grid=$("trophyGrid"); if(!grid) return;
+  const items=_trophyFilter==="all"?pool:pool.filter(t=>t.cat===_trophyFilter);
+  let head;
+  if(_trophyFilter==="all"){ head=`<div class="tg-prog">`+cats.map(c=>{ const s=pool.filter(t=>t.cat===c.key); return `<span>${c.label} <b>${s.filter(t=>isUnlocked(t,map,seals)).length}/${s.length}</b></span>`; }).join("")+`</div>`; }
+  else { const c=cats.find(x=>x.key===_trophyFilter); head=`<div class="tg-prog"><span>${c.label} <b>${items.filter(t=>isUnlocked(t,map,seals)).length}/${items.length}</b></span></div>`; }
+  grid.innerHTML=head+`<div class="tg-cards">`+items.map(t=>trophyCardHTML(t,trophyUnlock(t,map,seals),{})).join("")+`</div>`;
+}
+/* ---- Victim Memorial Gallery (separate from the trophy tabs) ---- */
+function renderMemorial(){
+  const grid=$("memorialGrid"); if(!grid) return;
+  const victims=THEME.victims||[], mem=LS.get("victimMemorial",{})||{};
+  const have=victims.filter(v=>mem[v.slug]).length;
+  if($("memorialCount")) $("memorialCount").textContent=`${have}/${victims.length}`;
+  grid.innerHTML=victims.map(v=>{
+    const u=mem[v.slug];
+    if(!u) return `<div class="mcard locked"><div class="mc-art"><img class="tc-img locked" src="${tAsset('victims','victim-'+v.slug+'.png')}" alt=""></div>`+
+      `<div class="mc-body"><div class="mc-name">Unknown</div><div class="tc-hint">Solve a case where this soul is the victim to remember them.</div></div></div>`;
+    return `<div class="mcard unlocked"><div class="mc-art"><img class="tc-img" src="${tAsset('victims','victim-'+v.slug+'.png')}" alt=""></div>`+
+      `<div class="mc-body"><div class="mc-name">${u.name}</div>`+
+      `<div class="mc-note">Remembered in <b>${u.title||('Case No. '+u.no)}</b> — found in ${u.room}, ${Skin.weaponBySlug(THEME,u.weapon).n} the instrument. <span class="mc-rip">May they rest.</span></div>`+
+      `<div class="tc-src">Case No. ${u.no} · ${u.date}</div></div></div>`;
+  }).join("");
+}
+
 /* ---- buttons / keys ---- */
 function setStatus(m,k){ const s=$("status"); s.textContent=m; s.className="status"+(k?" "+k:""); }
 function updateBtns(){ $("undoBtn").disabled=!undoStack.length; $("redoBtn").disabled=!redoStack.length; }
 $("undoBtn").onclick=undo; $("redoBtn").onclick=redo; $("eraseBtn").onclick=erase; $("hintBtn").onclick=hint; $("checkBtn").onclick=check;
 $("clearBtn").onclick=clearPuzzle;
-// DEMO: the header "Cases" button + the post-win button both return to the Case Select screen.
-$("newBtn").onclick=()=>showCaseSelect();
+function showCaseCodeHint(){ const h=$("codeHint"); if(!h||!C) return;
+  h.className="code-hint";
+  h.innerHTML=`This case's code: <b id="copyCode" title="Tap to copy">${C.code}</b> — share it or paste it to replay this exact case.`;
+  const cc=$("copyCode"); if(cc) cc.onclick=()=>{ try{ navigator.clipboard.writeText(C.code); cc.textContent=C.code+" ✓"; }catch(e){} }; }
+$("newBtn").onclick=()=>{ $("newModal").classList.add("show"); $("seedInput").value=""; showCaseCodeHint(); };
+$("newClose").onclick=$("newBack").onclick=()=>$("newModal").classList.remove("show");
 $("winClose").onclick=()=>$("winModal").classList.remove("show");
-$("winNew").onclick=()=>{ $("winModal").classList.remove("show"); showCaseSelect(); };
+$("winNew").onclick=()=>{ $("winModal").classList.remove("show"); startCase({difficulty:C.tier, rand:Math.random()}); };
 $("accuseClose").onclick=()=>{ $("accuseModal").classList.remove("show"); setStatus("Ready to accuse — press Check when you're sure.",""); };
 $("accuseSubmit").onclick=submitAccusation;
 $("accuseBtn").onclick=()=>{ if(solved)return; openAccusation(); };   // accuse any time, full board not required
 $("archiveBtn").onclick=openArchive;
 $("howtoBtn").onclick=()=>$("howtoModal").classList.add("show");
 $("howtoClose").onclick=()=>$("howtoModal").classList.remove("show");
-$("howtoGo").onclick=()=>{ $("howtoModal").classList.remove("show"); LS.set("seenHowTo",true);
-  if(!C) showCaseSelect(); };   // after the intro, land on the case files (no case auto-started)
-// first-time intro is opened from boot() once the case-select is up
+$("howtoGo").onclick=()=>{ $("howtoModal").classList.remove("show"); LS.set("seenHowTo",true); };   // DEMO: just close — Case Select is the entry, no auto-start
+if(!LS.get("seenHowTo",false)) $("howtoModal").classList.add("show");   // first-time intro
 $("archiveClose").onclick=()=>$("archiveModal").classList.remove("show");
+document.querySelectorAll("#recTabs .rec-tab").forEach(t=>t.onclick=()=>renderRecords(t.dataset.tier));   // leaderboard difficulty filter
 $("winArchive").onclick=openArchive;
 $("evPrev").onclick=()=>{ clueStep--; renderEvCurrent(); };
 $("evNext").onclick=()=>{ clueStep++; renderEvCurrent(); };
@@ -2693,8 +3680,11 @@ if($("evClue")){ $("evClue").title="Click to show this clue on the board";
 // current-evidence card and the full list are mutually exclusive (only one open)
 // current-evidence card and the full list are mutually exclusive ON DESKTOP only (on phones
 // they live in different places: the stepper by the board, the full list in the overlay tab).
-$("evBlock").addEventListener("toggle",()=>{ if(!isPhone() && $("evBlock").open && $("allEv").open) $("allEv").open=false; });
-$("allEv").addEventListener("toggle",()=>{ if(!isPhone() && $("allEv").open && $("evBlock").open) $("evBlock").open=false; });
+// desktop: the stepper (#evBlock) and the full list (#allEv) are mutually exclusive — exactly one open
+$("evBlock").addEventListener("toggle",()=>{ if(isPhone())return;
+  if($("evBlock").open){ if($("allEv").open) $("allEv").open=false; } else if(!$("allEv").open){ $("allEv").open=true; } });
+$("allEv").addEventListener("toggle",()=>{ if(isPhone())return;
+  if($("allEv").open){ if($("evBlock").open) $("evBlock").open=false; } else if(!$("evBlock").open){ $("evBlock").open=true; } });  // collapsing the list opens the stepper
 function isPhone(){ return document.body.classList.contains("phone"); }
 
 /* ---- mobile case-file overlay: reparent the cf-group blocks into tabs (one source of truth) ---- */
@@ -2722,12 +3712,24 @@ if($("caseFileBtn")) $("caseFileBtn").onclick=openCaseFile;
 if($("coClose")) $("coClose").onclick=closeCaseFile;
 document.querySelectorAll(".co-tab").forEach(t=>t.onclick=()=>coTab(t.dataset.tab));
 
+/* ===== robust phone detection: the phone CSS is gated by body.phone (NOT a media query), so it
+   activates even when the device lays out wide (desktop-site mode / ignored viewport meta).
+   phone = matchMedia(<=700px) OR (coarse-pointer physical phone whose layout viewport is wide). */
+function physicalPhone(){ try{ return matchMedia("(pointer:coarse)").matches && Math.min(screen.width||1e4, screen.height||1e4) <= 820; }catch(e){ return false; } }
+function repairViewport(){    // re-assert the meta on load; some override cases respect a JS-set meta
+  try{ let m=document.querySelector('meta[name="viewport"]'); if(!m){ m=document.createElement("meta"); m.name="viewport"; document.head.appendChild(m); }
+    m.setAttribute("content","width=device-width, initial-scale=1, viewport-fit=cover"); }catch(e){}
+}
 /* ===== DEMO is DESKTOP-ONLY: phone mode is disabled entirely (no body.phone, no force-phone).
    The case file always lives in the desktop side panel. On a small / touch screen we show a
    polite "best on desktop" notice instead of collapsing to the phone layout. ===== */
+let _vpRepaired=false;
 function updatePhone(){
+  if(!_vpRepaired){ repairViewport(); _vpRepaired=true; }
   document.body.classList.remove("phone","force-phone");   // never enter phone mode in the demo
+  document.documentElement.style.setProperty("--ps","1");
   placeCaseFile();                                         // keep the case file in the desktop side panel
+  if(typeof applyAmbient==="function" && C) applyAmbient();
   maybeShowDesktopNotice();
 }
 function maybeShowDesktopNotice(){
@@ -2738,8 +3740,52 @@ function maybeShowDesktopNotice(){
   note.classList.toggle("show", small || touch);
 }
 if($("desktopNoticeOk")) $("desktopNoticeOk").onclick=()=>{ const n=$("desktopNotice"); n.dataset.dismissed="1"; n.classList.remove("show"); };
+if(caseMQ.addEventListener) caseMQ.addEventListener("change",updatePhone); else caseMQ.addListener(updatePhone);
 window.addEventListener("resize",updatePhone);
+try{ if(window.visualViewport) window.visualViewport.addEventListener("resize",updatePhone); }catch(e){}
 updatePhone();
+/* ===== ambient background life: story-driven (seeded fallback) selection + cheap CSS layers =====
+   Story keywords -> effect: rain/storm/thunder/downpour/drizzle/tempest -> rain;
+   candle/fire/hearth/flame/lantern/guttering -> candle; fog/mist/smoke/haze -> smoke.
+   No cue -> a 1-2 effect set SEEDED from the case (deterministic). Vignette is always the base. */
+function pickAmbient(s){
+  const txt=((s.atmosphere||"")+" "+(s.intro?s.intro.join(" "):"")+" "+(s.narrative||"")).toLowerCase();
+  const set=[], add=x=>{ if(!set.includes(x)) set.push(x); };
+  if(/rain|storm|thunder|down ?pour|drizzle|tempest|rainfall/.test(txt)) add("rain");
+  if(/candle|candlelight|fire\b|hearth|flame|lantern|guttering|firelight/.test(txt)) add("candle");
+  if(/fog|mist|smoke|haze|vapou?r/.test(txt)) add("smoke");
+  if(set.length) return set.slice(0,2);              // story cue(s) override -> at most 2 effects
+  // no weather/story cue -> run the FULL ambient set together (dust + candle + smoke + grain +
+  // the always-on vignette). NOT rain — rain stays tied to rain/storm stories. Each effect keeps
+  // its existing extremely-subtle opacity/speed, so all of them together still reads as ambient.
+  return ["dust","candle","smoke","grain"];
+}
+function buildDust(){ const host=$("ambDust"); if(!host||host.childElementCount) return;
+  for(let i=0;i<17;i++){ const m=document.createElement("i"); m.className="mote";   // a few more motes (phone caps to 7 via CSS)
+    m.style.left=(Math.random()*100).toFixed(2)+"%"; m.style.top=(Math.random()*100).toFixed(2)+"%";
+    m.style.setProperty("--dx",(Math.random()*56-28).toFixed(0)+"px");   // a touch farther drift
+    m.style.setProperty("--dy",(-42-Math.random()*68).toFixed(0)+"px");
+    m.style.animationDuration=(12+Math.random()*13).toFixed(1)+"s";      // marginally faster float (still slow)
+    m.style.animationDelay=(-Math.random()*24).toFixed(1)+"s";
+    host.appendChild(m); } }
+function buildRain(){ const host=$("ambRain"); if(!host||host.childElementCount) return;
+  for(let i=0;i<26;i++){ const s=document.createElement("i"); s.className="streak";   // short, scattered, desynced
+    s.style.left=(Math.random()*100).toFixed(2)+"%";
+    s.style.height=(12+Math.random()*10).toFixed(0)+"px";                 // 12-22px streaks
+    s.style.animationDuration=(0.7+Math.random()*0.8).toFixed(2)+"s";     // varied fall speed
+    s.style.animationDelay=(-Math.random()*2).toFixed(2)+"s";             // varied start -> a shower, not bars
+    host.appendChild(s); } }
+function applyAmbient(){
+  const amb=$("amb"); if(!amb) return;
+  if(!motionOK()){ amb.className=""; return; }        // Motion off / reduced-motion -> nothing
+  const phone=document.body.classList.contains("phone"), focus=settings.atmosphere!=="high";
+  let fx = (story&&story.ambient) || ["dust"];         // the case's ACTUAL effects (story cue OR full no-cue set) — shown on Focus too, not just High
+  if(phone) fx=fx.slice(0,2);                          // phone -> vignette + at most two light effects (battery)
+  const cls=["amb-on","fx-vignette"].concat(fx.map(f=>"fx-"+f));
+  if(focus) cls.push("amb-focus");                     // Focus is a touch lighter than High (global dim) but still shows the effects
+  amb.className=cls.join(" ");
+  amb.classList.toggle("amb-paused", document.hidden);
+}
 function applyAtmosphere(){
   const focus = settings.atmosphere!=="high";
   document.body.classList.toggle("focus", focus);
@@ -2750,7 +3796,7 @@ function applyNotesMode(){ document.body.classList.toggle("notes", notesMode);
 $("notesBtn").onclick=()=>{ notesMode=!notesMode; applyNotesMode();
   setStatus(notesMode?"Notes ON — select a cell, then tap suspects to pencil in candidates.":"Notes off — tap a suspect to place them.",""); };
 $("atmoBtn").onclick=()=>{ settings.atmosphere = settings.atmosphere==="high"?"low":"high";
-  LS.set("settings",settings); applyAtmosphere(); if(C) renderBoard(); };
+  LS.set("settings",settings); applyAtmosphere(); applyAmbient(); if(C) renderBoard(); };
 // first-time sudoku rule callout (once per browser)
 if(!LS.get("seenRule",false)){ const ft=$("firstTip"); if(ft) ft.hidden=false; }
 $("firstTipOk").onclick=()=>{ $("firstTip").hidden=true; LS.set("seenRule",true); placeEvidence(); };
@@ -2775,11 +3821,31 @@ window.addEventListener("resize",placeEvidence);   // fallback: re-home on any w
 placeEvidence();
 $("codePill").onclick=()=>{ try{ navigator.clipboard.writeText(C.code); setStatus(`Case code ${C.code} copied.`,"good"); }catch(e){} };
 
-// DEMO: random / daily / load-code case generation is intentionally removed — the only cases
-// are the four fixed ones launched from the Case Select screen (see the DEMO block below).
+let pendingDiff="medium";
+document.querySelectorAll("#diffRow [data-diff]").forEach(b=>b.onclick=()=>{
+  pendingDiff=b.dataset.diff;
+  document.querySelectorAll("#diffRow .btn").forEach(x=>x.classList.remove("on")); b.classList.add("on");
+  $("newModal").classList.remove("show"); startCase({difficulty:pendingDiff, rand:Math.random()});
+});
+$("randomBtn").onclick=()=>{ $("newModal").classList.remove("show"); startCase({difficulty:pendingDiff, rand:Math.random()}); };
+$("dailyBtn").onclick=()=>{ const d=new Date(); const key="daily-"+d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();
+  $("newModal").classList.remove("show"); startCase({difficulty:pendingDiff, seed:key}); };
+function loadCaseCode(){
+  const v=$("seedInput").value.trim(), h=$("codeHint");
+  if(!v){ if(h){ h.className="code-hint err"; h.textContent="Enter a case code first."; } return; }
+  // a valid code is <tierChar><base36>, exactly what caseCode() / the codePill produce
+  if(!/^[EMHX][0-9A-Z]+$/i.test(v)){
+    if(h){ h.className="code-hint err"; h.textContent=`“${v}” isn't a valid case code. Codes look like M1ttuyjz (tap the code above to copy this one).`; }
+    return;
+  }
+  $("newModal").classList.remove("show"); startCase({seed:v});
+  setStatus(`Loaded case ${C.code}.`, "good");
+}
+$("loadCodeBtn").onclick=loadCaseCode;
+$("seedInput").addEventListener("keydown",e=>{ if(e.key==="Enter")$("loadCodeBtn").click(); });
 
 document.addEventListener("keydown",e=>{
-  if(solved || !C || caseSelectOpen())return;
+  if(solved||$("newModal").classList.contains("show"))return;
   const k=e.key.toUpperCase(), code=k.charCodeAt(0)-64;
   if(k==="N"&&cfg.N<14){ notesMode=!notesMode; applyNotesMode(); e.preventDefault(); return; }   // 'N' toggles notes
   if(k>="A"&&k<="Z"&&code>=1&&code<=cfg.N){ selectSuspect(code); e.preventDefault(); return; }
@@ -2856,6 +3922,9 @@ let _actx=null;   // null = not created, false = unavailable
 function audioCtx(){ if(_actx===false) return null;
   if(!_actx){ try{ _actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ _actx=false; return null; } }
   if(_actx.state==="suspended"){ try{ _actx.resume(); }catch(e){} } return _actx; }
+let _warmed=false;   // prime the audio graph on the first user gesture so the very first SFX has zero startup latency
+function warmAudio(){ const a=audioCtx(); if(!a||_warmed) return; _warmed=true;
+  try{ const b=a.createBuffer(1,1,a.sampleRate), s=a.createBufferSource(); s.buffer=b; s.connect(a.destination); s.start(0); }catch(e){} }
 function _tone(freq,dur,type,gain,delay){ const a=audioCtx(); if(!a)return; const t0=a.currentTime+(delay||0);
   const o=a.createOscillator(), g=a.createGain(); o.type=type||"sine"; o.frequency.setValueAtTime(freq,t0);
   g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(gain||0.16,t0+0.01);
@@ -2865,11 +3934,68 @@ function _noise(dur,gain){ const a=audioCtx(); if(!a)return; const len=Math.max(
   for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*(1-i/len);
   const s=a.createBufferSource(); s.buffer=buf; const g=a.createGain(); g.gain.value=gain||0.12;
   s.connect(g).connect(a.destination); s.start(); }
+/* a chess piece set down on a wooden board: an instant-attack contact click (band-passed noise
+   burst) layered over a short woody thump (low sine dropping in pitch), quick decay ~110ms, with
+   slight level/pitch variation between placements. Scheduled at currentTime with no ramp-in on the
+   click, so the attack is immediate. Quiet/tasteful; Sound-gated by sfx(). */
+function _knock(){ const a=audioCtx(); if(!a) return; const t0=a.currentTime; const v=0.85+Math.random()*0.3;
+  const len=Math.max(1,(a.sampleRate*0.05)|0), buf=a.createBuffer(1,len,a.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.2);              // sharp decaying noise = the contact tap
+  const s=a.createBufferSource(); s.buffer=buf;
+  const bp=a.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=1750+Math.random()*520; bp.Q.value=0.7;
+  const ng=a.createGain(); ng.gain.setValueAtTime(0.13*v,t0); ng.gain.exponentialRampToValueAtTime(0.0001,t0+0.055);   // instant attack
+  s.connect(bp).connect(ng).connect(a.destination); s.start(t0); s.stop(t0+0.07);
+  const o=a.createOscillator(), og=a.createGain(); o.type="sine";                     // woody body resonance
+  const f=150+Math.random()*28; o.frequency.setValueAtTime(f,t0); o.frequency.exponentialRampToValueAtTime(f*0.6,t0+0.07);
+  og.gain.setValueAtTime(0.0001,t0); og.gain.exponentialRampToValueAtTime(0.17*v,t0+0.003); og.gain.exponentialRampToValueAtTime(0.0001,t0+0.11);
+  o.connect(og).connect(a.destination); o.start(t0); o.stop(t0+0.13); }
 function sfx(name){ if(!settings.sound) return; if(!audioCtx()) return;
-  if(name==="place") _tone(620,0.09,"triangle",0.12);
+  if(name==="place") _knock();
   else if(name==="thunk"){ _tone(120,0.2,"sine",0.22); _noise(0.08,0.1); }
   else if(name==="buzz"){ _tone(150,0.22,"sawtooth",0.14); _tone(146,0.22,"sawtooth",0.1); }
-  else if(name==="win"){ [523.25,659.25,783.99].forEach((f,i)=>_tone(f,0.22,"sine",0.14,i*0.11)); } }
+  else if(name==="win"){ [523.25,659.25,783.99].forEach((f,i)=>_tone(f,0.22,"sine",0.14,i*0.11)); }
+  else if(name==="paper"){ _noise(0.17,0.05); }     // soft paper slide for the case-open sequence
+  else if(name==="stamp"){ _tone(90,0.16,"sine",0.16); _noise(0.06,0.07); }                       // soft "Cleared" stamp thud
+  else if(name==="confirm"){ _tone(523.25,0.14,"sine",0.06); _tone(783.99,0.16,"sine",0.05,0.06); } }   // soft warm "Confirmed"
+/* ---- very quiet footstep shuffle that rides the footprint walk-out trail (cell selection) ---- */
+let _lastSteps=-1e9;   // far in the past so the first footstep sequence is never rate-limited
+function _step(delay){ const a=audioCtx(); if(!a) return; const t0=a.currentTime+(delay||0);
+  const len=Math.max(1,(a.sampleRate*0.05)|0), buf=a.createBuffer(1,len,a.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*(1-i/len);                 // short decaying noise = soft scuff
+  const s=a.createBufferSource(); s.buffer=buf;
+  const lp=a.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=380+Math.random()*300;   // muffled, varied
+  const g=a.createGain(); g.gain.setValueAtTime(0.0001,t0);
+  g.gain.exponentialRampToValueAtTime(0.045+Math.random()*0.03,t0+0.005);    // VERY quiet
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+0.06);
+  s.connect(lp).connect(g).connect(a.destination); s.start(t0); s.stop(t0+0.09); }
+function playFootsteps(){
+  if(!settings.sound) return;                       // tied to the Sound toggle (off by default)
+  if(!motionOK()) return;                           // no walk animation -> no steps
+  const a=audioCtx(); if(!a) return;
+  if(a.currentTime - _lastSteps < 1.0) return;      // rate-limit: ignore rapid re-selection within ~1s
+  _lastSteps=a.currentTime;
+  const n=3+Math.floor(Math.random()*3);            // a short sequence of 3-5 soft steps
+  let t=0; for(let k=0;k<n;k++){ _step(t); t+=0.10+Math.random()*0.07; }   // slight timing randomization
+}
+/* ---- payoff newspaper headline: deliberate typewriter with quiet, slightly-random key ticks ---- */
+let _hlTimers=[], _hlFull="";
+function _clearHlTimers(){ while(_hlTimers.length) clearTimeout(_hlTimers.pop()); }
+function _hlTick(){ if(!settings.sound) return; const a=audioCtx(); if(!a) return; const t0=a.currentTime;   // soft typewriter key click
+  const len=Math.max(1,(a.sampleRate*0.012)|0), buf=a.createBuffer(1,len,a.sampleRate), d=buf.getChannelData(0);
+  for(let j=0;j<len;j++) d[j]=(Math.random()*2-1)*(1-j/len);
+  const s=a.createBufferSource(); s.buffer=buf;
+  const hp=a.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=1500+Math.random()*900;
+  const g=a.createGain(); g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.028+Math.random()*0.02,t0+0.002); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.03);
+  s.connect(hp).connect(g).connect(a.destination); s.start(t0); s.stop(t0+0.04); }
+function _hlDing(){ if(!settings.sound) return; _tone(1760,0.2,"sine",0.05); _tone(2349,0.18,"sine",0.03,0.012); }   // carriage-return bell
+function setHeadline(text){ const el=$("newsHeadline"); if(!el) return; _hlFull=text; _clearHlTimers();
+  if(!motionOK()){ el.textContent=text; el.classList.remove("typing"); return; }   // Motion off / reduced-motion -> full headline instantly
+  el.textContent=""; el.classList.add("typing"); let i=0;
+  (function step(){ el.textContent=text.slice(0,i);
+    if(i<text.length){ const ch=text[i++]; if(ch!==" ") _hlTick(); _hlTimers.push(setTimeout(step, 46+Math.random()*14)); }   // ~46-60ms/char
+    else { el.classList.remove("typing"); _hlDing(); } })();
+}
+function skipHeadline(){ _clearHlTimers(); const el=$("newsHeadline"); if(el){ el.textContent=_hlFull; el.classList.remove("typing"); } }
 
 /* the big solved-case reveal: flashbulb -> bars slam -> stamp thunk + dust -> confetti (3/3).
    Final state is the CSS resting state, so skip / Motion-off just shows the end immediately. */
@@ -2890,12 +4016,59 @@ function skipReveal(){ clearRevealTimers();
   if(wrap)wrap.classList.remove("j-slam"); if(stamp)stamp.classList.remove("j-thunk"); if(paper)paper.classList.remove("j-spin");
   document.querySelectorAll(".j-confetti,.j-bulb,.j-puff").forEach(e=>e.remove()); }
 
+/* ===== sequenced stamp payoff: bars -> trio reveals + themed stamp slams -> CASE CLOSED -> headline.
+   Motion-gated (instant static when off); tap the win modal to skip straight to the final state. ===== */
+let _payoffHeadline="";
+function slamStamp(sel){ const s=document.querySelector("#winModal "+sel); if(!s) return;
+  s.classList.remove("pre"); restartAnim(s,"slam"); fxPuff(s); sfx("thunk");
+  const host=s.closest(".trio-cell")||s.closest(".trio-proof"); if(host) fxShake(host); }   // tiny localized "screen" shake
+function playPayoff(grade, won, perfect, headlineText){
+  _payoffHeadline=headlineText||"";
+  clearRevealTimers();
+  const trio=document.querySelector("#accuseScore .accuse-trio");
+  const wrap=$("revealWrap"), stamp=document.querySelector("#winModal .news-stamp"), paper=document.querySelector("#winModal .newspaper");
+  if(wrap)wrap.classList.remove("j-slam"); if(stamp)stamp.classList.remove("j-thunk"); if(paper)paper.classList.remove("j-spin");
+  if(trio) trio.classList.remove("seq");
+  document.querySelectorAll("#winModal .trio-cell").forEach(c=>c.classList.remove("in"));
+  document.querySelectorAll("#winModal .payoff-stamp").forEach(s=>s.classList.remove("pre","slam"));
+  if(!motionOK()){ setHeadline(_payoffHeadline); renderTrophyStrip(_payoffStrip); return; }   // Motion off / reduced-motion -> everything static (strip shown, no slide-in)
+  // motion on: run the sequence
+  if(trio) trio.classList.add("seq");
+  document.querySelectorAll("#winModal .payoff-stamp").forEach(s=>s.classList.add("pre"));
+  if(paper) restartAnim(paper,"j-spin");
+  fxBulb(); sfx(won?"win":"buzz");
+  const cells = trio?[...trio.querySelectorAll(".trio-cell")]:[];
+  const cell=cls=>cells.find(c=>c.classList.contains(cls)), show=cls=>{ const c=cell(cls); if(c)c.classList.add("in"); };
+  const T=(ms,fn)=>_revealTimers.push(setTimeout(fn,ms));
+  if(won && wrap) T(120,()=>wrap.classList.add("j-slam"));   // culprit behind bars (existing)
+  T(300,()=>{ show("tc-culprit"); slamStamp(".stamp-falsealibi"); });   // FALSE ALIBI
+  T(680,()=> show("tc-weapon"));                                         // weapon slides in
+  T(980,()=> slamStamp(".stamp-weapon"));                                // WEAPON CONFIRMED (if right)
+  T(1280,()=> show("tc-motive"));                                        // motive flips
+  T(1580,()=> slamStamp(".stamp-motive"));                               // MOTIVE CONFIRMED (if right)
+  T(1820,()=> slamStamp(".stamp-proof"));                                // EVIDENCE FOUND (if right)
+  T(2120,()=>{ if(stamp){ restartAnim(stamp,"j-thunk"); fxPuff(stamp); } sfx("thunk");
+    fxShake($("winModal").querySelector(".modal")); if(perfect) fxConfetti(); });   // CASE CLOSED
+  T(2460,()=> setHeadline(_payoffHeadline));                             // typewriter headline (existing)
+  T(2680,()=> renderTrophyStrip(_payoffStrip));                          // trophies strip slides in after the stamps
+}
+function skipPayoff(){ clearRevealTimers();
+  const trio=document.querySelector("#accuseScore .accuse-trio"); if(trio) trio.classList.remove("seq");
+  document.querySelectorAll("#winModal .trio-cell").forEach(c=>c.classList.add("in"));
+  document.querySelectorAll("#winModal .payoff-stamp").forEach(s=>s.classList.remove("pre","slam"));
+  const wrap=$("revealWrap"); if(wrap) wrap.classList.remove("j-slam");
+  const stamp=document.querySelector("#winModal .news-stamp"); if(stamp) stamp.classList.remove("j-thunk");
+  document.querySelectorAll(".j-confetti,.j-bulb,.j-puff").forEach(e=>e.remove());
+  const el=$("newsHeadline"); if(el){ _clearHlTimers(); el.textContent=_payoffHeadline; el.classList.remove("typing"); }
+  renderTrophyStrip(_payoffStrip);   // jump the trophy strip to its final state too
+}
+
 function applyJuiceButtons(){ const m=$("motionBtn"), s=$("soundBtn"), mu=$("musicBtn");
   if(m){ m.textContent="✨ Motion: "+(settings.motion?"On":"Off"); m.classList.toggle("on",!!settings.motion); }
   if(s){ s.textContent="♪ Sound: "+(settings.sound?"On":"Off"); s.classList.toggle("on",!!settings.sound); }
   if(mu){ mu.textContent="🎵 Music: "+(settings.music?"On":"Off"); mu.classList.toggle("on",!!settings.music); } }
-if($("motionBtn")) $("motionBtn").onclick=()=>{ settings.motion=!settings.motion; LS.set("settings",settings); applyMotion(); applyJuiceButtons(); };
-if($("soundBtn")) $("soundBtn").onclick=()=>{ settings.sound=!settings.sound; LS.set("settings",settings); applyJuiceButtons(); if(settings.sound){ audioCtx(); sfx("place"); } };
+if($("motionBtn")) $("motionBtn").onclick=()=>{ settings.motion=!settings.motion; LS.set("settings",settings); applyMotion(); applyJuiceButtons(); applyAmbient(); };
+if($("soundBtn")) $("soundBtn").onclick=()=>{ settings.sound=!settings.sound; LS.set("settings",settings); applyJuiceButtons(); if(settings.sound){ warmAudio(); sfx("place"); } };
 /* ---- looping background music: own toggle, default ON, separate from the SFX "Sound" toggle ---- */
 let bgMusic=null;
 function ensureBgMusic(){ if(!bgMusic){ bgMusic=new Audio("../assets/music/Final%20Accusation.mp3"); bgMusic.loop=true; bgMusic.volume=0.4; bgMusic.preload="auto"; } return bgMusic; }
@@ -2903,24 +4076,34 @@ function applyMusic(){ const a=ensureBgMusic(); if(settings.music){ const p=a.pl
 function startMusicIfOn(){ if(settings.music){ const a=ensureBgMusic(); if(a.paused){ const p=a.play(); if(p&&p.catch) p.catch(()=>{}); } } }
 if($("musicBtn")) $("musicBtn").onclick=()=>{ settings.music=!settings.music; LS.set("settings",settings); applyJuiceButtons(); applyMusic(); };
 // first user gesture: unlock SFX audio AND start the music if autoplay was blocked (while Music is ON)
-["pointerdown","keydown","touchstart"].forEach(ev=>window.addEventListener(ev,()=>{ if(settings.sound) audioCtx(); startMusicIfOn(); },{passive:true}));
-if($("winModal")) $("winModal").addEventListener("pointerdown",skipReveal);   // tap to skip the reveal to its final state
+["pointerdown","keydown","touchstart"].forEach(ev=>window.addEventListener(ev,()=>{ if(settings.sound) warmAudio(); startMusicIfOn(); },{passive:true}));
+if($("winModal")) $("winModal").addEventListener("pointerdown",skipPayoff);   // tap to skip the whole payoff sequence to its final state
 applyMotion(); applyJuiceButtons(); applyMusic();   // try to start music immediately (retried on first gesture if blocked)
 /* ---- case intro / case-text settings (persisted) + intro card wiring ---- */
-function applyCaseButtons(){ const ib=$("introBtn"), sk=$("introSkipBtn"), ct=$("caseTextBtn");
+function applyCaseButtons(){ const ib=$("introBtn"), sk=$("introSkipBtn"), ct=$("caseTextBtn"), evb=$("evidenceBtn");
   if(ib){ ib.textContent="📖 Intro: "+(settings.intro?"On":"Off"); ib.classList.toggle("on",!!settings.intro); }
   if(sk){ sk.textContent="⏭ Auto-skip: "+(settings.introAutoskip?"On":"Off"); sk.classList.toggle("on",!!settings.introAutoskip); }
-  if(ct){ ct.textContent="📝 Case text: "+(settings.caseText==="full"?"Full":"Short"); ct.classList.toggle("on",settings.caseText==="full"); } }
+  if(ct){ ct.textContent="📝 Case text: "+(settings.caseText==="full"?"Full":"Short"); ct.classList.toggle("on",settings.caseText==="full"); }
+  if(evb){ evb.textContent="🔎 Evidence: "+(settings.evidence==="all"?"All up front":"Discover"); evb.classList.toggle("on",settings.evidence!=="all"); } }
 if($("introBtn")) $("introBtn").onclick=()=>{ settings.intro=!settings.intro; LS.set("settings",settings); applyCaseButtons(); };
 if($("introSkipBtn")) $("introSkipBtn").onclick=()=>{ settings.introAutoskip=!settings.introAutoskip; LS.set("settings",settings); applyCaseButtons(); };
 if($("caseTextBtn")) $("caseTextBtn").onclick=()=>{ settings.caseText=settings.caseText==="full"?"short":"full"; LS.set("settings",settings); applyCaseButtons(); renderCaseBriefing(); };
-if($("introModal")) $("introModal").onclick=hideIntro;   // tap anywhere (card, backdrop, X, Begin) to skip
+if($("evidenceBtn")) $("evidenceBtn").onclick=()=>{ settings.evidence=settings.evidence==="all"?"discover":"all"; LS.set("settings",settings); applyCaseButtons();
+  if(story){ if(settings.evidence==="discover") syncUnitsSilently(); renderEvidenceUI(); } };   // back to Discover shows SAVED progress (no re-credit); All shows every clue
+// tap anywhere / X / Begin during the sequence -> jump to the fully-revealed card; once revealed -> close & play
+function introSkipOrClose(e){ if(e) e.stopPropagation(); if(introAnimating) introRevealAll(); else hideIntro(); }
+if($("introModal")) $("introModal").onclick=introSkipOrClose;
+if($("introClose")) $("introClose").onclick=introSkipOrClose;
+if($("introBegin")) $("introBegin").onclick=introSkipOrClose;
 applyCaseButtons();
 
 setupBrand();
 setupAssistant();
 setupBars();
 applyAtmosphere();        // sets body.focus + button label before first render
+buildDust();              // create the dust motes once (shown only when the dust effect is active)
+buildRain();              // create the rain streaks once (shown only on rain/storm stories)
+document.addEventListener("visibilitychange",()=>{ const a=$("amb"); if(a) a.classList.toggle("amb-paused", document.hidden); });
 
 /* ============================================================================
    DEMO: fixed four-case Case Select + completion tracking + Steam/Kickstarter/
@@ -2932,7 +4115,7 @@ const DEMO_CASES=[
   {key:"hard",    seed:99,  desc:"A knotted 9×9 — and the weapon found by the body may well have been planted."},
   {key:"extreme", seed:119, desc:"The coldest case: barely any givens, so only the evidence can name the killer."},
 ];
-const DEMO_DONE_KEY="demo.done";
+const DEMO_DONE_KEY="done";   // stored under the demo-namespaced LS -> casedoku.demo.done
 function demoDone(){ return LS.get(DEMO_DONE_KEY,{})||{}; }
 function isDoneKey(key){ return !!demoDone()[key]; }
 function markDone(key){ const d=demoDone(); d[key]=true; LS.set(DEMO_DONE_KEY,d); }
@@ -2940,7 +4123,6 @@ function allDone(){ return DEMO_CASES.every(c=>isDoneKey(c.key)); }
 function demoCaseNo(seed){ return 100+(seed%900); }   // mirrors story.caseNo
 
 let activeDemoKey=null;
-function caseSelectOpen(){ const cs=$("caseSelect"); return !!cs && !cs.hidden; }
 function hideCaseSelect(){ const cs=$("caseSelect"); if(cs) cs.hidden=true; }
 function showCaseSelect(){ renderCaseSelect(); const cs=$("caseSelect"); if(cs) cs.hidden=false; }
 function launchDemoCase(c){ activeDemoKey=c.key; hideCaseSelect(); startCase({difficulty:c.key, seed:c.seed}); }
@@ -2998,9 +4180,10 @@ function onDemoPayoff(won){
 }
 function showDemoComplete(){ fillCta($("demoCompleteCta"),true); $("demoCompleteModal").classList.add("show"); }
 
-/* the post-win button: all four solved -> Demo Complete finale; otherwise back to the case files */
+/* DEMO: the header "Cases" button AND the post-win button both return to Case Select. */
+$("newBtn").onclick=()=>{ $("newModal").classList.remove("show"); showCaseSelect(); };
 $("winNew").onclick=()=>{ $("winModal").classList.remove("show");
-  if(allDone()) showDemoComplete(); else showCaseSelect(); };
+  if(allDone()) showDemoComplete(); else showCaseSelect(); };   // all four solved -> Demo Complete finale; else back to the case files
 if($("demoCompleteClose")) $("demoCompleteClose").onclick=()=>{ $("demoCompleteModal").classList.remove("show"); showCaseSelect(); };
 if($("demoCompleteBack"))  $("demoCompleteBack").onclick =()=>{ $("demoCompleteModal").classList.remove("show"); showCaseSelect(); };
 if($("csHowto")) $("csHowto").onclick=()=>$("howtoModal").classList.add("show");
@@ -3015,9 +4198,8 @@ function setupDemoBrand(){
 }
 setupDemoBrand();
 
-// Entry point: the Case Select screen (NO case auto-started). First-timers get How to Play first.
+// Entry point: the Case Select screen (NO case auto-started). First-timers see How to Play (wired above).
 showCaseSelect();
-if(!LS.get("seenHowTo",false)) $("howtoModal").classList.add("show");
 })();
 </script>
 </body>
