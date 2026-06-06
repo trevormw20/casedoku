@@ -512,6 +512,7 @@
   .modal-bg.show{display:flex;}
   .modal{background:linear-gradient(180deg,#1d212c,#13151d);border:1px solid var(--amber);
     border-radius:12px;max-width:560px;width:100%;padding:26px;position:relative;
+    max-height:calc(100dvh - 36px);overflow-y:auto;   /* tall modals (win payoff, archive) scroll inside; top (headline / close X) stays reachable */
     box-shadow:0 20px 60px rgba(0,0,0,.7);}
   .modal.center{text-align:center;}
   .modal .x{position:absolute;top:10px;right:10px;cursor:pointer;background:none;border:none;padding:6px;}
@@ -845,7 +846,7 @@
   @media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation:none !important;} }
 
   /* ---- case intro card (shown at case start; always skippable) ---- */
-  .intro-card{max-width:520px;position:relative;perspective:1400px;}
+  .intro-card{max-width:520px;position:relative;perspective:1400px;overflow:visible;}  /* keep the 3D case-file flap unclipped (overrides .modal's overflow) */
   .intro-card .x{z-index:6;}                                    /* close X stays above the folder flap */
   .intro-evidence{display:flex;gap:20px;align-items:flex-start;justify-content:center;margin:2px auto 10px;}
   .intro-victim,.intro-found{display:flex;flex-direction:column;align-items:center;gap:4px;}
@@ -874,7 +875,7 @@
     font-family:"Courier New",monospace;font-weight:700;font-size:16px;letter-spacing:3px;padding:5px 14px;border-radius:4px;text-transform:uppercase;}
   /* folder slides up/in */
   .intro-card.seq{animation:introSlide .5s cubic-bezier(.2,.7,.3,1) both;}
-  @keyframes introSlide{from{transform:translateY(48px) scale(.96);opacity:0;}to{transform:translateY(0) scale(1);opacity:1;}}
+  @keyframes introSlide{from{transform:translateY(-48px) scale(.96);opacity:0;}to{transform:translateY(0) scale(1);opacity:1;}}
   /* flap shown closed during the sequence, then swings open */
   .intro-card.seq .intro-flap{display:flex;transform:rotateX(0deg);transition:transform .55s ease,opacity .35s ease .2s;}
   .intro-card.seq.s-open .intro-flap{transform:rotateX(-112deg);opacity:0;}
@@ -3345,6 +3346,7 @@ function payoff(grade, won){
   setResolution(won);   // 2-3 sentence story closer (different flavor on a fail)
   buildChain();
   $("winModal").classList.add("show");
+  { const _m=$("winModal").querySelector(".modal"); if(_m) _m.scrollTop=0; }   // open at the top so the headline is seen first; trophy strip is below as you scroll
   playPayoff(grade, won, isPerfect, won?makeHeadline(k.name):failHeadline());   // sequenced stamp reveal -> CASE CLOSED -> headline
 }
 function failHeadline(){
@@ -3425,6 +3427,7 @@ function openArchive(){
     row.innerHTML=`<b>${a.title}</b><span class="arch-meta">Culprit: ${a.culprit} · ${TIER_FLAVOR[a.tier]||a.tier} · No. ${a.no} · ${a.date}${a.perfect?" · ★ flawless":""}</span>`;
     list.appendChild(row); });
   $("archiveModal").classList.add("show");
+  { const _m=$("archiveModal").querySelector(".modal"); if(_m) _m.scrollTop=0; }   // open at the top so the close X is in view
 }
 
 /* =====================================================================
@@ -3916,6 +3919,19 @@ $("howtoBtn").onclick=()=>$("howtoModal").classList.add("show");
 $("howtoClose").onclick=()=>$("howtoModal").classList.remove("show");
 $("howtoGo").onclick=()=>{ $("howtoModal").classList.remove("show"); LS.set("seenHowTo",true); openNewCaseModal(); };   // after the how-to, pick a case
 $("archiveClose").onclick=()=>$("archiveModal").classList.remove("show");
+/* ---- consistent modal dismissal: click the backdrop (outside the panel) or press Esc closes ---- */
+["newModal","accuseModal","archiveModal","howtoModal"].forEach(id=>{ const m=$(id);
+  if(m) m.addEventListener("click",e=>{ if(e.target===m) m.classList.remove("show"); }); });   // backdrop click
+window.addEventListener("keydown",e=>{   // Esc closes the front-most open modal (capture+stop so the game's key handler doesn't also fire)
+  if(e.key!=="Escape"&&e.key!=="Esc") return;
+  for(const id of ["manorStory","archiveModal","accuseModal","newModal","howtoModal","winModal","introModal"]){
+    const m=$(id); if(!m||!m.classList.contains("show")) continue;
+    if(id==="introModal"&&typeof introSkipOrClose==="function") introSkipOrClose();
+    else if(id==="manorStory"&&typeof closeManorStory==="function") closeManorStory();
+    else m.classList.remove("show");
+    e.preventDefault(); e.stopPropagation(); return;
+  }
+}, true);
 /* ---- manor hub wiring ---- */
 function openNewCaseModal(){ $("newModal").classList.add("show"); $("seedInput").value=""; showCaseCodeHint(); }
 $("manorNew").onclick=()=>{ if(!LS.get("seenHowTo",false)){ $("howtoModal").classList.add("show"); } else openNewCaseModal(); };   // first-timers see how-to first
@@ -4391,7 +4407,25 @@ setupBars();
 applyAtmosphere();        // sets body.focus + button label before first render
 buildDust();              // create the dust motes once (shown only when the dust effect is active)
 buildRain();              // create the rain streaks once (shown only on rain/storm stories)
-document.addEventListener("visibilitychange",()=>{ const a=$("amb"); if(a) a.classList.toggle("amb-paused", document.hidden); });
+/* Pause ALL audio + ambient motion when the page is hidden or loses focus (Steam Deck sleep/idle,
+   tab/window blur). On return, resume the background music ONLY if the Music toggle is on — never
+   auto-start SFX. Nothing is left looping in the background. */
+function setAmbientPaused(p){ const a=$("amb"); if(a) a.classList.toggle("amb-paused", p); }
+function pauseAllAudio(){
+  try{ if(bgMusic && !bgMusic.paused) bgMusic.pause(); }catch(e){}                        // background music
+  try{ if(_actx && _actx.state==="running" && _actx.suspend) _actx.suspend(); }catch(e){} // suspend the WebAudio (SFX) graph
+}
+function resumeAudioOnReturn(){
+  try{ if(_actx && _actx.state==="suspended" && _actx.resume) _actx.resume(); }catch(e){} // re-arm SFX context (plays nothing)
+  if(settings.music) startMusicIfOn();                                                     // music only when the toggle is on
+}
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden){ setAmbientPaused(true); pauseAllAudio(); }
+  else { setAmbientPaused(false); resumeAudioOnReturn(); }
+});
+window.addEventListener("blur",()=>{ setAmbientPaused(true); pauseAllAudio(); });
+window.addEventListener("focus",()=>{ if(!document.hidden){ setAmbientPaused(false); resumeAudioOnReturn(); } });
+window.addEventListener("pagehide",pauseAllAudio);
 
 // HOME: the game opens to the manor hub (no auto-started case). First launch plays the Graves opening.
 showManor();
