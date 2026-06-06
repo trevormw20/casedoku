@@ -1016,6 +1016,11 @@
     box-shadow:0 18px 50px rgba(0,0,0,.6),inset 0 0 90px rgba(0,0,0,.5);overflow:hidden;}
   .manor-floor::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:9px;
     box-shadow:inset 0 0 0 5px rgba(40,30,18,.45),inset 0 0 70px rgba(0,0,0,.55);}
+  /* STUDY composition pass: a soft inner vignette so the room reads as an enclosed footprint (sits BEHIND the objects, z:0) */
+  .manor-floor.study-room::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;border-radius:9px;
+    background:radial-gradient(125% 85% at 50% 38%, transparent 58%, rgba(6,7,11,.40) 100%);
+    box-shadow:inset 0 -40px 55px rgba(0,0,0,.45),inset 0 28px 42px rgba(0,0,0,.34);}
+  .manor-floor.study-room .manor-avatar{left:72%;}   /* stand the detective beside the desk, clear of the key props */
   .manor-obj{position:absolute;background:none;border:none;padding:0;cursor:pointer;transform-origin:bottom center;
     display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 6px 8px rgba(0,0,0,.6));transition:transform .14s,filter .14s;}
   .manor-obj img{width:100%;height:auto;display:block;pointer-events:none;}
@@ -3725,20 +3730,20 @@ const MANOR_DATA=[
  { id:"study", name:"The Study", floor:"assets/themes/manor/rooms/room-study.jpg",
    beat:"This is where it starts. Sweep back the years with the seals you earn closing cases, and the Study will give up what it's hiding.",
    objects:[
-    {id:"window",   name:"The Bay Window",     stages:MS("study","study_window",["0","1","2","3"]),
+    {id:"window",   name:"The Bay Window",     pos:{left:38,top:4,width:24,z:1},  stages:MS("study","study_window",["0","1","2","3"]),
        steps:["You pry the boards off the bay window; weak grey daylight falls in for the first time in years.","Fresh putty, clean glass — the rain outside stops being a threat and becomes a comfort.","Curtains rehung, the study finally feels like a room and not a tomb."]},
-    {id:"fireplace",name:"The Fireplace",      stages:MS("study","study_fireplace",["0","1","2","3"]),
+    {id:"fireplace",name:"The Fireplace",      pos:{left:2,top:24,width:20,z:2},  stages:MS("study","study_fireplace",["0","1","2","3"]),
        steps:["Out come the ash and the cobwebs; the cold grate remembers it was once a hearth.","Scrub the soot, set the brass tools straight — half a fireplace is better than none.","A fire at last. The study breathes warm light, and the shadows lose their edge."]},
-    {id:"cabinet",  name:"The Filing Cabinet", stages:MS("study","study_cabinet",["0","1","2"]),
+    {id:"cabinet",  name:"The Filing Cabinet", pos:{left:82,top:30,width:14,z:2},  stages:MS("study","study_cabinet",["0","1","2"]),
        steps:["The grimy filing cabinet gets a wipe-down; the drawers grind, then glide.","Oiled and squared away, it stands ready to hold a case or two again."]},
-    {id:"chair",    name:"The Wingback Chair",  stages:MS("study","study_chair",["0","1","2","3","4"]),
+    {id:"chair",    name:"The Wingback Chair",  pos:{left:42,top:61,width:18,z:5},  stages:MS("study","study_chair",["0","1","2","3","4"]),
        steps:["You right the toppled wingback and beat thirty years of dust from the cushion.","The torn arm gets a patch; the stuffing stops escaping.","New oxblood leather, tacked and buffed — it begins to look loved again.","A last polish, and the chair sits by the desk as if waiting for him to come back."]},
-    {id:"desk",     name:"The Detective's Desk",key:true, stages:MS("study","study_desk",["0","1","2","3"]),
+    {id:"desk",     name:"The Detective's Desk",key:true, pos:{left:34,top:38,width:32,z:3},  stages:MS("study","study_desk",["0","1","2","3"]),
        steps:["The dust-sheet comes away in a grey cloud — beneath it, Graves' desk, scarred but sound.","Beeswax and a soft cloth, and the green leather top glows like a card table again.","The bottom drawer fights you, then surrenders — and a folded slip of paper slides into your hand."],
        reveal:"In a slanting hand, dated the night he disappeared:<br><b>“If you are reading this, I did not simply leave. — A.G.”</b><br>Wembly reads it twice, says nothing, and quietly pockets his handkerchief."},
-    {id:"lamp",     name:"The Banker's Lamp",   stages:MS("study","study_lamp",["0","1","2"]),
+    {id:"lamp",     name:"The Banker's Lamp",   pos:{left:56,top:30,width:8,z:4},  stages:MS("study","study_lamp",["0","1","2"]),
        steps:["You stand the banker's lamp upright and wipe the green glass shade clean.","A new bulb, a click — and a warm pool of light spills across the desk."]},
-    {id:"rug",      name:"The Persian Rug",     stages:MS("study","study_rug",["0","1","2"]),
+    {id:"rug",      name:"The Persian Rug",     pos:{left:28,top:50,width:44,z:1},  stages:MS("study","study_rug",["0","1","2"]),
        steps:["You drag the worn rug into the light and beat the dust from its faded threads.","Cleaned and laid flat, the Persian colours come back like an old memory."]},
    ]},
  { id:"entry-hall", name:"The Entry Hall", floor:"assets/themes/manor/rooms/room-hall.jpg",
@@ -3796,11 +3801,12 @@ const MANOR_DATA=[
        steps:["…","…","…"]},
    ]},
 ];
-// lay each room's objects out in a non-overlapping grid (deterministic, stable across restores)
+// lay each room's objects out in a non-overlapping grid (deterministic, stable across restores).
+// Objects that already declare an explicit pos (the hand-composed Study) are left as authored.
 MANOR_DATA.forEach(room=>{ const objs=room.objects, n=objs.length;
   const cols = n<=2?2 : n<=6?3 : n<=9?3 : 4, rows=Math.ceil(n/cols);
   const cw=100/cols, ch=100/rows, ow=Math.min(cw*0.62, 19);   // keep cutouts inside their cell (floor is ~16:10)
-  objs.forEach((o,i)=>{ const c=i%cols, r=Math.floor(i/cols);
+  objs.forEach((o,i)=>{ if(o.pos) return; const c=i%cols, r=Math.floor(i/cols);   // skip hand-placed objects
     o.pos={ left:+(c*cw+(cw-ow)/2).toFixed(1), top:+(r*ch+ch*0.16).toFixed(1), width:+ow.toFixed(1) }; });
 });
 const MANOR_UNLOCK_PCT=0.8;   // a room unlocks the next at 80% restored AND its key object fully done
@@ -3839,12 +3845,14 @@ function renderManor(){
     nav.appendChild(b); });
   const floor=$("manorFloor"), avatar=$("manorAvatar");
   floor.style.backgroundImage=`linear-gradient(rgba(8,9,13,.28),rgba(8,9,13,.50)),url("${room.floor}")`;
+  floor.classList.toggle("study-room", room.id==="study");   // study-only framing/avatar tweaks (composition pass)
   floor.querySelectorAll(".manor-obj").forEach(e=>e.remove());
   room.objects.forEach(o=>{
     const st=Math.min(manorStageOf(room.id,o.id), o.stages.length-1), max=o.stages.length-1, full=st>=max;
     const el=document.createElement("button");
     el.className="manor-obj"+(full?" full":"")+(o.key?" key":""); el.dataset.obj=o.id;
     el.style.left=o.pos.left+"%"; el.style.top=o.pos.top+"%"; el.style.width=o.pos.width+"%";
+    if(o.pos.z!=null) el.style.zIndex=o.pos.z;   // explicit depth order (nearer/lower objects paint over farther/higher; rug beneath the desk cluster)
     el.title=room.locked?room.name:(o.name+(full?" — restored":` — stage ${st}/${max} · 1 seal`));
     el.innerHTML=`<img src="${o.stages[st]}" alt="${o.name}" draggable="false"><span class="manor-obj-tag">${o.name}</span>`+
       (room.locked?`<span class="manor-obj-cost">🔒</span>`:(full?`<span class="manor-obj-done">✓</span>`:`<span class="manor-obj-cost">🔏</span>`));
