@@ -1,0 +1,16 @@
+// SteamPipe APP build script — EDIT the ids/paths, then upload with steamcmd (see ../STEAM_BUILD.md).
+// Replace 3000000 with YOUR Steamworks AppID and 3000001 with YOUR DepotID.
+"appbuild"
+{
+	"appid"	"3000000"
+
+	"desc"	"Casedoku Demo"          // internal build description (not shown to players)
+	"buildoutput"	"..\\steampipe_output\\"  // steamcmd writes logs + chunk cache here (gitignored)
+	"contentroot"	"..\\dist\\win-unpacked\\" // the built game files (output of: npm run build:win)
+	"setlive"	""                     // branch to auto-set live, e.g. "beta" — leave "" to set live manually in Steamworks
+
+	"depots"
+	{
+		"3000001"	"depot_build_3000001.vdf"
+	}
+}

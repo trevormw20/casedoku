@@ -1,0 +1,53 @@
+{
+  "name": "casedoku-demo-desktop",
+  "version": "1.0.0",
+  "description": "Casedoku — Demo: Electron desktop wrapper for Steam (Windows + Steam Deck via Proton).",
+  "author": "Casedoku",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux AppImage"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.casedoku.demo",
+    "productName": "Casedoku Demo",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json"
+    ],
+    "extraResources": [
+      { "from": "../demo", "to": "demo", "filter": ["**/*"] },
+      { "from": "../assets", "to": "assets", "filter": ["**/*"] }
+    ],
+    "win": {
+      "target": ["portable", "nsis"],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName}-${version}-Setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-Portable.${ext}"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "icon": "build/icon.png",
+      "category": "Game"
+    }
+  }
+}

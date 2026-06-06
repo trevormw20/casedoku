@@ -1,0 +1,21 @@
+// SteamPipe DEPOT build script — referenced by app_build_3000000.vdf. EDIT the DepotID + paths.
+// Ships the entire built app folder (dist/win-unpacked) recursively. Steam runs the exe named below.
+"DepotBuild"
+{
+	"DepotID"	"3000001"
+
+	// Root of the files to upload — the unpacked Windows app produced by `npm run build:win`.
+	"contentroot"	"..\\dist\\win-unpacked\\"
+
+	"FileMapping"
+	{
+		"LocalPath"	"*"      // everything under contentroot...
+		"DepotPath"	"."      // ...into the depot root
+		"recursive"	"1"
+	}
+
+	// The launchable executable for this depot is "Casedoku Demo.exe" (set the Launch Option in
+	// Steamworks → Installation → General Installation → Launch Options to that exe).
+
+	"FileExclusion"	"*.pdb"
+}
