@@ -3900,13 +3900,16 @@ function showSnapStage(floor, avatar, url, animate){
   let a=floor.querySelector(".manor-snap.a"), b=floor.querySelector(".manor-snap.b");
   if(!a){ a=document.createElement("img"); a.className="manor-snap a"; a.draggable=false; a.alt=""; floor.insertBefore(a,avatar); }
   if(!b){ b=document.createElement("img"); b.className="manor-snap b"; b.draggable=false; b.alt=""; floor.insertBefore(b,avatar); }
+  // match the floor box to the scene's own aspect so the whole room shows (no cover-crop, no letterbox bars)
+  const fitAR=img=>{ if(img.naturalWidth) floor.style.aspectRatio=img.naturalWidth+"/"+img.naturalHeight; };
+  const load=img=>{ img.onload=()=>fitAR(img); img.src=url; if(img.complete) fitAR(img); };
   if(animate && motionOK()){
     const front = floor.dataset.snapFront==="b"?b:a, back = front===a?b:a;
-    back.src=url; void back.offsetWidth; back.style.opacity="1"; front.style.opacity="0";
+    load(back); void back.offsetWidth; back.style.opacity="1"; front.style.opacity="0";
     floor.dataset.snapFront = (back===a?"a":"b");
   } else {
     const front = floor.dataset.snapFront==="b"?b:a, back = front===a?b:a;
-    front.src=url; front.style.opacity="1"; back.style.opacity="0";
+    load(front); front.style.opacity="1"; back.style.opacity="0";
   }
 }
 function renderManor(){
@@ -3926,7 +3929,7 @@ function renderManor(){
   else if(snap===false) renderManorLayered(room, floor, avatar);
   else {   // unprobed: clear to a neutral state, probe, then re-render in the right mode (avoids a cutout/JPG flash)
     floor.querySelectorAll(".manor-obj,.manor-snap").forEach(e=>e.remove());
-    floor.classList.remove("iso-bg","study-room","snap-room"); floor.style.backgroundImage="none"; floor.onclick=null;
+    floor.classList.remove("iso-bg","study-room","snap-room"); floor.style.backgroundImage="none"; floor.style.aspectRatio=""; floor.onclick=null;
     resolveRoomSnapshot(room.id, ()=>{ if(_manorRoom===room.id) renderManor(); });
   }
   updateRestoreBtn(room);
@@ -3934,7 +3937,7 @@ function renderManor(){
   $("manorQuit").hidden = !(window.casedokuDesktop && typeof window.casedokuDesktop.quit==="function");
 }
 function renderManorLayered(room, floor, avatar){
-  floor.classList.remove("snap-room"); floor.onclick=null;
+  floor.classList.remove("snap-room"); floor.onclick=null; floor.style.aspectRatio="";   // revert to the CSS 16:10 floor
   floor.querySelectorAll(".manor-snap").forEach(e=>e.remove()); delete floor.dataset.snapShown; delete floor.dataset.snapFront;
   $("manorPct").textContent=Math.round(roomPct(room)*100)+"%";
   // Default to the top-down board floor (fallback); swap to the iso room-shell if one exists.
