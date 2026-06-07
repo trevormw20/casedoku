@@ -1023,6 +1023,17 @@
   .manor-floor.study-room .manor-avatar{left:72%;}   /* stand the detective beside the desk, clear of the key props */
   /* when an iso room-shell background is in use, the shell carries the walls/depth: drop the top-down overlays */
   .manor-floor.iso-bg::after,.manor-floor.iso-bg::before{display:none;}
+  /* SNAPSHOT MODE: one full-room scene per stage; two stacked layers crossfade; no cutouts/floor/wall overlay */
+  .manor-floor.snap-room{cursor:pointer;}
+  .manor-floor.snap-room::after{box-shadow:none;background:none;}            /* drop the top-down wall frame */
+  .manor-snap{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:9px;z-index:1;opacity:0;transition:opacity .55s ease;}
+  body.no-motion .manor-snap{transition:none;}
+  .manor-floor.snap-room .manor-avatar{left:88%;bottom:6%;}                   /* tuck the detective into the lower-right corner */
+  .manor-floor.snap-room::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:9px;z-index:4;opacity:0;
+    background:linear-gradient(115deg,transparent 35%,rgba(255,240,200,.42) 50%,transparent 65%);background-size:250% 100%;}
+  .manor-floor.snap-room.manor-snap-sweep::before{animation:manorSnapSweep .85s ease-out;}
+  @keyframes manorSnapSweep{0%{opacity:1;background-position:150% 0;}100%{opacity:0;background-position:-50% 0;}}
+  .manor-restore-btn:disabled{opacity:.5;cursor:default;filter:grayscale(.4);}
   .manor-obj{position:absolute;background:none;border:none;padding:0;cursor:pointer;transform-origin:bottom center;
     display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 6px 8px rgba(0,0,0,.6));transition:transform .14s,filter .14s;}
   .manor-obj img{width:100%;height:auto;display:block;pointer-events:none;}
@@ -1427,6 +1438,7 @@
       <div class="manor-toast" id="manorToast"></div>
     </div>
     <div class="manor-hub">
+      <button class="btn primary manor-restore-btn" id="manorRestore" hidden>🔏 Restore</button>
       <button class="btn primary" id="manorNew"><img src="assets/ui/icon-settings.png" alt=""/>Start New Case</button>
       <button class="btn" id="manorContinue" hidden>▶ Continue Case</button>
       <button class="btn" id="manorArchive"><img src="assets/ui/icon-notebook.png" alt=""/>Archive</button>
@@ -3731,6 +3743,17 @@ const MANOR_OPENING =
 const MANOR_DATA=[
  { id:"study", name:"The Study", floor:"assets/themes/manor/rooms/room-study.jpg",
    beat:"This is where it starts. Sweep back the years with the seals you earn closing cases, and the Study will give up what it's hiding.",
+   // SNAPSHOT MODE restore lines, indexed by stage s0..s7 (s0 = ruined baseline; s1..s7 spoken as each stage is restored)
+   snapLines:[
+     "Thirty years of dust and silence — the Study sits exactly as Graves left it.",
+     "You sweep away thirty years of cobwebs; the Study's shape returns.",
+     "Boards come off the bay window, and weak grey daylight finds the floor again.",
+     "The cold hearth is cleared and the brass tools set straight; the room remembers warmth.",
+     "The Persian rug is beaten clean and laid flat, colour bleeding back into the threads.",
+     "Graves' desk is uncovered and waxed until the green leather glows like a card table.",
+     "The wingback is righted and re-covered; it waits by the desk as if he'd just stepped out.",
+     "Warm at last — the desk lamp glows, and the Study breathes again."
+   ],
    objects:[
     {id:"window",   name:"The Bay Window",     pos:{left:38,top:4,width:24,z:1},  stages:MS("study","study_window",["0","1","2","3"]),
        steps:["You pry the boards off the bay window; weak grey daylight falls in for the first time in years.","Fresh putty, clean glass — the rain outside stops being a threat and becomes a comfort.","Curtains rehung, the study finally feels like a room and not a tomb."]},
@@ -3848,11 +3871,48 @@ function resolveRoomBg(roomId, cb){
     img.src=url;
   })();
 }
+/* ---- SNAPSHOT MODE: a single full-room scene per stage (assets/manor/<roomid>/room_s0..sN.{png,webp,jpg}).
+   A room with >=2 such stages uses snapshot mode (no layered cutouts/floor JPG/wall overlay/vignette);
+   otherwise it keeps the layered-object mode. ---- */
+const MANOR_SEAL_COST=1;            // Case Seals to advance one restoration stage (tunable)
+const _roomSnapCache={};            // roomid -> {urls:{n:url}, stages:[n…], max:N} | false (no set) | undefined (unprobed)
+function snapStageOf(roomId){ return manorStageOf(roomId,"__snap"); }   // reuse the manorObj store
+function setSnapStage(roomId,n){ setManorStage(roomId,"__snap",n); }
+function resolveRoomSnapshot(roomId, cb){
+  if(roomId in _roomSnapCache){ cb(_roomSnapCache[roomId]); return; }
+  const MAXN=9, exts=["png","webp","jpg"], urls={}; let n=0;
+  (function probeStage(){
+    // need an s0 baseline; if it's absent there's no snapshot set -> bail fast (keeps layered rooms to <=3 probes)
+    if(n>MAXN || (n>0 && urls[0]===undefined)){ const stages=Object.keys(urls).map(Number).sort((a,b)=>a-b);
+      const snap = stages.length>=2 ? {urls,stages,max:stages[stages.length-1]} : false;
+      _roomSnapCache[roomId]=snap; cb(snap); return; }
+    const cur=n; let ei=0;
+    (function tryExt(){
+      if(ei>=exts.length){ n++; probeStage(); return; }                 // stage absent in every ext -> next stage (tolerates gaps)
+      const url="assets/manor/"+roomId+"/room_s"+cur+"."+exts[ei++], img=new Image();
+      img.onload=()=>{ urls[cur]=url; n++; probeStage(); };
+      img.onerror=tryExt; img.src=url;
+    })();
+  })();
+}
+// paint the current snapshot image; crossfade between two stacked layers when animating (instant if Motion off)
+function showSnapStage(floor, avatar, url, animate){
+  let a=floor.querySelector(".manor-snap.a"), b=floor.querySelector(".manor-snap.b");
+  if(!a){ a=document.createElement("img"); a.className="manor-snap a"; a.draggable=false; a.alt=""; floor.insertBefore(a,avatar); }
+  if(!b){ b=document.createElement("img"); b.className="manor-snap b"; b.draggable=false; b.alt=""; floor.insertBefore(b,avatar); }
+  if(animate && motionOK()){
+    const front = floor.dataset.snapFront==="b"?b:a, back = front===a?b:a;
+    back.src=url; void back.offsetWidth; back.style.opacity="1"; front.style.opacity="0";
+    floor.dataset.snapFront = (back===a?"a":"b");
+  } else {
+    const front = floor.dataset.snapFront==="b"?b:a, back = front===a?b:a;
+    front.src=url; front.style.opacity="1"; back.style.opacity="0";
+  }
+}
 function renderManor(){
   const room=roomById(_manorRoom)||MANOR_DATA[0];
   $("manorRoomName").textContent=room.name;
   $("manorSealCount").textContent=manorSeals();
-  $("manorPct").textContent=Math.round(roomPct(room)*100)+"%";
   const nav=$("manorNav"); nav.innerHTML="";
   MANOR_DATA.forEach(r=>{ const unlocked=roomUnlocked(r.id);
     const b=document.createElement("button"); b.className="manor-tab"+(r.id===_manorRoom?" on":"")+(unlocked?"":" locked");
@@ -3861,6 +3921,22 @@ function renderManor(){
     else b.onclick=()=>manorToast(r.beat||"Locked.");
     nav.appendChild(b); });
   const floor=$("manorFloor"), avatar=$("manorAvatar");
+  const snap=_roomSnapCache[room.id];
+  if(snap) renderManorSnapshot(room, floor, avatar, snap);
+  else if(snap===false) renderManorLayered(room, floor, avatar);
+  else {   // unprobed: clear to a neutral state, probe, then re-render in the right mode (avoids a cutout/JPG flash)
+    floor.querySelectorAll(".manor-obj,.manor-snap").forEach(e=>e.remove());
+    floor.classList.remove("iso-bg","study-room","snap-room"); floor.style.backgroundImage="none"; floor.onclick=null;
+    resolveRoomSnapshot(room.id, ()=>{ if(_manorRoom===room.id) renderManor(); });
+  }
+  updateRestoreBtn(room);
+  $("manorContinue").hidden = !(C && !solved);
+  $("manorQuit").hidden = !(window.casedokuDesktop && typeof window.casedokuDesktop.quit==="function");
+}
+function renderManorLayered(room, floor, avatar){
+  floor.classList.remove("snap-room"); floor.onclick=null;
+  floor.querySelectorAll(".manor-snap").forEach(e=>e.remove()); delete floor.dataset.snapShown; delete floor.dataset.snapFront;
+  $("manorPct").textContent=Math.round(roomPct(room)*100)+"%";
   // Default to the top-down board floor (fallback); swap to the iso room-shell if one exists.
   floor.style.backgroundImage=`linear-gradient(rgba(8,9,13,.28),rgba(8,9,13,.50)),url("${room.floor}")`;
   floor.classList.remove("iso-bg");
@@ -3884,8 +3960,57 @@ function renderManor(){
     el.onclick=room.locked?(()=>manorToast(room.beat)):(()=>restoreObject(room.id,o.id));
     floor.insertBefore(el, avatar);
   });
-  $("manorContinue").hidden = !(C && !solved);
-  $("manorQuit").hidden = !(window.casedokuDesktop && typeof window.casedokuDesktop.quit==="function");
+}
+function renderManorSnapshot(room, floor, avatar, snap){
+  floor.querySelectorAll(".manor-obj").forEach(e=>e.remove());        // no cutouts in snapshot mode
+  floor.classList.remove("iso-bg","study-room"); floor.classList.add("snap-room");
+  floor.style.backgroundImage="none";                                 // the snapshot image carries the whole scene
+  const cur=Math.min(snapStageOf(room.id), snap.max);
+  const present=snap.stages.filter(n=>n<=cur);                        // tolerate gaps: show the highest present stage <= cur
+  const showN = present.length? present[present.length-1] : snap.stages[0];
+  $("manorPct").textContent=Math.round((snap.max?cur/snap.max:1)*100)+"%";
+  if(floor.dataset.snapShown!==String(showN)){ showSnapStage(floor, avatar, snap.urls[showN], false); floor.dataset.snapShown=String(showN); }
+  floor.onclick=(e)=>{ if(e.target && e.target.closest && e.target.closest(".manor-avatar")) return; restoreRoomSnapshot(room.id); };   // tap the scene to restore
+}
+function updateRestoreBtn(room){
+  const rb=$("manorRestore"); if(!rb) return;
+  const snap=_roomSnapCache[room.id];
+  if(!snap || room.locked){ rb.hidden=true; return; }
+  rb.hidden=false;
+  const cur=Math.min(snapStageOf(room.id), snap.max), n=snap.max, short=room.name.replace(/^The /,"");
+  if(cur>=n){ rb.disabled=true; rb.textContent=`✓ ${short} fully restored — Stage ${n} of ${n}`; }
+  else if(manorSeals()<MANOR_SEAL_COST){ rb.disabled=true; rb.textContent=`Restore the ${short} — Stage ${cur} of ${n} · need a Case Seal`; }
+  else { rb.disabled=false; rb.textContent=`🔏 Restore the ${short} — Stage ${cur} of ${n} (1 Seal)`; }
+}
+function restoreRoomSnapshot(roomId){
+  const snap=_roomSnapCache[roomId]; if(!snap) return;
+  const room=roomById(roomId), short=room.name.replace(/^The /,"");
+  const cur=Math.min(snapStageOf(roomId), snap.max);
+  if(cur>=snap.max){ manorToast(`The ${short} is fully restored.`); return; }
+  if(manorSeals()<MANOR_SEAL_COST){ manorToast(`You need a <b>Case Seal</b> — close a case to earn one. (Win = 1, a flawless 4/4 = 2.)`); return; }
+  setManorSeals(manorSeals()-MANOR_SEAL_COST);
+  const nextN = snap.stages.find(n=>n>cur), ns = (nextN==null)? snap.max : nextN;   // advance to the next present stage
+  setSnapStage(roomId, ns);
+  const floor=$("manorFloor"), avatar=$("manorAvatar");
+  floor.dataset.snapShown=String(ns);
+  showSnapStage(floor, avatar, snap.urls[ns], true);                 // crossfade old -> new (instant if Motion off)
+  if(motionOK()){ restartAnim(floor,"manor-snap-sweep"); const av=$("manorAvatar"); if(av) restartAnim(av,"manor-sweep"); }
+  if(settings.sound) sfx("confirm");
+  manorToast((room.snapLines&&room.snapLines[ns]) || `The ${short} comes a little further back to life.`);
+  $("manorSealCount").textContent=manorSeals();
+  $("manorPct").textContent=Math.round((ns/snap.max)*100)+"%";
+  updateRestoreBtn(room);
+  if(ns>=snap.max) fireSnapFinal(room);                             // final stage -> Graves reveal + unlock next
+}
+function fireSnapFinal(room){
+  const keyObj=room.objects.find(o=>o.key), reveal=room.snapReveal || (keyObj&&keyObj.reveal);
+  const idx=MANOR_DATA.indexOf(room), next=MANOR_DATA[idx+1], doUnlock=!!(next && !next.locked && !roomUnlocked(next.id));
+  const afterReveal=()=>{ if(doUnlock){ unlockRoom(next.id);
+      showManorStory(`<div class="ms-kicker">${next.name} unlocked</div>${next.beat}`,
+        ()=>{ _manorRoom=next.id; LS.set("manorActiveRoom",next.id); renderManor(); }, "beat");
+    } else renderManor(); };
+  if(reveal) setTimeout(()=>showManorStory(`<div class="ms-kicker">A discovery in ${room.name}</div>${reveal}`, afterReveal, "reveal"), 800);
+  else afterReveal();
 }
 function showManor(){
   ["winModal","newModal","accuseModal","archiveModal","howtoModal","introModal"].forEach(id=>{ const m=$(id); if(m) m.classList.remove("show"); });
@@ -3970,6 +4095,7 @@ function openNewCaseModal(){ $("newModal").classList.add("show"); $("seedInput")
 $("manorNew").onclick=()=>{ if(!LS.get("seenHowTo",false)){ $("howtoModal").classList.add("show"); } else openNewCaseModal(); };   // first-timers see how-to first
 $("manorContinue").onclick=()=>{ if(C && !solved) hideManor(); else showManor(); };   // resume the in-progress case
 $("manorArchive").onclick=openArchive;
+if($("manorRestore")) $("manorRestore").onclick=()=>restoreRoomSnapshot(_manorRoom);   // snapshot-mode room restoration
 $("manorQuit").onclick=()=>{ try{ window.casedokuDesktop && window.casedokuDesktop.quit && window.casedokuDesktop.quit(); }catch(e){} };
 $("manorStoryOk").onclick=closeManorStory;
 $("manorStory").onclick=(e)=>{ if(e.target===$("manorStory")) closeManorStory(); };   // tap backdrop to dismiss
@@ -4485,7 +4611,9 @@ function devCounts(){ let trophies=0,total=0,memN=0;
   return { trophies, total, memN, victims:(THEME.victims||[]).length, seals:manorSeals(),
     unlocked, cases:(LS.get("archive",[])||[]).length }; }
 function refreshDevReadout(){ const ro=$("devReadout"); if(!ro) return; const c=devCounts(), room=roomById(_manorRoom)||MANOR_DATA[0];
-  ro.innerHTML=`Room <b>${room.name.replace(/^The /,"")}</b> · <b>${Math.round(roomPct(room)*100)}%</b><br>`+
+  const snap=_roomSnapCache[room.id];
+  const prog = snap ? `<b>Stage ${Math.min(snapStageOf(room.id),snap.max)}/${snap.max}</b> <span style="opacity:.6">(snapshot)</span>` : `<b>${Math.round(roomPct(room)*100)}%</b>`;
+  ro.innerHTML=`Room <b>${room.name.replace(/^The /,"")}</b> · ${prog}<br>`+
     `Unlocked: <b>${c.unlocked.join(", ")||"—"}</b><br>`+
     `Seals <b>${c.seals}</b> · Cases solved <b>${c.cases}</b><br>`+
     `Trophies <b>${c.trophies}/${c.total}</b> · Memorials <b>${c.memN}/${c.victims}</b>`; }
@@ -4499,14 +4627,19 @@ function devLockPrev(){ const pl=MANOR_DATA.filter(r=>!r.locked); let last=0; pl
   if(last<=0){ devLog("Only the Study is unlocked."); return; } const u=LS.get("manorUnlocked",{})||{}; delete u[pl[last].id]; LS.set("manorUnlocked",u);
   if(_manorRoom===pl[last].id){ _manorRoom=pl[last-1].id; LS.set("manorActiveRoom",_manorRoom); } if(manorOpen()) renderManor(); devLog("Locked "+pl[last].name); }
 function devRestoreStep(){ const room=roomById(_manorRoom); if(!room||room.locked){ devLog("No restorable room."); return; }
-  const obj=room.objects.find(o=>manorStageOf(room.id,o.id)<o.stages.length-1); if(!obj){ devLog(room.name+" fully restored."); return; }
-  if(!manorOpen()) showManor(); setManorSeals(manorSeals()+1); restoreObject(room.id,obj.id); devLog("Restored +1: "+obj.name); }
+  if(!manorOpen()) showManor();
+  resolveRoomSnapshot(room.id, snap=>{
+    if(snap){ if(Math.min(snapStageOf(room.id),snap.max)>=snap.max){ devLog(room.name+" fully restored."); return; }
+      setManorSeals(manorSeals()+1); restoreRoomSnapshot(room.id); refreshDevReadout(); devLog("Restored +1 stage: "+room.name); }
+    else { const obj=room.objects.find(o=>manorStageOf(room.id,o.id)<o.stages.length-1); if(!obj){ devLog(room.name+" fully restored."); return; }
+      setManorSeals(manorSeals()+1); restoreObject(room.id,obj.id); devLog("Restored +1: "+obj.name); } }); }
 function devRestoreFull(){ const room=roomById(_manorRoom); if(!room||room.locked){ devLog("No restorable room."); return; }
-  if(!manorOpen()) showManor(); let g=0;
-  room.objects.forEach(o=>{ while(manorStageOf(room.id,o.id)<o.stages.length-1 && g++<300){ setManorSeals(manorSeals()+1); restoreObject(room.id,o.id); } });
-  devLog("Restored FULLY: "+room.name); }
-function devResetRoom(){ const room=roomById(_manorRoom); if(!room) return; room.objects.forEach(o=>setManorStage(room.id,o.id,0));
-  if(manorOpen()) renderManor(); devLog("Reset to ruined: "+room.name); }
+  if(!manorOpen()) showManor();
+  resolveRoomSnapshot(room.id, snap=>{ let g=0;
+    if(snap){ while(Math.min(snapStageOf(room.id),snap.max)<snap.max && g++<50){ setManorSeals(manorSeals()+1); restoreRoomSnapshot(room.id); } refreshDevReadout(); devLog("Restored FULLY: "+room.name); }
+    else { room.objects.forEach(o=>{ while(manorStageOf(room.id,o.id)<o.stages.length-1 && g++<300){ setManorSeals(manorSeals()+1); restoreObject(room.id,o.id); } }); devLog("Restored FULLY: "+room.name); } }); }
+function devResetRoom(){ const room=roomById(_manorRoom); if(!room) return; room.objects.forEach(o=>setManorStage(room.id,o.id,0)); setSnapStage(room.id,0);
+  if(manorOpen()){ const fl=$("manorFloor"); if(fl) delete fl.dataset.snapShown; renderManor(); } devLog("Reset to ruined: "+room.name); }
 function devResetManor(){ _rm("manorObj"); _rm("manorUnlocked"); _rm("manorActiveRoom"); _manorRoom=MANOR_DATA[0].id;
   if(!manorOpen()) showManor(); else renderManor(); devLog("Reset ALL manor progress."); }
 /* ----- cases / records ----- */
