@@ -1034,6 +1034,52 @@
   .manor-floor.snap-room.manor-snap-sweep::before{animation:manorSnapSweep .85s ease-out;}
   @keyframes manorSnapSweep{0%{opacity:1;background-position:150% 0;}100%{opacity:0;background-position:-50% 0;}}
   .manor-restore-btn:disabled{opacity:.5;cursor:default;filter:grayscale(.4);}
+  /* ===== manor home: Wembly, progress bars, objective, teaser, mystery tracker ===== */
+  .manor-wembly{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0;}
+  .manor-wembly-portrait{width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid rgba(231,185,77,.7);background:#10131a;flex:none;}
+  .manor-wembly-ico{font-size:26px;width:46px;height:46px;display:flex;align-items:center;justify-content:center;border-radius:50%;
+    background:rgba(231,185,77,.10);border:1px solid rgba(231,185,77,.45);flex:none;}
+  .manor-wembly-body{min-width:0;}
+  .manor-wembly-name{font-family:"Courier New",monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-dim);}
+  .manor-wembly-line{font-family:Georgia,serif;font-style:italic;font-size:14.5px;color:var(--ink);line-height:1.35;}
+  .manor-bar{position:relative;height:9px;border-radius:6px;background:#15181f;border:1px solid var(--line);overflow:hidden;}
+  .manor-bar-fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:6px;
+    background:linear-gradient(90deg,#7a5a1f,var(--amber-soft));transition:width .5s ease;}
+  .manor-bar.mini{height:6px;display:inline-block;width:88px;vertical-align:middle;margin-left:6px;}
+  .manor-overall{padding:0 18px 6px;flex:none;}
+  .manor-overall-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px;}
+  .manor-tab{display:flex;flex-direction:column;gap:4px;min-width:92px;align-items:stretch;}   /* augments the base .manor-tab: label over a mini bar */
+  .manor-tab-label{display:block;text-align:left;}
+  .manor-tab-bar{position:relative;height:5px;border-radius:4px;background:#0f1218;border:1px solid var(--line);overflow:hidden;}
+  .manor-tab-bar>span{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#7a5a1f,var(--amber-soft));border-radius:4px;transition:width .5s ease;}
+  .manor-tab-bar.locked{opacity:.4;}
+  .manor-status{padding:6px 18px 4px;flex:none;display:flex;flex-direction:column;gap:5px;}
+  .manor-objective{font-size:13.5px;color:var(--amber-soft);font-weight:600;}
+  .manor-status-row{display:flex;align-items:flex-start;gap:10px;justify-content:space-between;flex-wrap:wrap;}
+  .manor-teaser{font-size:12px;color:var(--ink-dim);line-height:1.4;flex:1 1 220px;min-width:0;}
+  .manor-teaser-lock{color:var(--amber-soft);font-weight:600;white-space:nowrap;}
+  .manor-teaser-hook{font-style:italic;}
+  .manor-teaser-req{margin-top:2px;}
+  .manor-case-btn{flex:none;background:#171a22;border:1px solid var(--amber);color:var(--amber-soft);border-radius:8px;
+    padding:6px 11px;font-size:12.5px;font-family:"Courier New",monospace;letter-spacing:.5px;cursor:pointer;align-self:center;}
+  .manor-case-btn:hover{background:#20232e;}
+  .graves-sub{text-align:center;color:var(--ink-dim);font-family:"Courier New",monospace;letter-spacing:1px;font-size:12px;margin-bottom:4px;}
+  .graves-intro{font-style:italic;color:var(--ink-dim);font-size:13px;text-align:center;margin:0 auto 12px;max-width:420px;line-height:1.5;}
+  .graves-clues{display:flex;flex-direction:column;gap:9px;}
+  .graves-clue{border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:#13151d;text-align:left;}
+  .graves-clue.found{border-color:rgba(231,185,77,.5);background:#181b24;}
+  .graves-clue-t{color:var(--amber-soft);font-weight:700;font-size:14px;margin-bottom:2px;}
+  .graves-clue.hidden .graves-clue-t{color:var(--ink-dim);letter-spacing:2px;}
+  .graves-clue-room{font-weight:400;font-style:italic;color:var(--ink-dim);font-size:12px;letter-spacing:0;}
+  .graves-clue-s{font-size:13px;color:var(--ink);line-height:1.5;}
+  .graves-clue.hidden .graves-clue-s{color:var(--ink-dim);font-style:italic;}
+  body.appfit .manor-overall,body.appfit .manor-status{padding-left:14px;padding-right:14px;}
+  body.appfit .manor-wembly-line{font-size:13px;} body.appfit .manor-objective{font-size:12.5px;}
+  body.appfit .manor-wembly-portrait,body.appfit .manor-wembly-ico{width:38px;height:38px;}
+  body.phone .manor-wembly-line{font-size:calc(13px * var(--ps,1));}
+  body.phone .manor-wembly-name{font-size:calc(10px * var(--ps,1));}
+  body.phone .manor-case-btn{font-size:calc(12px * var(--ps,1));}
+  body.phone .manor-teaser{font-size:calc(11px * var(--ps,1));}
   .manor-obj{position:absolute;background:none;border:none;padding:0;cursor:pointer;transform-origin:bottom center;
     display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 6px 8px rgba(0,0,0,.6));transition:transform .14s,filter .14s;}
   .manor-obj img{width:100%;height:auto;display:block;pointer-events:none;}
@@ -1422,13 +1468,24 @@
   <!-- ===== MANOR RESTORATION — the home hub (Inspector Graves' manor) ===== -->
   <div class="manor-screen" id="manorScreen" hidden>
     <div class="manor-head">
-      <div class="manor-titles">
-        <div class="manor-room-name" id="manorRoomName">The Study</div>
-        <div class="manor-sub">Blackwood Manor · <span class="manor-pct" id="manorPct">0%</span> restored</div>
+      <div class="manor-wembly" id="manorWembly">
+        <img class="manor-wembly-portrait" id="manorWemblyPortrait" alt="" hidden/>
+        <span class="manor-wembly-ico" id="manorWemblyIco" aria-hidden="true">🕯️</span>
+        <div class="manor-wembly-body">
+          <div class="manor-wembly-name">Wembly, the Clerk</div>
+          <div class="manor-wembly-line" id="manorWemblyLine">—</div>
+        </div>
       </div>
       <div class="manor-seals" title="Case Seals — earn 1 per case (2 for a flawless 4/4), spend 1 to restore">
         <span class="manor-seal-ico">🔏</span> <b id="manorSealCount">0</b> <span class="manor-seal-label">Case Seals</span>
       </div>
+    </div>
+    <div class="manor-overall">
+      <div class="manor-overall-top">
+        <span class="manor-room-name" id="manorRoomName">The Study</span>
+        <span class="manor-sub">Blackwood Manor · <span class="manor-pct" id="manorPct">0%</span> restored</span>
+      </div>
+      <div class="manor-bar" title="Overall manor restoration"><span class="manor-bar-fill" id="manorOverallFill"></span></div>
     </div>
     <div class="manor-nav" id="manorNav"></div>
     <div class="manor-floor-wrap">
@@ -1436,6 +1493,13 @@
         <div class="manor-avatar" id="manorAvatar" title="You — the new tenant">🕵️</div>
       </div>
       <div class="manor-toast" id="manorToast"></div>
+    </div>
+    <div class="manor-status">
+      <div class="manor-objective" id="manorObjective">—</div>
+      <div class="manor-status-row">
+        <div class="manor-teaser" id="manorTeaser"></div>
+        <button class="manor-case-btn" id="manorCaseBtn">🔎 The Graves Case</button>
+      </div>
     </div>
     <div class="manor-hub">
       <button class="btn primary manor-restore-btn" id="manorRestore" hidden>🔏 Restore</button>
@@ -1452,6 +1516,17 @@
       <div class="ms-seal">🔍</div>
       <div class="ms-body" id="manorStoryBody"></div>
       <button class="btn primary" id="manorStoryOk" style="margin-top:14px">Continue</button>
+    </div>
+  </div>
+
+  <!-- The Graves Case — mystery tracker: clues uncovered through restoration (??? until found) -->
+  <div class="modal-bg" id="gravesModal">
+    <div class="modal">
+      <button class="x" id="gravesClose"><img src="assets/ui/icon-close.png" alt="close"/></button>
+      <h2>The Graves Case</h2>
+      <div class="graves-sub" id="gravesCount"></div>
+      <div class="graves-intro">What happened to Inspector Graves? Restore the manor and his own house gives up the clues.</div>
+      <div class="graves-clues" id="gravesClues"></div>
     </div>
   </div>
 
@@ -3742,6 +3817,8 @@ const MANOR_OPENING =
   "Outside, the rain keeps its own counsel. Inside, there is a house full of cold cases to wake.";
 const MANOR_DATA=[
  { id:"study", name:"The Study", floor:"assets/themes/manor/rooms/room-study.jpg",
+   clueTitle:"The Desk Note", clueShort:"A slip in Graves' hand, dated the night he vanished: “If you are reading this, I did not simply leave. — A.G.”",
+   wemblyClue:"“I did not simply leave.” Thirty years I believed he had, detective. What did he mean?",
    beat:"This is where it starts. Sweep back the years with the seals you earn closing cases, and the Study will give up what it's hiding.",
    // SNAPSHOT MODE restore lines, indexed by stage s0..s7 (s0 = ruined baseline; s1..s7 spoken as each stage is restored)
    snapLines:[
@@ -3772,6 +3849,9 @@ const MANOR_DATA=[
        steps:["You drag the worn rug into the light and beat the dust from its faded threads.","Cleaned and laid flat, the Persian colours come back like an old memory."]},
    ]},
  { id:"entry-hall", name:"The Entry Hall", floor:"assets/themes/manor/rooms/room-hall.jpg",
+   teaser:"The hall that once greeted his guests — and the grandfather clock that keeps the hour he disappeared.",
+   clueTitle:"The Stopped Clock", clueShort:"The grandfather clock stopped at 2:15 — the very hour the report says he locked up and left at dawn.",
+   wemblyClue:"Quarter past two, and stopped. He never wound it wrong in his life — I'd stake my pension on it.",
    beat:"The house wakes. With the Study warm again, Wembly hands you the hall keys: “He always said a home should greet you. Let's give it back its manners.”",
    objects:[
     {id:"doors",     name:"The Front Doors",      stages:MS("entry-hall","entryhall_doors",["0","1","2"]),
@@ -3795,6 +3875,9 @@ const MANOR_DATA=[
        steps:["You sweep and scrub the grey marble; a checkerboard pattern surfaces underfoot.","Buffed to a shine, the black-and-white floor gleams like the day it was laid."]},
    ]},
  { id:"library", name:"The Library", floor:"assets/themes/manor/rooms/room-library.jpg",
+   teaser:"His mind lived in the library. “Mind the third shelf,” Wembly says — “he never let me dust it.”",
+   clueTitle:"The Closed Case", clueShort:"His most celebrated case, stamped CLOSED — with a doubt pencilled inside: “the fourth alibi never broke. why did I let it?”",
+   wemblyClue:"He doubted his greatest case, in his own hand. Graves never doubted aloud. Why write it down?",
    beat:"Wembly unlocks the library with something like reverence: “His mind lived in here. Mind the third shelf — he never let me dust it.”",
    objects:[
     {id:"shelves",   name:"The Bookshelves",      stages:MS("library","lib_shelves",["0","1","2","3"]),
@@ -3820,6 +3903,7 @@ const MANOR_DATA=[
        steps:["You strip the run-down window seat back to bare wood.","Cushioned and clean, it's the best seat in the house when the rain comes."]},
    ]},
  { id:"trophy-hall", name:"The Trophy Hall", floor:"assets/themes/manor/rooms/room-study.jpg", locked:true,
+   teaser:"What Graves was proudest of, locked away. Wembly hasn't the key… or won't say that he has.",
    beat:"The Trophy Hall — where Graves kept what he was proudest of. Locked. Wembly hasn't the key… or won't say that he has.",
    objects:[
     {id:"displaycase",name:"The Display Cases", stages:MS("trophy-hall","trophyhall_displaycase",["0","1","2","3"]),
@@ -3912,6 +3996,114 @@ function showSnapStage(floor, avatar, url, animate){
     load(front); front.style.opacity="1"; back.style.opacity="0";
   }
 }
+/* ===== manor home chrome: progress, Wembly's voice, objective, next-room teaser, mystery tracker ===== */
+const MANOR_ROOMS=()=>MANOR_DATA.filter(r=>!r.locked);   // restorable rooms (excludes the perma-locked Trophy Hall)
+function shortRoom(r){ return r.name.replace(/^The /,""); }
+function roomFrac(room){ const s=_roomSnapCache[room.id];   // snapshot: stage/max ; layered: existing %
+  if(s) return s.max? Math.min(snapStageOf(room.id),s.max)/s.max : 1;
+  return roomPct(room); }
+function roomCompleted(room){ const s=_roomSnapCache[room.id];
+  if(s) return snapStageOf(room.id)>=s.max;
+  return roomComplete(room); }
+function roomSealsLeft(room){ const s=_roomSnapCache[room.id];   // seals to fully restore (= stages/steps remaining)
+  if(s) return Math.max(0, s.max-Math.min(snapStageOf(room.id),s.max));
+  return Math.max(0, roomSteps(room)-roomDone(room)); }
+function clueDiscovered(room){ if(!room.clueTitle) return false; const s=_roomSnapCache[room.id];
+  if(s) return snapStageOf(room.id)>=s.max;          // snapshot: clue at final stage
+  return roomKeyDone(room) && roomDone(room)>0; }    // layered: key object at its final stage
+function overallFrac(){ const rs=MANOR_ROOMS(); return rs.length? rs.reduce((a,r)=>a+roomFrac(r),0)/rs.length : 0; }
+/* Wembly's voice — loyal, wry, a little haunted. {room} fills with the active/affected room. */
+const WEMBLY={
+  first:[ "Welcome to Blackwood, detective. Thirty years I've kept the dust company — glad of the help." ],
+  idle:[ "Take your time. The house has waited this long.",
+         "Cold in here still — but less so than yesterday, I fancy.",
+         "He'd have liked you, I think. Hard to say; he liked very few.",
+         "Every room you mend, a little more of him comes back.",
+         "I keep the kettle on out of habit. Old habits outlast their men." ],
+  restored:[ "The {room} breathes a little easier now, detective.",
+             "Light where there was only grey. Good work.",
+             "Another corner reclaimed from the years — he'd not believe it.",
+             "Bit by bit, the old place remembers itself." ],
+  complete:[ "The {room}, whole again. I'd near forgotten it could look so.",
+             "Finished. He kept this room just so — you've done it justice." ],
+  noseals:[ "No seals left — a case or two should refill the tin.",
+            "The tin's empty, I'm afraid. Close a case and we'll carry on." ],
+  haveseals:[ "You've seals in hand. Shall we put the old place back together?",
+              "Seals in your pocket and work to be done. Say the word." ]
+};
+function wemblyPick(arr,room){ if(!arr||!arr.length) return ""; const s=arr[Math.floor(Math.random()*arr.length)];
+  return room? s.replace(/\{room\}/g, shortRoom(room)) : s; }
+let _manorCtx=null, _manorCtxRoom=null, _wemblyKey="", _wemblyLine="";
+function manorWemblyLine(){
+  const room=roomById(_manorRoom)||MANOR_DATA[0];
+  if(_manorCtx==="clue"){ const cr=_manorCtxRoom||room; if(cr.wemblyClue) return cr.wemblyClue; }
+  if(_manorCtx==="restored") return wemblyPick(WEMBLY.restored, _manorCtxRoom||room);
+  if(_manorCtx==="complete") return wemblyPick(WEMBLY.complete, _manorCtxRoom||room);
+  if(!LS.get("manorIntroSeen",false)) return wemblyPick(WEMBLY.first);
+  const seals=manorSeals(), done=roomCompleted(room);
+  if(seals<1 && !done) return wemblyPick(WEMBLY.noseals);
+  if(seals>=1 && !done) return wemblyPick(WEMBLY.haveseals);
+  return wemblyPick(WEMBLY.idle, room);
+}
+function manorWemblyStable(){   // keep the line stable until state meaningfully changes (no flicker on every render)
+  const room=roomById(_manorRoom)||MANOR_DATA[0];
+  const key=[_manorCtx||"", _manorCtxRoom?_manorCtxRoom.id:"", room.id, manorSeals()<1?"0":"s",
+    roomCompleted(room)?"d":"", LS.get("manorIntroSeen",false)?"i":"f"].join("|");
+  if(key!==_wemblyKey || !_wemblyLine){ _wemblyKey=key; _wemblyLine=manorWemblyLine(); }
+  return _wemblyLine;
+}
+function manorObjectiveText(){
+  const room=roomById(_manorRoom)||MANOR_DATA[0];
+  if(roomCompleted(room)){ const idx=MANOR_DATA.indexOf(room), next=MANOR_DATA.slice(idx+1).find(r=>!r.locked);
+    return next? `The ${shortRoom(room)} is restored — a new door has opened.`
+              : `Blackwood Manor is fully restored. Graves would be proud.`; }
+  if(manorSeals()<1) return `Solve a case to earn a Case Seal.`;
+  return `Spend a seal to restore the ${shortRoom(room)}.`;
+}
+function manorTeaserHTML(){
+  const rest=MANOR_ROOMS(); let last=-1; rest.forEach((r,i)=>{ if(roomUnlocked(r.id)) last=i; });
+  const next=rest[last+1], gate=rest[last];
+  if(!next){ const perm=MANOR_DATA.find(r=>r.locked && r.teaser);
+    return perm ? `<span class="manor-teaser-lock">🔒 ${shortRoom(perm)}</span> <span class="manor-teaser-hook">${perm.teaser}</span>`
+                : `<span class="manor-teaser-hook">Every room restored — the manor is whole again.</span>`; }
+  const left=gate?roomSealsLeft(gate):0, frac=gate?roomFrac(gate):0;
+  return `<span class="manor-teaser-lock">🔒 ${shortRoom(next)}</span> <span class="manor-teaser-hook">${next.teaser||"A door still closed to you."}</span>`+
+    `<div class="manor-teaser-req">Fully restore the ${shortRoom(gate)} to open it — <b>${left}</b> ${left===1?"seal":"seals"} to go`+
+    `<span class="manor-bar mini"><span class="manor-bar-fill" style="width:${Math.round(frac*100)}%"></span></span></div>`;
+}
+function updateManorChrome(){
+  const of=$("manorOverallFill"); if(of) of.style.width=Math.round(overallFrac()*100)+"%";
+  const wl=$("manorWemblyLine"); if(wl) wl.textContent=manorWemblyStable();
+  const ob=$("manorObjective"); if(ob) ob.textContent="▸ "+manorObjectiveText();
+  const tz=$("manorTeaser"); if(tz) tz.innerHTML=manorTeaserHTML();
+  const clued=MANOR_DATA.filter(r=>r.clueTitle), found=clued.filter(clueDiscovered).length;
+  const cb=$("manorCaseBtn"); if(cb) cb.textContent=`🔎 The Graves Case — ${found}/${clued.length}`;
+  const gm=$("gravesModal"); if(gm && gm.classList.contains("show")) renderGravesCase();
+  _manorCtx=null; _manorCtxRoom=null;   // contextual one-shot consumed
+}
+function renderGravesCase(){
+  const wrap=$("gravesClues"); if(!wrap) return;
+  const clued=MANOR_DATA.filter(r=>r.clueTitle), found=clued.filter(clueDiscovered).length;
+  const gc=$("gravesCount"); if(gc) gc.textContent=`${found} of ${clued.length} clues uncovered`;
+  wrap.innerHTML="";
+  clued.forEach(r=>{ const got=clueDiscovered(r);
+    const row=document.createElement("div"); row.className="graves-clue"+(got?" found":" hidden");
+    row.innerHTML = got
+      ? `<div class="graves-clue-t">${r.clueTitle}</div><div class="graves-clue-s">${r.clueShort}</div>`
+      : `<div class="graves-clue-t">??? <span class="graves-clue-room">— ${shortRoom(r)}</span></div><div class="graves-clue-s">An undiscovered clue waits here. Restore the room to bring it to light.</div>`;
+    wrap.appendChild(row); });
+}
+function openGravesCase(){ renderGravesCase(); const m=$("gravesModal"); if(!m) return; m.classList.add("show"); const mc=m.querySelector(".modal"); if(mc) mc.scrollTop=0; }
+/* Wembly portrait: show assets/ui/assistant.png if present, else keep the emoji placeholder (auto-swaps when the file appears) */
+let _wemblyArtTried=false;
+function setupManorWembly(){ if(_wemblyArtTried) return; _wemblyArtTried=true;
+  const p=$("manorWemblyPortrait"), ico=$("manorWemblyIco"); if(!p) return;
+  const t=new Image(); t.onload=()=>{ p.src=uiAsset("assistant.png"); p.hidden=false; if(ico) ico.hidden=true; }; t.onerror=()=>{}; t.src=uiAsset("assistant.png"); }
+/* probe every room's snapshot set once so the overall/per-room bars read correctly from the start */
+let _snapWarmed=false;
+function prewarmSnaps(){ if(_snapWarmed) return; _snapWarmed=true; let pending=0;
+  MANOR_DATA.forEach(r=>{ if(r.id in _roomSnapCache) return; pending++;
+    resolveRoomSnapshot(r.id, ()=>{ if(--pending===0 && manorOpen()) renderManor(); }); }); }
 function renderManor(){
   const room=roomById(_manorRoom)||MANOR_DATA[0];
   $("manorRoomName").textContent=room.name;
@@ -3919,7 +4111,9 @@ function renderManor(){
   const nav=$("manorNav"); nav.innerHTML="";
   MANOR_DATA.forEach(r=>{ const unlocked=roomUnlocked(r.id);
     const b=document.createElement("button"); b.className="manor-tab"+(r.id===_manorRoom?" on":"")+(unlocked?"":" locked");
-    b.textContent=(unlocked?"":"🔒 ")+r.name.replace(/^The /,"");
+    const frac=unlocked?roomFrac(r):0;   // per-room restoration bar (lock for locked rooms)
+    b.innerHTML=`<span class="manor-tab-label">${unlocked?"":"🔒 "}${shortRoom(r)}</span>`+
+      `<span class="manor-tab-bar${unlocked?"":" locked"}"><span style="width:${Math.round(frac*100)}%"></span></span>`;
     if(unlocked) b.onclick=()=>{ _manorRoom=r.id; LS.set("manorActiveRoom",r.id); renderManor(); };
     else b.onclick=()=>manorToast(r.beat||"Locked.");
     nav.appendChild(b); });
@@ -3933,6 +4127,7 @@ function renderManor(){
     resolveRoomSnapshot(room.id, ()=>{ if(_manorRoom===room.id) renderManor(); });
   }
   updateRestoreBtn(room);
+  updateManorChrome();   // overall bar, Wembly's line, objective, next-room teaser, Graves-case count
   $("manorContinue").hidden = !(C && !solved);
   $("manorQuit").hidden = !(window.casedokuDesktop && typeof window.casedokuDesktop.quit==="function");
 }
@@ -4003,6 +4198,8 @@ function restoreRoomSnapshot(roomId){
   $("manorSealCount").textContent=manorSeals();
   $("manorPct").textContent=Math.round((ns/snap.max)*100)+"%";
   updateRestoreBtn(room);
+  _manorCtxRoom=room; _manorCtx=(ns>=snap.max)?"clue":"restored";   // Wembly reacts to the restore (clue line at the final stage)
+  renderManor();                                                    // refresh chrome (bars, objective, teaser, Wembly); snapshot image already shown
   if(ns>=snap.max) fireSnapFinal(room);                             // final stage -> Graves reveal + unlock next
 }
 function fireSnapFinal(room){
@@ -4018,6 +4215,7 @@ function fireSnapFinal(room){
 function showManor(){
   ["winModal","newModal","accuseModal","archiveModal","howtoModal","introModal"].forEach(id=>{ const m=$(id); if(m) m.classList.remove("show"); });
   const co=$("caseOverlay"); if(co){ co.hidden=true; document.body.classList.remove("co-open"); }
+  setupManorWembly(); prewarmSnaps();
   renderManor(); manorAvatarMarker();
   $("manorScreen").hidden=false; document.body.classList.add("manor-open");
 }
@@ -4032,6 +4230,7 @@ function restoreObject(roomId,objId){
   if(st>=max){ manorToast(`<b>${obj.name}</b> is fully restored.`); return; }
   if(manorSeals()<1){ manorToast(`You need a <b>Case Seal</b> — close a case to earn one. (Win = 1, a flawless 4/4 = 2.)`); return; }
   spendSeal(); const ns=st+1; setManorStage(roomId,objId,ns);
+  _manorCtxRoom=room; _manorCtx=(obj.key && ns===max)?"clue":"restored";   // Wembly reacts (clue line when the key reveal fires)
   renderManor();
   const el=document.querySelector(`#manorFloor .manor-obj[data-obj="${objId}"]`);
   if(el && motionOK()) restartAnim(el,"manor-restored");
@@ -4081,11 +4280,11 @@ $("howtoClose").onclick=()=>$("howtoModal").classList.remove("show");
 $("howtoGo").onclick=()=>{ $("howtoModal").classList.remove("show"); LS.set("seenHowTo",true); openNewCaseModal(); };   // after the how-to, pick a case
 $("archiveClose").onclick=()=>$("archiveModal").classList.remove("show");
 /* ---- consistent modal dismissal: click the backdrop (outside the panel) or press Esc closes ---- */
-["newModal","accuseModal","archiveModal","howtoModal"].forEach(id=>{ const m=$(id);
+["newModal","accuseModal","archiveModal","howtoModal","gravesModal"].forEach(id=>{ const m=$(id);
   if(m) m.addEventListener("click",e=>{ if(e.target===m) m.classList.remove("show"); }); });   // backdrop click
 window.addEventListener("keydown",e=>{   // Esc closes the front-most open modal (capture+stop so the game's key handler doesn't also fire)
   if(e.key!=="Escape"&&e.key!=="Esc") return;
-  for(const id of ["manorStory","archiveModal","accuseModal","newModal","howtoModal","winModal","introModal"]){
+  for(const id of ["gravesModal","manorStory","archiveModal","accuseModal","newModal","howtoModal","winModal","introModal"]){
     const m=$(id); if(!m||!m.classList.contains("show")) continue;
     if(id==="introModal"&&typeof introSkipOrClose==="function") introSkipOrClose();
     else if(id==="manorStory"&&typeof closeManorStory==="function") closeManorStory();
@@ -4098,6 +4297,8 @@ function openNewCaseModal(){ $("newModal").classList.add("show"); $("seedInput")
 $("manorNew").onclick=()=>{ if(!LS.get("seenHowTo",false)){ $("howtoModal").classList.add("show"); } else openNewCaseModal(); };   // first-timers see how-to first
 $("manorContinue").onclick=()=>{ if(C && !solved) hideManor(); else showManor(); };   // resume the in-progress case
 $("manorArchive").onclick=openArchive;
+if($("manorCaseBtn")) $("manorCaseBtn").onclick=openGravesCase;   // open the Graves mystery tracker
+if($("gravesClose")) $("gravesClose").onclick=()=>$("gravesModal").classList.remove("show");
 if($("manorRestore")) $("manorRestore").onclick=()=>restoreRoomSnapshot(_manorRoom);   // snapshot-mode room restoration
 $("manorQuit").onclick=()=>{ try{ window.casedokuDesktop && window.casedokuDesktop.quit && window.casedokuDesktop.quit(); }catch(e){} };
 $("manorStoryOk").onclick=closeManorStory;
