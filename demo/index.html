@@ -2575,7 +2575,7 @@ function dressStory(){
     motiveClues, motiveOptions, killerTag,
     time:pick(THEME.times), atmosphere, sceneRoom, alibiRoom, killer, caseNo:100+(C.seed%900) };
   { const ms=loadMotiveState(C.code); story.motiveRevealed=ms.revealed; story.motiveMarks=ms.marks; }   // per-case motive notebook + reveal flag
-  story.title=`The Murder of ${vsel.name}`;
+  story.title=caseTitle(vsel.name, C.seed);   // seeded cozy-mystery title (mostly not "murder")
   // unified evidence list: position clues (solve WHO) + [WEAPON] (solve WHAT) + [MOTIVE] (solve WHY), each tagged
   story.evidence=[];
   C.clues.forEach((cl,i)=>story.evidence.push({ tag:Skin.EV_TAG[cl.type]||cl.type.toUpperCase(),
@@ -2599,6 +2599,23 @@ function dressStory(){
   story.ambient=pickAmbient(story);            // story-driven ambient effect set (seeded fallback)
 }
 
+/* Cozy-mystery case titles: a seeded MIX of templates so "murder" no longer dominates. Deterministic
+   per case seed (its own RNG stream) so a given case always titles the same and case codes stay stable. */
+function surnameOf(name){ const p=(name||"").trim().split(/\s+/); return p.length>1?p[p.length-1]:(name||""); }
+function manorPlace(){ return (THEME&&THEME.place)||"Blackwood Manor"; }
+const CASE_TITLE_TEMPLATES=[
+  n=>`The ${surnameOf(n)} Case`,
+  n=>`Cold Case: ${n}`,
+  n=>`The ${surnameOf(n)} Affair`,
+  n=>`A Death at ${manorPlace()}`,
+  n=>`The ${surnameOf(n)} File`,
+  n=>`The ${n} Mystery`
+];
+function caseTitle(name, seed){
+  const r=E.makeRNG((seed ^ E.hashStr("title"))>>>0)();
+  if(r<0.2) return `The Murder of ${name}`;                              // ~1 in 5 keeps the classic
+  return CASE_TITLE_TEMPLATES[Math.floor((r-0.2)/0.8*CASE_TITLE_TEMPLATES.length)%CASE_TITLE_TEMPLATES.length](name);
+}
 /* seeded playable cast: a random N-subset of the 16-role roster, deterministic from the case
    seed (so case codes reproduce the same cast), guaranteed to contain >=2 women and >=2 men. */
 function pickCaseCast(seed, N){
