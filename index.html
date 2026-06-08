@@ -995,23 +995,30 @@
   body.appfit #caseOverlay,body.appfit .co-scroll{max-height:100dvh;}
 
   /* ===================== MANOR RESTORATION — the home hub ===================== */
-  .manor-screen{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;
+  .manor-screen{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;
+    --manor-w:920px;padding:0 14px;
     background:radial-gradient(120% 90% at 50% 0,#1a1d27,#0d0f14 72%);overflow:hidden;}
   .manor-screen[hidden]{display:none;}
-  .manor-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 14px 2px;flex:none;}
-  .manor-room-name{font-family:Georgia,serif;font-size:17px;font-weight:bold;color:var(--amber-soft);letter-spacing:.5px;line-height:1.1;}
-  .manor-sub{font-family:"Courier New",monospace;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-dim);}
+  /* ONE centered column the width of the room picture: every chrome row shares the picture's width + left/right
+     edges. --manor-w is set by layoutManor() to the picture's actual rendered width; the leftover is side margin.
+     The floor-wrap stays FULL width (so the picture self-sizes by aspect-ratio and stays true 4:3/16:10) and the
+     picture centers within it — same screen-center as the chrome rows, so their edges line up. */
+  .manor-head,.manor-overall,.manor-nav,.manor-status,.manor-hub{
+    width:100%;max-width:var(--manor-w);margin-left:auto;margin-right:auto;box-sizing:border-box;}
+  .manor-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0 5px;flex:none;}
+  .manor-room-name{font-family:Georgia,serif;font-size:22px;font-weight:bold;color:var(--amber-soft);letter-spacing:.5px;line-height:1.1;}
+  .manor-sub{font-family:"Courier New",monospace;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-dim);}
   .manor-pct{color:var(--good);}
-  .manor-seals{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--ink);white-space:nowrap;
-    background:rgba(231,185,77,.10);border:1px solid rgba(231,185,77,.45);border-radius:8px;padding:3px 9px;}
-  .manor-seals b{color:var(--amber-soft);font-size:15px;} .manor-seal-ico{font-size:13px;}
-  .manor-nav{display:flex;gap:4px;flex-wrap:wrap;padding:0 14px 4px;flex:none;}
-  .manor-tab{font-family:"Courier New",monospace;font-size:11.5px;letter-spacing:.5px;cursor:pointer;
-    background:#171a22;border:1px solid var(--line);color:var(--ink-dim);border-radius:6px;padding:3px 8px;}
+  .manor-seals{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--ink);white-space:nowrap;
+    background:rgba(231,185,77,.10);border:1px solid rgba(231,185,77,.45);border-radius:9px;padding:5px 11px;}
+  .manor-seals b{color:var(--amber-soft);font-size:17px;} .manor-seal-ico{font-size:15px;}
+  .manor-nav{display:flex;gap:6px;flex-wrap:wrap;padding:0 0 6px;flex:none;}
+  .manor-tab{font-family:"Courier New",monospace;font-size:12.5px;letter-spacing:.5px;cursor:pointer;
+    background:#171a22;border:1px solid var(--line);color:var(--ink-dim);border-radius:7px;padding:5px 10px;}
   .manor-tab.on{color:var(--amber-soft);border-color:var(--amber);background:#20232e;}
   .manor-tab.locked{opacity:.55;}
-  .manor-floor-wrap{flex:1 1 auto;position:relative;min-height:0;padding:0 12px;display:flex;}
-  .manor-floor{position:relative;aspect-ratio:16/10;max-width:920px;max-height:100%;margin:auto;width:100%;border-radius:12px;
+  .manor-floor-wrap{flex:1 1 auto;position:relative;min-height:0;padding:0;display:flex;width:100%;}
+  .manor-floor{position:relative;aspect-ratio:16/10;height:100%;width:auto;max-width:min(920px,100%);max-height:100%;margin:auto;border-radius:12px;
     background-size:cover;background-position:center;border:3px solid #2a2118;
     box-shadow:0 18px 50px rgba(0,0,0,.6),inset 0 0 90px rgba(0,0,0,.5);overflow:hidden;}
   .manor-floor::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:9px;
@@ -1034,35 +1041,35 @@
   .manor-floor.snap-room.manor-snap-sweep::before{animation:manorSnapSweep .85s ease-out;}
   @keyframes manorSnapSweep{0%{opacity:1;background-position:150% 0;}100%{opacity:0;background-position:-50% 0;}}
   .manor-restore-btn:disabled{opacity:.5;cursor:default;filter:grayscale(.4);}
-  /* ===== manor home: Wembly, progress bars, objective, teaser, mystery tracker (compact) ===== */
-  .manor-wembly{display:flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0;}
-  .manor-wembly-portrait{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid rgba(231,185,77,.7);background:#10131a;flex:none;}
-  .manor-wembly-ico{font-size:19px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:50%;
+  /* ===== manor home: Wembly, progress bars, objective, teaser, mystery tracker ===== */
+  .manor-wembly{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0;}
+  .manor-wembly-portrait{width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid rgba(231,185,77,.7);background:#10131a;flex:none;}
+  .manor-wembly-ico{font-size:24px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:50%;
     background:rgba(231,185,77,.10);border:1px solid rgba(231,185,77,.45);flex:none;}
   .manor-wembly-body{min-width:0;}
-  .manor-wembly-name{font-family:"Courier New",monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-dim);line-height:1.1;}
-  .manor-wembly-line{font-family:Georgia,serif;font-style:italic;font-size:12.5px;color:var(--ink);line-height:1.25;
-    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}   /* never grows past two lines */
-  .manor-bar{position:relative;height:6px;border-radius:5px;background:#15181f;border:1px solid var(--line);overflow:hidden;}
-  .manor-bar-fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:5px;
+  .manor-wembly-name{font-family:"Courier New",monospace;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-dim);line-height:1.1;}
+  .manor-wembly-line{font-family:Georgia,serif;font-style:italic;font-size:14px;color:var(--ink);line-height:1.3;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}   /* readable, capped at two lines */
+  .manor-bar{position:relative;height:8px;border-radius:6px;background:#15181f;border:1px solid var(--line);overflow:hidden;}
+  .manor-bar-fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:6px;
     background:linear-gradient(90deg,#7a5a1f,var(--amber-soft));transition:width .5s ease;}
-  .manor-bar.mini{height:5px;display:inline-block;width:64px;vertical-align:middle;margin-left:5px;flex:none;}
-  .manor-overall{padding:0 14px 4px;flex:none;}
-  .manor-overall-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:3px;}
-  .manor-tab{display:flex;flex-direction:column;gap:3px;min-width:0;align-items:stretch;}   /* augments the base .manor-tab: label over a mini bar */
+  .manor-bar.mini{height:6px;display:inline-block;width:78px;vertical-align:middle;margin-left:6px;flex:none;}
+  .manor-overall{padding:0 0 6px;flex:none;}
+  .manor-overall-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px;}
+  .manor-tab{display:flex;flex-direction:column;gap:4px;min-width:84px;align-items:stretch;}   /* augments the base .manor-tab: label over a mini bar */
   .manor-tab-label{display:block;text-align:left;white-space:nowrap;}
-  .manor-tab-bar{position:relative;height:4px;border-radius:3px;background:#0f1218;border:1px solid var(--line);overflow:hidden;}
-  .manor-tab-bar>span{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#7a5a1f,var(--amber-soft));border-radius:3px;transition:width .5s ease;}
+  .manor-tab-bar{position:relative;height:5px;border-radius:4px;background:#0f1218;border:1px solid var(--line);overflow:hidden;}
+  .manor-tab-bar>span{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#7a5a1f,var(--amber-soft));border-radius:4px;transition:width .5s ease;}
   .manor-tab-bar.locked{opacity:.4;}
-  .manor-status{padding:3px 14px 3px;flex:none;display:flex;flex-direction:column;gap:3px;}
-  .manor-objective{font-size:12px;color:var(--amber-soft);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .manor-status-row{display:flex;align-items:center;gap:8px;justify-content:space-between;}
-  .manor-teaser{font-size:11px;color:var(--ink-dim);line-height:1.3;flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;}
+  .manor-status{padding:4px 0 4px;flex:none;display:flex;flex-direction:column;gap:5px;}
+  .manor-objective{font-size:13px;color:var(--amber-soft);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .manor-status-row{display:flex;align-items:center;gap:10px;justify-content:space-between;}
+  .manor-teaser{font-size:12px;color:var(--ink-dim);line-height:1.3;flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;}
   .manor-teaser-lock{color:var(--amber-soft);font-weight:600;white-space:nowrap;flex:none;}
   .manor-teaser-hook{font-style:italic;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1 1 auto;}
   .manor-teaser-req{flex:none;white-space:nowrap;}
-  .manor-case-btn{flex:none;background:#171a22;border:1px solid var(--amber);color:var(--amber-soft);border-radius:7px;
-    padding:4px 9px;font-size:11.5px;font-family:"Courier New",monospace;letter-spacing:.5px;cursor:pointer;align-self:center;white-space:nowrap;}
+  .manor-case-btn{flex:none;background:#171a22;border:1px solid var(--amber);color:var(--amber-soft);border-radius:8px;
+    padding:6px 11px;font-size:12px;font-family:"Courier New",monospace;letter-spacing:.5px;cursor:pointer;align-self:center;white-space:nowrap;}
   .manor-case-btn:hover{background:#20232e;}
   .graves-sub{text-align:center;color:var(--ink-dim);font-family:"Courier New",monospace;letter-spacing:1px;font-size:12px;margin-bottom:4px;}
   .graves-intro{font-style:italic;color:var(--ink-dim);font-size:13px;text-align:center;margin:0 auto 12px;max-width:420px;line-height:1.5;}
@@ -1109,8 +1116,8 @@
     opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:8;}
   .manor-toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
   .manor-toast b{color:var(--amber-soft);font-style:normal;}
-  .manor-hub{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;padding:8px 14px 10px;flex:none;}
-  .manor-hub .btn{font-size:13px;padding:8px 13px;min-height:0;}
+  .manor-hub{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;padding:10px 0 12px;flex:none;}
+  .manor-hub .btn{font-size:14px;padding:9px 15px;min-height:0;}
   /* manor story modal (opening / room beats / key reveals) */
   #manorStory .ms-seal{font-size:34px;margin-bottom:4px;}
   .ms-body{font-size:15.5px;line-height:1.7;color:var(--ink);text-align:left;max-width:460px;margin:0 auto;}
@@ -1119,16 +1126,13 @@
   .win-seals{margin:8px 0 2px;text-align:center;font-size:14px;color:var(--ink);background:rgba(231,185,77,.08);
     border:1px dashed rgba(231,185,77,.5);border-radius:8px;padding:8px 12px;}
   .win-seals[hidden]{display:none;} .win-seals .ws-ico{font-size:16px;} .win-seals b{color:var(--amber-soft);font-size:16px;} .win-seals .ws-bonus{color:var(--good);font-style:italic;}
-  body.appfit .manor-head{padding:4px 14px 2px;} body.appfit .manor-room-name{font-size:16px;}
-  body.appfit .manor-nav{padding:0 14px 3px;} body.appfit .manor-hub{padding:5px 14px 7px;}
-  body.appfit .manor-overall,body.appfit .manor-status{padding-top:2px;padding-bottom:2px;}
-  body.phone .manor-room-name{font-size:calc(16px * var(--ps,1));}
-  body.phone .manor-seals{font-size:calc(11px * var(--ps,1));padding:3px 7px;}
-  body.phone .manor-tab{font-size:calc(11px * var(--ps,1));}
-  body.phone .manor-hub{padding:5px 10px 8px;gap:6px;}
-  body.phone .manor-hub .btn{font-size:calc(13px * var(--ps,1));min-height:calc(38px * var(--ps,1));}
+  body.appfit .manor-head{padding:6px 0 4px;} body.appfit .manor-room-name{font-size:20px;}
+  body.appfit .manor-hub{padding:7px 0 9px;}
+  body.phone .manor-room-name{font-size:calc(19px * var(--ps,1));}
+  body.phone .manor-seals{font-size:calc(12px * var(--ps,1));}
+  body.phone .manor-tab{font-size:calc(12px * var(--ps,1));}
+  body.phone .manor-hub .btn{font-size:calc(14px * var(--ps,1));min-height:calc(42px * var(--ps,1));}
   body.phone .manor-toast{font-size:calc(13px * var(--ps,1));}
-  body.phone .manor-wembly-portrait,body.phone .manor-wembly-ico{width:30px;height:30px;}
 
   /* ===================== DEV / TEST PANEL (left dock; gated) ===================== */
   .dev-panel{position:fixed;left:0;top:0;height:100vh;height:100dvh;width:210px;z-index:9999;
@@ -3989,7 +3993,7 @@ function showSnapStage(floor, avatar, url, animate){
   if(!a){ a=document.createElement("img"); a.className="manor-snap a"; a.draggable=false; a.alt=""; floor.insertBefore(a,avatar); }
   if(!b){ b=document.createElement("img"); b.className="manor-snap b"; b.draggable=false; b.alt=""; floor.insertBefore(b,avatar); }
   // match the floor box to the scene's own aspect so the whole room shows (no cover-crop, no letterbox bars)
-  const fitAR=img=>{ if(img.naturalWidth) floor.style.aspectRatio=img.naturalWidth+"/"+img.naturalHeight; };
+  const fitAR=img=>{ if(img.naturalWidth){ floor.style.aspectRatio=img.naturalWidth+"/"+img.naturalHeight; if(typeof layoutManor==="function") layoutManor(); } };   // re-fit the column once the scene's real aspect is known
   const load=img=>{ img.onload=()=>fitAR(img); img.src=url; if(img.complete) fitAR(img); };
   if(animate && motionOK()){
     const front = floor.dataset.snapFront==="b"?b:a, back = front===a?b:a;
@@ -4109,6 +4113,25 @@ let _snapWarmed=false;
 function prewarmSnaps(){ if(_snapWarmed) return; _snapWarmed=true; let pending=0;
   MANOR_DATA.forEach(r=>{ if(r.id in _roomSnapCache) return; pending++;
     resolveRoomSnapshot(r.id, ()=>{ if(--pending===0 && manorOpen()) renderManor(); }); }); }
+/* Contain-fit the room picture into the available area and make the chrome column the SAME width, so every
+   chrome row shares the picture's left/right edges (both centered on screen-centre). Computed deterministically
+   from the floor-wrap's box and the room's aspect-ratio — a div + aspect-ratio can't be relied on to contain-fit
+   under both max-width and max-height, so we set the picture's width/height explicitly. */
+function layoutManor(){
+  const scr=$("manorScreen"); if(!scr || scr.hidden) return;
+  const wrap=document.querySelector(".manor-floor-wrap"), floor=$("manorFloor"); if(!wrap||!floor) return;
+  const availW=Math.floor(wrap.clientWidth), availH=Math.floor(wrap.clientHeight);
+  if(availW<40 || availH<40) return;
+  let ar=16/10; const m=(getComputedStyle(floor).aspectRatio||"").match(/([\d.]+)\s*\/\s*([\d.]+)/);   // 16/10 layered, e.g. 600/448 snapshot
+  if(m){ const a=parseFloat(m[1]), b=parseFloat(m[2]); if(a>0&&b>0) ar=a/b; }
+  const cap=Math.min(920, availW);
+  let w=cap, h=w/ar;
+  if(h>availH){ h=availH; w=h*ar; if(w>cap){ w=cap; h=w/ar; } }   // contain: fit width then height
+  w=Math.round(w); h=Math.round(h);
+  floor.style.width=w+"px"; floor.style.height=h+"px";           // explicit, true-ratio picture
+  scr.style.setProperty("--manor-w", w+"px");                    // chrome rows match the picture width
+}
+window.addEventListener("resize", ()=>{ if(typeof manorOpen==="function" && manorOpen()) layoutManor(); });
 function renderManor(){
   const room=roomById(_manorRoom)||MANOR_DATA[0];
   $("manorRoomName").textContent=room.name;
@@ -4133,6 +4156,7 @@ function renderManor(){
   }
   updateRestoreBtn(room);
   updateManorChrome();   // overall bar, Wembly's line, objective, next-room teaser, Graves-case count
+  layoutManor();         // size the centered chrome column to the room picture's width
   $("manorContinue").hidden = !(C && !solved);
   $("manorQuit").hidden = !(window.casedokuDesktop && typeof window.casedokuDesktop.quit==="function");
 }
@@ -4223,6 +4247,7 @@ function showManor(){
   setupManorWembly(); prewarmSnaps();
   renderManor(); manorAvatarMarker();
   $("manorScreen").hidden=false; document.body.classList.add("manor-open");
+  layoutManor();   // measure the picture now that the screen is visible (renderManor's call no-ops while hidden)
 }
 function hideManor(){ const m=$("manorScreen"); if(m) m.hidden=true; document.body.classList.remove("manor-open"); }
 function manorOpen(){ const m=$("manorScreen"); return !!(m && !m.hidden); }
