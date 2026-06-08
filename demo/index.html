@@ -610,6 +610,10 @@
   .mode-name{font-family:Georgia,serif;font-size:19px;font-weight:bold;color:var(--amber-soft);margin-bottom:6px;}
   .mode-desc{font-size:13px;color:var(--ink);line-height:1.5;}
   body.phone .mode-cards{flex-direction:column;}
+  /* How-to cozy promise + respectful memorial line */
+  .howto-promise{text-align:center;font-family:Georgia,serif;font-size:16px;color:var(--amber-soft);line-height:1.5;margin:.1em 0 10px;}
+  .howto-nopressure{display:inline-block;margin-top:3px;font-style:italic;font-size:13px;color:var(--ink-dim);}
+  .mc-closed{font-family:"Courier New",monospace;font-size:11px;letter-spacing:.5px;color:var(--good);margin-top:4px;}
   /* star legend near the evidence */
   .star-legend{font-size:12px;color:var(--ink-dim);line-height:1.45;margin:6px 0 2px;
     border-top:1px dashed var(--line);padding-top:6px;}
@@ -1294,13 +1298,14 @@
     <div class="modal">
       <button class="x" id="howtoClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
       <h2 style="text-align:center">How to Play</h2>
+      <p class="howto-promise">Solve cold cases. Restore the manor. Uncover the truth.<br><span class="howto-nopressure">Play at your pace — hints are always here.</span></p>
       <p class="howto-lead">A sudoku you finish with detective work. The starting clues are <b>intentionally not enough</b> on their own — sudoku logic and the evidence work <b>together</b>, interleaved.</p>
       <ol class="howto-steps">
         <li><b>Place the suspects</b> so each appears exactly once in every <b>row</b>, every <b>column</b>, and every <b>room</b> (3×3 block).</li>
         <li><b>Use the evidence</b> to resolve what sudoku alone can't — the clues break the ties the grid leaves open. (You can't finish by sudoku alone.)</li>
         <li><b>Make your accusation</b> once every other guest is seated: name the culprit, the proof, and the motive. <b>The dashed scene belongs to the victim — only your accusation fills it.</b></li>
       </ol>
-      <p class="howto-foot">Tap a cell to select it, then tap a suspect to place them. <b>★</b> marks <b>key</b> evidence (required); the rest corroborate. <b>Every clue is true.</b><br>You may <b>Accuse</b> at any time — but you get only <b>3 guesses</b>, and each wrong accusation adds <b>+1:00</b> to your time. Three misses and the case goes cold.</p>
+      <p class="howto-foot">Tap a cell to select it, then tap a suspect to place them. <b>★</b> marks <b>key</b> evidence (required); the rest corroborate. <b>Every clue is true.</b><br>Accuse whenever you like. In <b>Detective</b> mode you have <b>3 guesses</b> and a <b>+1:00</b> penalty per miss; in <b>Relaxed</b> there's no limit and no penalty — just keep deducing.</p>
       <button class="btn primary" id="howtoGo" style="margin-top:6px">Start sleuthing</button>
     </div>
   </div>
@@ -2778,7 +2783,7 @@ function renderCase(){
   $("caseVictim").title=story.victimDisplay;
   renderCaseBriefing();   // Short (tight intro) by default; Full adds the atmospheric narrative
   const so=Skin.weaponBySlug(THEME,story.sceneObject);
-  $("caseSub").innerHTML=`Case No. ${story.caseNo} · <b>${TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label}</b> · ${THEME.place}`+
+  $("caseSub").innerHTML=`Cold Case No. ${story.caseNo} · <b>${TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label}</b> · ${THEME.place}`+
     ` · Found beside victim: <img class="wicon" src="${tAsset('weapons','weapon-'+story.sceneObject+'.png')}" alt="">${so.n}.`;
   // evidence list — each clue prefixed with a TYPE TAG chip (★ = key required; ✦ = discovered extra)
   renderClueList();
@@ -3388,7 +3393,7 @@ function payoff(grade, won){
       attempts:guessesUsed+1, acc, perfect:acc===4, date:nowStr() });   // Detective only — Relaxed runs aren't time-ranked
     const tr=evalTrophiesOnWin(grade); _payoffStrip={fresh:tr.fresh, ctx:tr.ctx, teases:missedTeases(grade), memorial:tr.memorial};   // claim trophies + queue the post-case strip
     $("poTrophy").innerHTML=tr.fresh.length?`<b style="color:var(--amber-soft)">${tr.fresh.length}</b> new ${tr.fresh.length>1?"trophies":"trophy"} 🏆`:`<span class="muted">${tr.memorial?"memorial added":"none new"}</span>`;
-    setStatus(`Case closed — ${k.name} arrested.`,"good");
+    setStatus(`Case closed at last — ${k.name} named, the truth restored.`,"good");
   } else {
     _payoffStrip=null;
     $("poTrophy").innerHTML=`<span class="muted">none — case unsolved</span>`;
@@ -3396,7 +3401,7 @@ function payoff(grade, won){
       `<div class="acc-stars" style="color:var(--bad)">CASE UNSOLVED <span class="acc-num" style="color:var(--ink-dim)">⏱ ${totalTime}${penaltyStr} · ${MAX_GUESSES}/${MAX_GUESSES} guesses used</span></div>`;
     sc.appendChild(buildAccuseTrio(null,false));   // the truth, pinned up
     sc.insertAdjacentHTML("beforeend",`<div class="trio-proof"><span class="trio-proof-label">The proof</span>“${correctProof}”</div>`);
-    setStatus(`Case unsolved — ${k.name} got away.`,"bad");
+    setStatus(`The case stays cold for now — ${k.name} slips away.`,"bad");
   }
   setResolution(won);   // 2-3 sentence story closer (different flavor on a fail)
   buildChain();
@@ -3710,7 +3715,7 @@ function renderTrophyStrip(data){
   const reg=trophyRegistry(), map=loadTrophyUnlocks(), seals=loadRoomSeals();
   const pool=reg.filter(t=>t.cat!=="daily"); const have=pool.filter(t=>isUnlocked(t,map,seals)).length;
   let html=`<div class="ts-head">Detective’s Archive <span class="ts-prog">${have}/${pool.length} trophies</span></div>`;
-  if(data.memorial) html+=`<div class="ts-memorial">🕯️ Memorial added: <b>${data.memorial}</b></div>`;
+  if(data.memorial) html+=`<div class="ts-memorial">🕯️ <b>${data.memorial}</b> — remembered rightly.</div>`;
   if(data.fresh.length){
     html+=`<div class="ts-new">${data.fresh.length===1?"New trophy claimed":data.fresh.length+" new trophies claimed"}</div>`;
     html+=`<div class="ts-cards">`+data.fresh.map((t,i)=>trophyCardHTML(t,trophyUnlock(t,map,seals),{strip:true,idx:i})).join("")+`</div>`;
@@ -3746,15 +3751,16 @@ function renderMemorial(){
   const grid=$("memorialGrid"); if(!grid) return;
   const victims=THEME.victims||[], mem=LS.get("victimMemorial",{})||{};
   const have=victims.filter(v=>mem[v.slug]).length;
-  if($("memorialCount")) $("memorialCount").textContent=`${have}/${victims.length}`;
+  if($("memorialCount")) $("memorialCount").textContent=`${have} of ${victims.length} remembered`;
   grid.innerHTML=victims.map(v=>{
     const u=mem[v.slug];
     if(!u) return `<div class="mcard locked"><div class="mc-art"><img class="tc-img locked" src="${tAsset('victims','victim-'+v.slug+'.png')}" alt=""></div>`+
-      `<div class="mc-body"><div class="mc-name">Unknown</div><div class="tc-hint">Solve a case where this soul is the victim to remember them.</div></div></div>`;
+      `<div class="mc-body"><div class="mc-name">Unknown</div><div class="tc-hint">Close the cold case in which this person was the victim, and they'll be remembered here.</div></div></div>`;
     return `<div class="mcard unlocked"><div class="mc-art"><img class="tc-img" src="${tAsset('victims','victim-'+v.slug+'.png')}" alt=""></div>`+
       `<div class="mc-body"><div class="mc-name">${u.name}</div>`+
-      `<div class="mc-note">Remembered in <b>${u.title||('Case No. '+u.no)}</b> — found in ${u.room}, ${Skin.weaponBySlug(THEME,u.weapon).n} the instrument. <span class="mc-rip">May they rest.</span></div>`+
-      `<div class="tc-src">Case No. ${u.no} · ${u.date}</div></div></div>`;
+      `<div class="mc-note">Remembered in <b>${u.title||('Case No. '+u.no)}</b> — found in ${u.room}, ${Skin.weaponBySlug(THEME,u.weapon).n} the instrument. The truth, restored at last. <span class="mc-rip">Rest easy.</span></div>`+
+      `<div class="mc-closed">🕯️ Case closed at last — remembered rightly.</div>`+
+      `<div class="tc-src">Cold Case No. ${u.no} · ${u.date}</div></div></div>`;
   }).join("");
 }
 
