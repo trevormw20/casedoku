@@ -515,6 +515,13 @@
     max-height:calc(100dvh - 36px);overflow-y:auto;   /* tall modals (win payoff, archive) scroll inside; top (headline / close X) stays reachable */
     box-shadow:0 20px 60px rgba(0,0,0,.7);}
   .modal.center{text-align:center;}
+  /* cozy in-game confirmation bubble (replaces native confirm/alert in the play flow) */
+  .confirm-card{max-width:380px;padding:22px 24px;}
+  .confirm-ico{font-size:30px;line-height:1;margin-bottom:8px;}
+  .confirm-msg{font-family:Georgia,serif;font-size:15.5px;line-height:1.5;color:var(--ink);margin:2px 0 16px;}
+  .confirm-msg .confirm-sub{display:block;margin-top:6px;font-size:13px;font-style:italic;color:var(--ink-dim);}
+  .confirm-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+  .confirm-actions .btn{min-width:108px;justify-content:center;}
   .modal .x{position:absolute;top:10px;right:10px;cursor:pointer;background:none;border:none;padding:6px;}
   .modal .x img{width:20px;height:20px;}
   .modal h2{margin:.2em 0;color:var(--amber-soft);font-variant:small-caps;letter-spacing:2px;}
@@ -891,8 +898,10 @@
   .iflap-stamp{transform:rotate(-8deg);border:2px solid rgba(150,32,32,.55);color:rgba(150,32,32,.62);
     font-family:"Courier New",monospace;font-weight:700;font-size:16px;letter-spacing:3px;padding:5px 14px;border-radius:4px;text-transform:uppercase;}
   /* folder slides up/in */
-  .intro-card.seq{animation:introSlide .5s cubic-bezier(.2,.7,.3,1) both;}
-  @keyframes introSlide{from{transform:translateY(-48px) scale(.96);opacity:0;}to{transform:translateY(0) scale(1);opacity:1;}}
+  /* the case folder drops DOWN into place (starts above, settles to rest). Higher specificity than
+     `.modal-bg.show .modal`'s jModalIn so the downward slide wins instead of the generic upward pop. */
+  .modal-bg.show .intro-card.seq{animation:introSlide .5s cubic-bezier(.2,.7,.3,1) both;}
+  @keyframes introSlide{from{transform:translateY(-54px) scale(.96);opacity:0;}to{transform:translateY(0) scale(1);opacity:1;}}
   /* flap shown closed during the sequence, then swings open */
   .intro-card.seq .intro-flap{display:flex;transform:rotateX(0deg);transition:transform .55s ease,opacity .35s ease .2s;}
   .intro-card.seq.s-open .intro-flap{transform:rotateX(-112deg);opacity:0;}
@@ -1637,6 +1646,18 @@
       <div class="ms-seal">🔍</div>
       <div class="ms-body" id="manorStoryBody"></div>
       <button class="btn primary" id="manorStoryOk" style="margin-top:14px">Continue</button>
+    </div>
+  </div>
+
+  <!-- Cozy in-game confirmation bubble — replaces native confirm()/alert() in the play flow -->
+  <div class="modal-bg" id="confirmModal">
+    <div class="modal center confirm-card">
+      <div class="confirm-ico" id="confirmIco" aria-hidden="true">🔎</div>
+      <p class="confirm-msg" id="confirmMsg">—</p>
+      <div class="confirm-actions">
+        <button class="btn" id="confirmNo">Cancel</button>
+        <button class="btn primary" id="confirmYes">Continue</button>
+      </div>
     </div>
   </div>
 
@@ -3218,7 +3239,8 @@ function sceneTap(){ if(!C) return;
     assist("The scene belongs to the victim. Only your accusation can place the killer here.");
     pulseAccuse(); }
   // …and offer the shortcut: tapping the scene is the fastest route to the Final Deduction
-  if(confirm("Ready to name the killer? The dashed scene belongs to the victim — only your accusation fills it.")) openAccusation();
+  gameConfirm("Ready to name the killer?<span class=\"confirm-sub\">The dashed scene belongs to the victim — only your accusation fills it.</span>",
+    { icon:"⚖", okText:"Name the Killer", cancelText:"Not yet", onOk:openAccusation });
 }
 function sceneRejectPlace(){ if(!C) return;   // defensive: any place attempt on the scene shakes + explains once
   fxShake(boardEl.children[C.murderCell]); sfx("buzz");
@@ -3270,7 +3292,10 @@ function erase(){ if(solved||sel<0||given[sel])return;
 function clearPuzzle(){ if(solved)return;
   const dirty = board.some((v,i)=>!given[i] && v!==0) || candidates.some(s=>s&&s.size);
   if(!dirty){ setStatus("The board is already back to its starting clues.",""); return; }
-  if(!confirm("Clear the puzzle? This removes every suspect you've placed and all your notes, and goes back to the starting clues. (You can Undo this.)")) return;
+  gameConfirm("Clear the puzzle?<span class=\"confirm-sub\">This removes every suspect you've placed and all your notes, and goes back to the starting clues. (You can Undo this.)</span>",
+    { icon:"🧹", okText:"Clear", cancelText:"Keep", onOk:doClearPuzzle });
+}
+function doClearPuzzle(){ if(solved||!C)return;
   const all=[]; for(let i=0;i<cfg.N*cfg.N;i++) all.push(i);
   applyAction(all, ()=>{ for(let i=0;i<all.length;i++){ if(!given[i]) board[i]=0; candidates[i]=new Set(); } });
   sel=-1; clearHints(); refresh(); renderTray(); updateBtns();
@@ -4582,6 +4607,24 @@ function showManorStory(html, onClose, kind){
 }
 function closeManorStory(){ const m=$("manorStory"); if(!m) return; m.classList.remove("show");
   const cb=m._onClose; m._onClose=null; if(cb) cb(); }
+/* cozy in-game confirmation bubble — the ONLY confirm in the play flow (no native confirm()).
+   gameConfirm(message, {okText, cancelText, icon, hideCancel, onOk, onCancel}) */
+let _confirmCb=null;
+function gameConfirm(message, opts){
+  opts=opts||{};
+  const m=$("confirmModal"); if(!m){ if(opts.onOk) opts.onOk(); return; }   // graceful fallback if markup is missing
+  $("confirmMsg").innerHTML=message;
+  $("confirmIco").textContent=opts.icon||"🔎";
+  $("confirmYes").textContent=opts.okText||"Continue";
+  const no=$("confirmNo"); no.textContent=opts.cancelText||"Cancel"; no.style.display=opts.hideCancel?"none":"";
+  _confirmCb={ ok:opts.onOk||null, cancel:opts.onCancel||null };
+  m.classList.add("show"); const mc=m.querySelector(".modal"); if(mc) mc.scrollTop=0;
+}
+function closeConfirm(which){
+  const m=$("confirmModal"); if(m) m.classList.remove("show");
+  const cb=_confirmCb; _confirmCb=null;
+  if(cb){ if(which==="ok"&&cb.ok) cb.ok(); else if(which!=="ok"&&cb.cancel) cb.cancel(); }
+}
 
 /* ---- buttons / keys ---- */
 function setStatus(m,k){ const s=$("status"); s.textContent=m; s.className="status"+(k?" "+k:""); }
@@ -4609,9 +4652,10 @@ $("archiveClose").onclick=()=>$("archiveModal").classList.remove("show");
   if(m) m.addEventListener("click",e=>{ if(e.target===m) m.classList.remove("show"); }); });   // backdrop click
 window.addEventListener("keydown",e=>{   // Esc closes the front-most open modal (capture+stop so the game's key handler doesn't also fire)
   if(e.key!=="Escape"&&e.key!=="Esc") return;
-  for(const id of ["roomDoneModal","gravesModal","manorStory","archiveModal","accuseModal","newModal","howtoModal","winModal","introModal"]){
+  for(const id of ["confirmModal","roomDoneModal","gravesModal","manorStory","archiveModal","accuseModal","newModal","howtoModal","winModal","introModal"]){
     const m=$(id); if(!m||!m.classList.contains("show")) continue;
-    if(id==="introModal"&&typeof introSkipOrClose==="function") introSkipOrClose();
+    if(id==="confirmModal"&&typeof closeConfirm==="function") closeConfirm("cancel");
+    else if(id==="introModal"&&typeof introSkipOrClose==="function") introSkipOrClose();
     else if(id==="manorStory"&&typeof closeManorStory==="function") closeManorStory();
     else m.classList.remove("show");
     e.preventDefault(); e.stopPropagation(); return;
@@ -4628,6 +4672,9 @@ if($("manorRestore")) $("manorRestore").onclick=()=>restoreRoomSnapshot(_manorRo
 $("manorQuit").onclick=()=>{ try{ window.casedokuDesktop && window.casedokuDesktop.quit && window.casedokuDesktop.quit(); }catch(e){} };
 $("manorStoryOk").onclick=closeManorStory;
 $("manorStory").onclick=(e)=>{ if(e.target===$("manorStory")) closeManorStory(); };   // tap backdrop to dismiss
+if($("confirmYes")) $("confirmYes").onclick=()=>closeConfirm("ok");
+if($("confirmNo")) $("confirmNo").onclick=()=>closeConfirm("cancel");
+if($("confirmModal")) $("confirmModal").onclick=(e)=>{ if(e.target===$("confirmModal")) closeConfirm("cancel"); };   // tap backdrop = cancel
 document.querySelectorAll("#recTabs .rec-tab").forEach(t=>t.onclick=()=>renderRecords(t.dataset.tier));   // leaderboard difficulty filter
 $("winArchive").onclick=openArchive;
 $("evPrev").onclick=()=>{ clueStep--; renderEvCurrent(); };
