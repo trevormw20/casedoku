@@ -1149,7 +1149,7 @@
         <button class="btn" id="undoBtn"><img src="../assets/ui/icon-undo.png" alt=""/>Undo</button>
         <button class="btn" id="redoBtn"><img src="../assets/ui/icon-redo.png" alt=""/>Redo</button>
         <button class="btn" id="eraseBtn"><img src="../assets/ui/icon-erase.png" alt=""/>Erase</button>
-        <button class="btn" id="clearBtn" title="Reset the whole puzzle back to its starting givens">🧹 Clear</button>
+        <button class="btn" id="clearBtn" title="Reset the whole puzzle back to its starting clues">🧹 Clear</button>
         <button class="btn" id="notesBtn" title="Pencil-mark candidates (press N)">✎ Notes</button>
         <button class="btn" id="hintBtn"><img src="../assets/ui/icon-hint.png" alt=""/>Ask the Clerk</button>
         <button class="btn" id="checkBtn"><img src="../assets/ui/icon-check.png" alt=""/>Check</button>
@@ -1160,8 +1160,8 @@
         <button class="btn" id="playModeBtn" title="Switch between Relaxed (cozy) and Detective (timer + limited guesses)">🎚 Play mode: Relaxed</button>
         <button class="btn" id="introBtn" title="Show the case intro card at the start of each case">📖 Intro: On</button>
         <button class="btn" id="introSkipBtn" title="After you've read one intro, skip the rest automatically (still in the case file)">⏭ Auto-skip: Off</button>
-        <button class="btn" id="caseTextBtn" title="Case briefing length: Short intro, or Full atmospheric text">📝 Case text: Short</button>
-        <button class="btn" id="evidenceBtn" title="Discover corroborating evidence as you complete rows/columns/rooms, or show it all up front">🔎 Evidence: Discover</button>
+        <button class="btn" id="caseTextBtn" title="Case briefing length: a Short intro, or the Full story">📝 Case text: Short</button>
+        <button class="btn" id="evidenceBtn" title="Find extra evidence as you complete rows/columns/rooms, or show it all up front">🔎 Evidence: Discover</button>
       </div>
       <!-- mobile-only: opens the tabbed case-file overlay (the side panel is hidden on phones) -->
       <button class="case-file-btn" id="caseFileBtn">📁 Case File <span class="cf-sub">Evidence · Weapons · People · Case</span></button>
@@ -1264,7 +1264,7 @@
     </div>
   </div>
 
-  <footer>Casedoku · sudoku backbone + load-bearing evidence · procedural &amp; seeded · placeholder art in <code>/assets</code></footer>
+  <footer>Casedoku · a cozy detective sudoku · solve the grid, read the clues, name the killer</footer>
 
   <!-- New case modal -->
   <div class="modal-bg" id="newModal">
@@ -1299,13 +1299,13 @@
       <button class="x" id="howtoClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
       <h2 style="text-align:center">How to Play</h2>
       <p class="howto-promise">Solve cold cases. Restore the manor. Uncover the truth.<br><span class="howto-nopressure">Play at your pace — hints are always here.</span></p>
-      <p class="howto-lead">A sudoku you finish with detective work. The starting clues are <b>intentionally not enough</b> on their own — sudoku logic and the evidence work <b>together</b>, interleaved.</p>
+      <p class="howto-lead">It's a sudoku you solve like a detective. The starting clues are <b>not enough on their own</b> — that's on purpose. You need <b>both</b> sudoku logic and the evidence. Use them together.</p>
       <ol class="howto-steps">
-        <li><b>Place the suspects</b> so each appears exactly once in every <b>row</b>, every <b>column</b>, and every <b>room</b> (3×3 block).</li>
-        <li><b>Use the evidence</b> to resolve what sudoku alone can't — the clues break the ties the grid leaves open. (You can't finish by sudoku alone.)</li>
-        <li><b>Make your accusation</b> once every other guest is seated: name the culprit, the proof, and the motive. <b>The dashed scene belongs to the victim — only your accusation fills it.</b></li>
+        <li><b>Place the suspects</b> so each one shows up exactly once in every <b>row</b>, every <b>column</b>, and every <b>room</b> (a 3×3 block).</li>
+        <li><b>Use the evidence</b> to work out what sudoku alone can't. The clues break the ties the grid leaves open. (You can't win by sudoku alone.)</li>
+        <li><b>Accuse</b> once every other guest is seated. Name the killer, the proof, and the motive. <b>The dashed scene is the victim's spot — only your accusation fills it.</b></li>
       </ol>
-      <p class="howto-foot">Tap a cell to select it, then tap a suspect to place them. <b>★</b> marks <b>key</b> evidence (required); the rest corroborate. <b>Every clue is true.</b><br>Accuse whenever you like. In <b>Detective</b> mode you have <b>3 guesses</b> and a <b>+1:00</b> penalty per miss; in <b>Relaxed</b> there's no limit and no penalty — just keep deducing.</p>
+      <p class="howto-foot">Tap a cell to pick it, then tap a suspect to place them. <b>★</b> marks <b>key</b> evidence — you need it to solve the case. The rest just back it up. <b>Every clue is true.</b><br>Accuse whenever you like. In <b>Detective</b> mode you get <b>3 guesses</b>, and a wrong one adds <b>1:00</b> to your time. In <b>Relaxed</b> mode there's no limit and no penalty — just keep solving.</p>
       <button class="btn primary" id="howtoGo" style="margin-top:6px">Start sleuthing</button>
     </div>
   </div>
@@ -1314,15 +1314,15 @@
   <div class="modal-bg" id="modeModal">
     <div class="modal center mode-choose">
       <h2>How would you like to play?</h2>
-      <p class="mode-sub">Pick a feel for your investigations. You can switch any time from the toolbar.</p>
+      <p class="mode-sub">Pick how your cases feel. You can switch any time from the toolbar.</p>
       <div class="mode-cards">
         <button class="mode-card" id="modeRelaxed">
           <div class="mode-ico">🍵</div><div class="mode-name">Relaxed</div>
-          <div class="mode-desc">Play at your pace. No timer, no penalties — just cozy deduction, with hints whenever you want.</div>
+          <div class="mode-desc">Play at your own pace. No timer, no penalties — just cozy puzzle-solving, with hints whenever you want.</div>
         </button>
         <button class="mode-card" id="modeDetective">
           <div class="mode-ico">🔎</div><div class="mode-name">Detective</div>
-          <div class="mode-desc">The full investigation — a running clock, limited guesses, and a sharper challenge for the seasoned sleuth.</div>
+          <div class="mode-desc">The full investigation. You get a timer and limited guesses — a tougher test for a sharp sleuth.</div>
         </button>
       </div>
     </div>
@@ -1333,18 +1333,18 @@
     <div class="modal">
       <button class="x" id="accuseClose"><img src="../assets/ui/icon-close.png" alt="close"/></button>
       <h2 style="text-align:center">Final Deduction</h2>
-      <p class="accuse-intro" id="accuseIntro">Name the killer. You don't have to finish the grid first — but you get only <b>3 guesses</b>, and a wrong accusation adds <b>+1:00</b> to your time.</p>
+      <p class="accuse-intro" id="accuseIntro">Name the killer. You don't have to finish the grid first — but you get only <b>3 guesses</b>, and a wrong one adds <b>1:00</b> to your time.</p>
       <div class="accuse-guesses" id="accuseGuesses"></div>
-      <div class="accuse-q">1 · Who is the culprit? <span class="accuse-q-hint">(decides the case)</span></div>
+      <div class="accuse-q">1 · Who did it? <span class="accuse-q-hint">(this decides the case)</span></div>
       <div class="accuse-suspects" id="accuseSuspects"></div>
-      <div class="accuse-q">2 · What was the <b>true</b> weapon? <span class="accuse-q-hint">([WEAPON] clues)</span></div>
+      <div class="accuse-q">2 · What was the <b>real</b> weapon? <span class="accuse-q-hint">(from the [WEAPON] clues)</span></div>
       <div class="accuse-weapons" id="accuseWeapons"></div>
-      <div class="accuse-q">3 · What was the motive? <span class="accuse-q-hint">([MOTIVE] clues)</span></div>
+      <div class="accuse-q">3 · What was the motive? <span class="accuse-q-hint">(from the [MOTIVE] clues)</span></div>
       <select id="accuseMotive" class="accuse-select"></select>
-      <div class="accuse-q">4 · Which evidence proves it? <span class="accuse-q-hint">(the decisive clue)</span></div>
+      <div class="accuse-q">4 · Which clue proves it? <span class="accuse-q-hint">(the one that cracks the case)</span></div>
       <select id="accuseEvidence" class="accuse-select"></select>
       <div class="accuse-feedback" id="accuseFeedback"></div>
-      <button class="btn primary" id="accuseSubmit" style="margin-top:8px;width:100%">J'accuse — name the killer</button>
+      <button class="btn primary" id="accuseSubmit" style="margin-top:8px;width:100%">⚖ Name the Killer</button>
     </div>
   </div>
 
@@ -1409,7 +1409,7 @@
           </div>
           <h2 class="intro-title" id="introTitle">—</h2>
           <p class="intro-body" id="introBody"></p>
-          <p class="intro-scene-note">The dashed scene belongs to the victim — only your accusation fills it.</p>
+          <p class="intro-scene-note">The dashed scene is the victim's spot — only your accusation fills it.</p>
         </div>
       </div>
       <button class="btn primary" id="introBegin" style="margin-top:6px">Begin Investigation</button>
@@ -2480,13 +2480,13 @@ function buildCaseIntro(s, N){
   ]);
   const wq=pick([                                                  // weapon posed as a QUESTION — never reveals real/planted
     `The ${obj} found beside the body looks the obvious weapon — but is it truly the one that killed?`,
-    `A ${obj} lay at the scene; whether it dealt the fatal blow is for you to determine.`,
+    `A ${obj} lay at the scene — but whether it dealt the fatal blow is for you to decide.`,
     `The ${obj} was close at hand, though the wound leaves room for doubt.`,
   ]);
   const susp=pick([                                                // opportunity puzzle — N guests, no suspect specifics
-    `All ${N} guests under this roof swear they never crossed ${room} — yet the manor's floor plan says one of them must have.`,
-    `Every one of the ${N} guests claims an alibi; the geometry of the house leaves exactly one of them without.`,
-    `${N} guests, ${N} tidy alibis — and only the seating of the rooms can reveal whose story cannot hold.`,
+    `All ${N} guests under this roof swear they never set foot in ${room} — yet the manor's floor plan says one of them must have.`,
+    `Every one of the ${N} guests claims an alibi — but the layout of the house leaves exactly one of them without.`,
+    `${N} guests, ${N} neat alibis — and only by seating each room can you find whose story falls apart.`,
   ]);
   const cta=pick([
     `Solve the grid to uncover who had the opportunity.`,
@@ -2694,7 +2694,7 @@ function startCase(opts){
   $("loadBearingNote").innerHTML=
     `Sudoku logic alone leaves <b>${C.completionsWithout}</b> possible arrangements of this house — `+
     `only the evidence narrows it to one. The scene (dashed) hides the killer.`;
-  setStatus(`Case No. ${story.caseNo} opened — ${board.filter(v=>!v).length} positions to place.`,"");
+  setStatus(`Case No. ${story.caseNo} opened — ${board.filter(v=>!v).length} empty spots to fill.`,"");
   startTimer();
   maybeShowIntro();   // case intro card (subject to settings; skippable)
   applyAmbient();     // ambient background life keyed to this case's atmosphere
@@ -2788,7 +2788,7 @@ function renderCase(){
   // evidence list — each clue prefixed with a TYPE TAG chip (★ = key required; ✦ = discovered extra)
   renderClueList();
   if($("sceneObjInfo")) $("sceneObjInfo").innerHTML=`<span class="soi-label">Found beside the body</span>`+
-    `<img class="wicon" src="${tAsset('weapons','weapon-'+story.sceneObject+'.png')}" alt="">${so.n} — but is it the real weapon? Weigh it against the <span class="tag-weapon ev-tag" style="margin:0">WEAPON</span> evidence.`;
+    `<img class="wicon" src="${tAsset('weapons','weapon-'+story.sceneObject+'.png')}" alt="">${so.n} — but is it the real weapon? Check it against the <span class="tag-weapon ev-tag" style="margin:0">WEAPON</span> evidence.`;
   renderPossibleWeapons();
   renderPossibleMotives();
   // current-evidence stepper + tactical progress readout
@@ -2871,7 +2871,7 @@ function discoverNextExtra(){
   queueDiscovery(e);
 }
 function maybeDiscoverHint(){ if(LS.get("seenDiscoverHint",false)) return; LS.set("seenDiscoverHint",true);
-  assist(`<span class="disc-mark">✦</span> marks evidence you <b>uncovered</b> during your investigation — completing a row, column, or room surfaces a new corroborating clue.`); }
+  assist(`<span class="disc-mark">✦</span> marks evidence you <b>found</b> while playing. Each time you finish a row, column, or room, a new clue turns up to back up the case.`); }
 /* discovery ceremony: a brief CENTERED foreground card naming the new evidence — the words
    "NEW EVIDENCE" prominent + the actual clue text, held long enough to read (~1.3s) or until tap,
    with a stamp-style slam on the banner. On dismiss the stepper counter flashes so the eye lands
@@ -3066,12 +3066,12 @@ function erase(){ if(solved||sel<0||given[sel])return;
    isn't triggered by accident, and undoable (one snapshot of every cell). */
 function clearPuzzle(){ if(solved)return;
   const dirty = board.some((v,i)=>!given[i] && v!==0) || candidates.some(s=>s&&s.size);
-  if(!dirty){ setStatus("The board is already at its starting givens.",""); return; }
-  if(!confirm("Clear the puzzle? This removes every suspect you've placed and all your notes, returning to the starting givens. (You can Undo this.)")) return;
+  if(!dirty){ setStatus("The board is already back to its starting clues.",""); return; }
+  if(!confirm("Clear the puzzle? This removes every suspect you've placed and all your notes, and goes back to the starting clues. (You can Undo this.)")) return;
   const all=[]; for(let i=0;i<cfg.N*cfg.N;i++) all.push(i);
   applyAction(all, ()=>{ for(let i=0;i<all.length;i++){ if(!given[i]) board[i]=0; candidates[i]=new Set(); } });
   sel=-1; clearHints(); refresh(); renderTray(); updateBtns();
-  setStatus("Board cleared back to the starting givens.","");
+  setStatus("Board cleared back to the starting clues.","");
   sfx("place"); }
 function undo(){ if(!undoStack.length)return; const e=undoStack.pop(); restoreSnap(e.before); redoStack.push(e);
   clearHints(); refresh(); renderTray(); updateBtns(); }
@@ -3177,10 +3177,10 @@ function hint(){ if(solved)return;
   } else if(hintLevel===2){
     const {r0,c0}=E.rcOfBox(cfg,E.boxOf(cfg,Math.floor(i/N),i%N));
     for(let a=0;a<cfg.bh;a++)for(let b=0;b<cfg.bw;b++) boardEl.children[(r0+a)*N+(c0+b)].classList.add("hint-room");
-    assist(`Turn your attention to <b>${room}</b> (highlighted). Cross-reference its evidence with who is already placed.`);
+    assist(`Look to <b>${room}</b> (highlighted). Compare its evidence with who is already placed.`);
   } else if(hintLevel===3){
     boardEl.children[i].classList.add("hint-cell"); sel=i; refresh();
-    assist(`This exact spot (highlighted) is the one to settle next. The evidence and elimination decide it.`);
+    assist(`This exact spot (highlighted) is the one to solve next. Use the evidence and rule out the rest.`);
   } else {
     if(i===C.murderCell){   // the hint NEVER auto-places the scene — it points the player at the accusation
       assist("Only your accusation can place the killer in the scene. Name them in the Final Deduction.");
@@ -3199,7 +3199,7 @@ function check(){ if(solved)return;
     if(board[i]===0){empty++;continue;} if(board[i]!==C.solution[i]){ wrong++; if(tok)tok.classList.add("bad"); } }
   if(wrong===0 && empty>0){
     // also surface whether the *evidence* is already contradicted (teaches that clues bind)
-    setStatus(`No misplacements yet. ${empty} position${empty>1?"s":""} left — lean on the evidence to fix them.`,"good");
+    setStatus(`Nothing in the wrong place yet. ${empty} spot${empty>1?"s":""} left — use the evidence to fill them in.`,"good");
   } else if(wrong>0){
     setStatus(`${wrong} suspect${wrong>1?"s are":" is"} in the wrong place (circled red).`,"bad");
   }
@@ -3280,7 +3280,7 @@ function openAccusation(){
   const mo=$("accuseMotive"); mo.innerHTML='<option value="-1">— choose the motive —</option>';
   story.motiveOptions.forEach((opt,i)=>{ const o=document.createElement("option"); o.value=i; o.textContent=cap(opt.motive); mo.appendChild(o); });
   // (4) evidence — the displayed clues; correct = a position proof clue
-  const ev=$("accuseEvidence"); ev.innerHTML='<option value="-1">— choose the decisive clue —</option>';
+  const ev=$("accuseEvidence"); ev.innerHTML='<option value="-1">— choose the clue that proves it —</option>';
   story.evidence.forEach((e,idx)=>{ if(!evidenceVisible(idx)) return;   // only offer clues the player has actually seen
     const o=document.createElement("option"); o.value=idx;
     o.textContent=`#${idx+1} [${e.tag}]: ${stripTags(e.text)}`; ev.appendChild(o); });
@@ -3288,8 +3288,8 @@ function openAccusation(){
   const boardNote = placed<total?` · board ${placed}/${total} placed (you can still accuse)`:` · grid complete`;
   const ai=$("accuseIntro");
   if(ai) ai.innerHTML = isRelaxed()
-    ? `Name the culprit. You don't have to finish the grid first — accuse as often as you like, with no penalty. A wrong guess just clears that suspect.`
-    : `Name the killer. You don't have to finish the grid first — but you get only <b>3 guesses</b>, and a wrong accusation adds <b>+1:00</b> to your time.`;
+    ? `Name the killer. You don't have to finish the grid first — accuse as often as you like, with no penalty. A wrong guess just clears that suspect.`
+    : `Name the killer. You don't have to finish the grid first — but you get only <b>3 guesses</b>, and a wrong one adds <b>1:00</b> to your time.`;
   $("accuseGuesses").innerHTML = (isRelaxed()
     ? `Accuse freely — no penalty, no limit`
     : `<b>${guessesLeft}</b> guess${guessesLeft===1?"":"es"} left`) + boardNote;
@@ -3297,7 +3297,7 @@ function openAccusation(){
 }
 function setAccuseFeedback(msg,kind){ const f=$("accuseFeedback"); f.textContent=msg; f.className="accuse-feedback"+(kind?" "+kind:""); }
 function submitAccusation(){
-  if(accuseCulprit<1){ setAccuseFeedback("Name a culprit first.",""); return; }
+  if(accuseCulprit<1){ setAccuseFeedback("Pick who did it first.",""); return; }
   if(accuseCulprit!==C.killer){
     // a wrong accusation proves them innocent -> slam a "SUSPECT CLEARED" stamp on the accused (both modes)
     const sb=document.querySelector(`#accuseSuspects .accuse-suspect[data-v="${accuseCulprit}"]`);
@@ -3305,7 +3305,7 @@ function submitAccusation(){
       const st=sb.querySelector(".payoff-stamp"); if(st && motionOK()) restartAnim(st,"slam"); }
     if(isRelaxed()){                                          // RELAXED: no guess limit, no penalty, never fails — just keep deducing
       fxShake($("accuseModal").querySelector(".modal")); sfx("buzz");
-      setAccuseFeedback("Not them — that suspect's cleared. No penalty here; keep deducing.","");
+      setAccuseFeedback("Not them — that suspect is cleared. No penalty here, so keep going.","");
       updateGuessPill(); return;
     }
     guessesLeft--; addPenalty(60000); updateGuessPill();      // DETECTIVE: wrong -> lose a guess, +1:00 penalty
@@ -3545,7 +3545,7 @@ const RELIC_DEFS=[
   {id:"relic-key",      name:"Missing Key",              glyph:"🔑", hint:"Name the killer with the board less than four-fifths filled.",      test:c=>c.won&&c.fillFrac<0.8},
   {id:"relic-hankie",   name:"Bloodless Handkerchief",   glyph:"🧣", hint:"Win a case without a single time penalty.",                        test:c=>c.won&&c.penaltyMs===0},
   {id:"relic-letter",   name:"Sealed Letter",            glyph:"✉️", hint:"Solve a case where the weapon by the body was planted — and name the true one.", test:c=>c.won&&c.weaponPlanted&&c.weaponRight},
-  {id:"relic-news",     name:"Old Newspaper Clipping",   glyph:"📰", hint:"Uncover every corroborating clue in a case, then solve it.",        test:c=>c.won&&c.extrasAll},
+  {id:"relic-news",     name:"Old Newspaper Clipping",   glyph:"📰", hint:"Find every extra clue in a case, then solve it.",        test:c=>c.won&&c.extrasAll},
   {id:"relic-portrait", name:"Family Portrait Fragment", glyph:"🖼️", hint:"Win a 6×6 and a 9×9 case on the same day.",                         test:c=>c.won&&c.dayBothSizes},
 ];
 /* BADGES — performance + milestone achievements. The original five "Perfect Deductions" keep their
@@ -3569,7 +3569,7 @@ const BADGE_DEFS=[
   {id:"badge-perfect-5",  name:"Five Perfect Cases",    rarity:"rare",       glyph:"✨", desc:"Five flawless 4/4 cases.",                                              hint:"Land five perfect deductions.",                         test:c=>c.stats.perfectWins>=5},
   {id:"badge-early-5",    name:"Quick Study",           rarity:"uncommon",   glyph:"🐎", desc:"Five wins by early accusation (board under four-fifths filled).",       hint:"Win five times by early accusation.",                   test:c=>c.stats.earlyWins>=5},
   {id:"badge-zeropen-10", name:"Steady Hands",          rarity:"uncommon",   glyph:"🕊️", desc:"Ten wins with no time penalty.",                                        hint:"Win ten cases with no penalty.",                        test:c=>c.stats.zeroPenWins>=10},
-  {id:"badge-extras-5",   name:"Thorough Investigator", rarity:"uncommon",   glyph:"🔬", desc:"Uncovered every corroborating clue in five cases.",                     hint:"Uncover all the extras in five cases.",                 test:c=>c.stats.extrasWins>=5},
+  {id:"badge-extras-5",   name:"Thorough Investigator", rarity:"uncommon",   glyph:"🔬", desc:"Found every extra clue in five cases.",                     hint:"Find all the extra clues in five cases.",                 test:c=>c.stats.extrasWins>=5},
   {id:"badge-allweapons", name:"Master of the Armory",  rarity:"legendary",  glyph:"🗡️", desc:"Identified all twelve weapons.",                                        hint:"Claim every weapon trophy.",                            test:c=>c.ownedCount("weapon")>=12},
   {id:"badge-allmotives", name:"Reader of Hearts",      rarity:"legendary",  glyph:"🩸", desc:"Proved all twelve motives.",                                            hint:"Claim every motive trophy.",                            test:c=>c.ownedCount("motive")>=12},
 ];
@@ -3715,7 +3715,7 @@ function renderTrophyStrip(data){
   const reg=trophyRegistry(), map=loadTrophyUnlocks(), seals=loadRoomSeals();
   const pool=reg.filter(t=>t.cat!=="daily"); const have=pool.filter(t=>isUnlocked(t,map,seals)).length;
   let html=`<div class="ts-head">Detective’s Archive <span class="ts-prog">${have}/${pool.length} trophies</span></div>`;
-  if(data.memorial) html+=`<div class="ts-memorial">🕯️ <b>${data.memorial}</b> — remembered rightly.</div>`;
+  if(data.memorial) html+=`<div class="ts-memorial">🕯️ <b>${data.memorial}</b> — remembered with care.</div>`;
   if(data.fresh.length){
     html+=`<div class="ts-new">${data.fresh.length===1?"New trophy claimed":data.fresh.length+" new trophies claimed"}</div>`;
     html+=`<div class="ts-cards">`+data.fresh.map((t,i)=>trophyCardHTML(t,trophyUnlock(t,map,seals),{strip:true,idx:i})).join("")+`</div>`;
@@ -3755,11 +3755,11 @@ function renderMemorial(){
   grid.innerHTML=victims.map(v=>{
     const u=mem[v.slug];
     if(!u) return `<div class="mcard locked"><div class="mc-art"><img class="tc-img locked" src="${tAsset('victims','victim-'+v.slug+'.png')}" alt=""></div>`+
-      `<div class="mc-body"><div class="mc-name">Unknown</div><div class="tc-hint">Close the cold case in which this person was the victim, and they'll be remembered here.</div></div></div>`;
+      `<div class="mc-body"><div class="mc-name">Unknown</div><div class="tc-hint">Solve the cold case where this person was the victim, and they'll be remembered here.</div></div></div>`;
     return `<div class="mcard unlocked"><div class="mc-art"><img class="tc-img" src="${tAsset('victims','victim-'+v.slug+'.png')}" alt=""></div>`+
       `<div class="mc-body"><div class="mc-name">${u.name}</div>`+
-      `<div class="mc-note">Remembered in <b>${u.title||('Case No. '+u.no)}</b> — found in ${u.room}, ${Skin.weaponBySlug(THEME,u.weapon).n} the instrument. The truth, restored at last. <span class="mc-rip">Rest easy.</span></div>`+
-      `<div class="mc-closed">🕯️ Case closed at last — remembered rightly.</div>`+
+      `<div class="mc-note">Remembered in <b>${u.title||('Case No. '+u.no)}</b> — found in ${u.room}, ${Skin.weaponBySlug(THEME,u.weapon).n} the weapon used. The truth, found at last. <span class="mc-rip">Rest easy.</span></div>`+
+      `<div class="mc-closed">🕯️ Case closed at last — remembered with care.</div>`+
       `<div class="tc-src">Cold Case No. ${u.no} · ${u.date}</div></div></div>`;
   }).join("");
 }
