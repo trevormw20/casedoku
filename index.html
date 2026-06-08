@@ -585,6 +585,19 @@
   .howto-foot{font-size:13px;color:var(--ink-dim);line-height:1.5;background:rgba(231,185,77,.07);
     border-left:3px solid var(--amber);border-radius:0 6px 6px 0;padding:8px 11px;margin:0 0 6px;}
   .howto-foot b{color:var(--amber-soft);}
+  /* RELAXED play mode: timer + guess pills are hidden (no pressure) */
+  body.relaxed #timerPill,body.relaxed #guessPill{display:none;}
+  /* first-launch play-mode choice */
+  .modal.mode-choose{max-width:560px;}
+  .mode-sub{color:var(--ink-dim);font-size:13.5px;margin:.2em 0 14px;}
+  .mode-cards{display:flex;gap:12px;flex-wrap:wrap;}
+  .mode-card{flex:1 1 220px;min-width:200px;background:#15181f;border:1px solid var(--line);border-radius:12px;
+    padding:16px 14px;cursor:pointer;text-align:center;color:var(--ink);transition:border-color .15s,background .15s,transform .1s;}
+  .mode-card:hover{border-color:var(--amber);background:#1b1e28;transform:translateY(-2px);}
+  .mode-ico{font-size:34px;line-height:1;margin-bottom:6px;}
+  .mode-name{font-family:Georgia,serif;font-size:19px;font-weight:bold;color:var(--amber-soft);margin-bottom:6px;}
+  .mode-desc{font-size:13px;color:var(--ink);line-height:1.5;}
+  body.phone .mode-cards{flex-direction:column;}
   /* star legend near the evidence */
   .star-legend{font-size:12px;color:var(--ink-dim);line-height:1.45;margin:6px 0 2px;
     border-top:1px dashed var(--line);padding-top:6px;}
@@ -1287,6 +1300,7 @@
         <button class="btn" id="motionBtn" title="Toggle animations">✨ Motion: On</button>
         <button class="btn" id="soundBtn" title="Toggle sound effects">♪ Sound: Off</button>
         <button class="btn" id="musicBtn" title="Toggle background music">🎵 Music: On</button>
+        <button class="btn" id="playModeBtn" title="Switch between Relaxed (cozy) and Detective (timer + limited guesses)">🎚 Play mode: Relaxed</button>
         <button class="btn" id="introBtn" title="Show the case intro card at the start of each case">📖 Intro: On</button>
         <button class="btn" id="introSkipBtn" title="After you've read one intro, skip the rest automatically (still in the case file)">⏭ Auto-skip: Off</button>
         <button class="btn" id="caseTextBtn" title="Case briefing length: Short intro, or Full atmospheric text">📝 Case text: Short</button>
@@ -1438,12 +1452,30 @@
     </div>
   </div>
 
+  <!-- First-launch play-mode choice (one-time; changeable later in the toolbar) -->
+  <div class="modal-bg" id="modeModal">
+    <div class="modal center mode-choose">
+      <h2>How would you like to play?</h2>
+      <p class="mode-sub">Pick a feel for your investigations. You can switch any time from the toolbar.</p>
+      <div class="mode-cards">
+        <button class="mode-card" id="modeRelaxed">
+          <div class="mode-ico">🍵</div><div class="mode-name">Relaxed</div>
+          <div class="mode-desc">Play at your pace. No timer, no penalties — just cozy deduction, with hints whenever you want.</div>
+        </button>
+        <button class="mode-card" id="modeDetective">
+          <div class="mode-ico">🔎</div><div class="mode-name">Detective</div>
+          <div class="mode-desc">The full investigation — a running clock, limited guesses, and a sharper challenge for the seasoned sleuth.</div>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Final Deduction — the player makes the accusation -->
   <div class="modal-bg" id="accuseModal">
     <div class="modal">
       <button class="x" id="accuseClose"><img src="assets/ui/icon-close.png" alt="close"/></button>
       <h2 style="text-align:center">Final Deduction</h2>
-      <p class="accuse-intro">Name the killer. You don't have to finish the grid first — but you get only <b>3 guesses</b>, and a wrong accusation adds <b>+1:00</b> to your time.</p>
+      <p class="accuse-intro" id="accuseIntro">Name the killer. You don't have to finish the grid first — but you get only <b>3 guesses</b>, and a wrong accusation adds <b>+1:00</b> to your time.</p>
       <div class="accuse-guesses" id="accuseGuesses"></div>
       <div class="accuse-q">1 · Who is the culprit? <span class="accuse-q-hint">(decides the case)</span></div>
       <div class="accuse-suspects" id="accuseSuspects"></div>
@@ -3442,25 +3474,36 @@ function openAccusation(){
     const o=document.createElement("option"); o.value=idx;
     o.textContent=`#${idx+1} [${e.tag}]: ${stripTags(e.text)}`; ev.appendChild(o); });
   const placed=board.filter(v=>v).length, total=cfg.N*cfg.N;
-  $("accuseGuesses").innerHTML=`<b>${guessesLeft}</b> guess${guessesLeft===1?"":"es"} left`+
-    (placed<total?` · board ${placed}/${total} placed (you can still accuse)`:` · grid complete`);
+  const boardNote = placed<total?` · board ${placed}/${total} placed (you can still accuse)`:` · grid complete`;
+  const ai=$("accuseIntro");
+  if(ai) ai.innerHTML = isRelaxed()
+    ? `Name the culprit. You don't have to finish the grid first — accuse as often as you like, with no penalty. A wrong guess just clears that suspect.`
+    : `Name the killer. You don't have to finish the grid first — but you get only <b>3 guesses</b>, and a wrong accusation adds <b>+1:00</b> to your time.`;
+  $("accuseGuesses").innerHTML = (isRelaxed()
+    ? `Accuse freely — no penalty, no limit`
+    : `<b>${guessesLeft}</b> guess${guessesLeft===1?"":"es"} left`) + boardNote;
   setAccuseFeedback("",""); $("accuseModal").classList.add("show");
 }
 function setAccuseFeedback(msg,kind){ const f=$("accuseFeedback"); f.textContent=msg; f.className="accuse-feedback"+(kind?" "+kind:""); }
 function submitAccusation(){
   if(accuseCulprit<1){ setAccuseFeedback("Name a culprit first.",""); return; }
   if(accuseCulprit!==C.killer){
-    guessesLeft--; addPenalty(60000); updateGuessPill();      // wrong: lose a guess, +1:00 penalty
+    // a wrong accusation proves them innocent -> slam a "SUSPECT CLEARED" stamp on the accused (both modes)
+    const sb=document.querySelector(`#accuseSuspects .accuse-suspect[data-v="${accuseCulprit}"]`);
+    if(sb && !sb.querySelector(".payoff-stamp")){ sb.insertAdjacentHTML("beforeend", mkStampHTML("Suspect Cleared","stamp-suspect",-9));
+      const st=sb.querySelector(".payoff-stamp"); if(st && motionOK()) restartAnim(st,"slam"); }
+    if(isRelaxed()){                                          // RELAXED: no guess limit, no penalty, never fails — just keep deducing
+      fxShake($("accuseModal").querySelector(".modal")); sfx("buzz");
+      setAccuseFeedback("Not them — that suspect's cleared. No penalty here; keep deducing.","");
+      updateGuessPill(); return;
+    }
+    guessesLeft--; addPenalty(60000); updateGuessPill();      // DETECTIVE: wrong -> lose a guess, +1:00 penalty
     fxFlash(); fxShake($("accuseModal").querySelector(".modal")); fxFloat("+1:00"); sfx("buzz");  // screen shake + red flash + floating penalty
     if(guessesLeft<=0){                                       // out of guesses -> case fails
       $("accuseModal").classList.remove("show");
       payoff(null, false);
       return;
     }
-    // a wrong accusation proves them innocent -> slam a "SUSPECT CLEARED" stamp on the accused
-    const sb=document.querySelector(`#accuseSuspects .accuse-suspect[data-v="${accuseCulprit}"]`);
-    if(sb && !sb.querySelector(".payoff-stamp")){ sb.insertAdjacentHTML("beforeend", mkStampHTML("Suspect Cleared","stamp-suspect",-9));
-      const st=sb.querySelector(".payoff-stamp"); if(st && motionOK()) restartAnim(st,"slam"); }
     setAccuseFeedback(`Wrong accusation. +1:00 added to your time. ${guessesLeft} guess${guessesLeft===1?"":"es"} left.`,"bad");
     return;
   }
@@ -3531,13 +3574,13 @@ function payoff(grade, won){
     const acc=1+(grade.weaponRight?1:0)+(grade.motiveRight?1:0)+(grade.evidenceRight?1:0), perfect=acc===4; isPerfect=perfect;
     const plantNote=story.weaponPlanted?` (the ${Skin.weaponBySlug(THEME,story.sceneObject).n} by the body was planted)`:"";
     const sc=$("accuseScore"); sc.innerHTML=
-      `<div class="acc-stars">${"★".repeat(acc)}${"☆".repeat(4-acc)} <span class="acc-num">Accuracy ${acc}/4 · ⏱ ${totalTime}${penaltyStr} · ${guessesUsed+1}/${MAX_GUESSES} guesses</span></div>`+
+      `<div class="acc-stars">${"★".repeat(acc)}${"☆".repeat(4-acc)} <span class="acc-num">Accuracy ${acc}/4 · ${isRelaxed()?"Relaxed":`⏱ ${totalTime}${penaltyStr} · ${guessesUsed+1}/${MAX_GUESSES} guesses`}</span></div>`+
       (perfect?`<div class="acc-correct good">Flawless deduction.${plantNote}</div>`:``);
     sc.appendChild(buildAccuseTrio(grade,true));
     sc.insertAdjacentHTML("beforeend",`<div class="trio-proof"><span class="trio-proof-label">Proof</span>“${correctProof}”${grade.evidenceRight?mkStampHTML("Evidence Found","stamp-proof",-7):""}</div>`);
     recordSolved(makeHeadline(k.name), perfect);
-    recordLeaderboard({ tier:C.tier, ms:elapsedMs(), timeStr:totalTime, no:story.caseNo, code:C.code,
-      attempts:guessesUsed+1, acc, perfect:acc===4, date:nowStr() });   // personal best (time incl. penalties)
+    if(!isRelaxed()) recordLeaderboard({ tier:C.tier, ms:elapsedMs(), timeStr:totalTime, no:story.caseNo, code:C.code,
+      attempts:guessesUsed+1, acc, perfect:acc===4, date:nowStr() });   // Detective only — Relaxed runs aren't time-ranked
     const tr=evalTrophiesOnWin(grade); _payoffStrip={fresh:tr.fresh, ctx:tr.ctx, teases:missedTeases(grade), memorial:tr.memorial};   // claim trophies + queue the post-case strip
     $("poTrophy").innerHTML=tr.fresh.length?`<b style="color:var(--amber-soft)">${tr.fresh.length}</b> new ${tr.fresh.length>1?"trophies":"trophy"} 🏆`:`<span class="muted">${tr.memorial?"memorial added":"none new"}</span>`;
     const sealsEarned=grantSeals(perfect);   // MANOR: +1 Case Seal per win, +1 for a flawless 4/4 — always grants progress
@@ -5003,6 +5046,18 @@ function applyJuiceButtons(){ const m=$("motionBtn"), s=$("soundBtn"), mu=$("mus
   if(mu){ mu.textContent="🎵 Music: "+(settings.music?"On":"Off"); mu.classList.toggle("on",!!settings.music); } }
 if($("motionBtn")) $("motionBtn").onclick=()=>{ settings.motion=!settings.motion; LS.set("settings",settings); applyMotion(); applyJuiceButtons(); applyAmbient(); };
 if($("soundBtn")) $("soundBtn").onclick=()=>{ settings.sound=!settings.sound; LS.set("settings",settings); applyJuiceButtons(); if(settings.sound){ warmAudio(); sfx("place"); } };
+/* ---- PLAY MODE: Relaxed (cozy, default) vs Detective (timer + limited guesses). Persisted; changeable in the toolbar. ---- */
+function isRelaxed(){ return settings.playMode!=="detective"; }   // default = Relaxed (the cozy front door)
+function applyPlayMode(){
+  const r=isRelaxed(); document.body.classList.toggle("relaxed", r);   // CSS hides timer + guess pills in Relaxed
+  const pb=$("playModeBtn"); if(pb){ pb.textContent="🎚 Play mode: "+(r?"Relaxed":"Detective"); pb.classList.toggle("on", !r); }
+  const ab=$("accuseBtn"); if(ab) ab.title=r?"Name the culprit — accuse freely, no timer or guess limit":"Name the killer — you have 3 guesses (full board not required)";
+}
+function setPlayMode(mode){ settings.playMode=mode; LS.set("settings",settings); LS.set("modeChosen",true); applyPlayMode(); }
+function maybeShowModeChoice(){ if(LS.get("modeChosen",false) || settings.playMode) return; const m=$("modeModal"); if(m) m.classList.add("show"); }
+if($("playModeBtn")) $("playModeBtn").onclick=()=>setPlayMode(isRelaxed()?"detective":"relaxed");
+if($("modeRelaxed")) $("modeRelaxed").onclick=()=>{ setPlayMode("relaxed"); const m=$("modeModal"); if(m) m.classList.remove("show"); };
+if($("modeDetective")) $("modeDetective").onclick=()=>{ setPlayMode("detective"); const m=$("modeModal"); if(m) m.classList.remove("show"); };
 /* ---- looping background music: own toggle, default ON, separate from the SFX "Sound" toggle ---- */
 let bgMusic=null;
 function ensureBgMusic(){ if(!bgMusic){ bgMusic=new Audio("assets/music/Final%20Accusation.mp3"); bgMusic.loop=true; bgMusic.volume=0.4; bgMusic.preload="auto"; } return bgMusic; }
@@ -5012,7 +5067,7 @@ if($("musicBtn")) $("musicBtn").onclick=()=>{ settings.music=!settings.music; LS
 // first user gesture: unlock SFX audio AND start the music if autoplay was blocked (while Music is ON)
 ["pointerdown","keydown","touchstart"].forEach(ev=>window.addEventListener(ev,()=>{ if(settings.sound) warmAudio(); startMusicIfOn(); },{passive:true}));
 if($("winModal")) $("winModal").addEventListener("pointerdown",skipPayoff);   // tap to skip the whole payoff sequence to its final state
-applyMotion(); applyJuiceButtons(); applyMusic();   // try to start music immediately (retried on first gesture if blocked)
+applyMotion(); applyJuiceButtons(); applyMusic(); applyPlayMode();   // try to start music immediately (retried on first gesture if blocked)
 /* ---- case intro / case-text settings (persisted) + intro card wiring ---- */
 function applyCaseButtons(){ const ib=$("introBtn"), sk=$("introSkipBtn"), ct=$("caseTextBtn"), evb=$("evidenceBtn");
   if(ib){ ib.textContent="📖 Intro: "+(settings.intro?"On":"Off"); ib.classList.toggle("on",!!settings.intro); }
@@ -5059,7 +5114,8 @@ window.addEventListener("pagehide",pauseAllAudio);
 
 // HOME: the game opens to the manor hub (no auto-started case). First launch plays the Graves opening.
 showManor();
-if(!LS.get("manorIntroSeen",false)) showManorStory(MANOR_OPENING, ()=>LS.set("manorIntroSeen",true), "intro");
+if(!LS.get("manorIntroSeen",false)) showManorStory(MANOR_OPENING, ()=>{ LS.set("manorIntroSeen",true); maybeShowModeChoice(); }, "intro");
+else maybeShowModeChoice();   // returning users who never chose still get the one-time choice; otherwise default Relaxed
 
 /* =====================================================================
    DEV / TEST PANEL — left-docked, gated, NEVER shown to players by default.
