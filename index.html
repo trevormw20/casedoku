@@ -1091,6 +1091,16 @@
   .manor-bar.mini{height:6px;display:inline-block;width:78px;vertical-align:middle;margin-left:6px;flex:none;}
   .manor-overall{padding:0 0 6px;flex:none;}
   .manor-overall-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px;}
+  /* PRIORITY 5 — stamped stage segments */
+  .manor-stages.stamped{display:flex;gap:3px;}
+  .stage-seg{flex:1 1 0;min-width:0;font-family:"Courier New",monospace;font-size:9px;letter-spacing:.2px;text-align:center;
+    padding:3px 2px;border-radius:4px;border:1px solid var(--line);background:#13151d;color:var(--ink-dim);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .4s,color .4s,border-color .4s;}
+  .stage-seg.done{background:linear-gradient(180deg,rgba(231,185,77,.30),rgba(231,185,77,.13));border-color:var(--amber);color:var(--amber-soft);font-weight:bold;}
+  .stage-seg.next{border-color:var(--amber-soft);color:var(--ink);box-shadow:inset 0 0 0 1px rgba(231,185,77,.3);}
+  .stage-seg.stamp{animation:segStamp .5s cubic-bezier(.3,1.5,.5,1);}
+  @keyframes segStamp{0%{transform:scale(.55);}60%{transform:scale(1.14);}100%{transform:scale(1);}}
+  body.no-motion .stage-seg{animation:none;}
   .manor-tab{display:flex;flex-direction:column;gap:4px;min-width:84px;align-items:stretch;}   /* augments the base .manor-tab: label over a mini bar */
   .manor-tab-label{display:block;text-align:left;white-space:nowrap;}
   .manor-tab-bar{position:relative;height:5px;border-radius:4px;background:#0f1218;border:1px solid var(--line);overflow:hidden;}
@@ -1541,9 +1551,9 @@
     <div class="manor-overall">
       <div class="manor-overall-top">
         <span class="manor-room-name" id="manorRoomName">The Study</span>
-        <span class="manor-sub">Blackwood Manor · <span class="manor-pct" id="manorPct">0%</span> restored</span>
+        <span class="manor-sub" id="manorProgLabel">Study 0/7</span>
       </div>
-      <div class="manor-bar" title="Overall manor restoration"><span class="manor-bar-fill" id="manorOverallFill"></span></div>
+      <div class="manor-stages" id="manorStages" title="Restoration progress"></div>
     </div>
     <div class="manor-nav" id="manorNav"></div>
     <div class="manor-floor-wrap">
@@ -4163,8 +4173,28 @@ function manorTeaserHTML(){
     `<span class="manor-teaser-req" title="Fully restore the ${shortRoom(gate)} to open the ${shortRoom(next)} — ${left} ${left===1?"seal":"seals"} to go"><b>${left}</b> 🔏 to open`+
     `<span class="manor-bar mini"><span class="manor-bar-fill" style="width:${Math.round(frac*100)}%"></span></span></span>`;
 }
+/* PRIORITY 5 — stamped progress bar: named stage segments that fill/stamp as completed (snapshot rooms),
+   or a plain fill bar for layered rooms; plus a "Room X/N" label. Segment labels come from the task data. */
+function renderStages(room){
+  const host=$("manorStages"), lbl=$("manorProgLabel"); if(!host) return;
+  const snap=_roomSnapCache[room.id];
+  if(snap){
+    const cur=Math.min(snapStageOf(room.id), snap.max), n=snap.max;
+    if(lbl) lbl.textContent=`${shortRoom(room)} ${cur}/${n}`;
+    const prev=+(host.dataset.cur!=null?host.dataset.cur:-1); host.dataset.cur=cur;
+    const just=(prev>=0 && cur>prev)? cur-1 : -1;   // animate only the segment that just stamped
+    host.className="manor-stages stamped"; let html="";
+    for(let i=0;i<n;i++){ const done=i<cur, seg=(room.tasks&&room.tasks[i]&&room.tasks[i].seg)||("Stage "+(i+1));
+      html+=`<span class="stage-seg${done?" done":""}${i===cur?" next":""}${i===just?" stamp":""}" title="${seg}">${done?"✓ ":""}${seg}</span>`; }
+    host.innerHTML=html;
+  } else if(snap===false){
+    if(lbl) lbl.textContent=`${shortRoom(room)} ${Math.round(roomPct(room)*100)}%`;
+    host.className="manor-stages bar"; delete host.dataset.cur;
+    host.innerHTML=`<span class="manor-bar"><span class="manor-bar-fill" style="width:${Math.round(roomPct(room)*100)}%"></span></span>`;
+  } else { if(lbl) lbl.textContent=shortRoom(room); host.innerHTML=""; }
+}
 function updateManorChrome(){
-  const of=$("manorOverallFill"); if(of) of.style.width=Math.round(overallFrac()*100)+"%";
+  renderStages(roomById(_manorRoom)||MANOR_DATA[0]);   // stamped per-room progress (priority 5)
   const wl=$("manorWemblyLine"); if(wl) wl.textContent=manorWemblyStable();
   const ob=$("manorObjective"); if(ob) ob.textContent="▸ "+manorObjectiveText();
   const tz=$("manorTeaser"); if(tz) tz.innerHTML=manorTeaserHTML();
@@ -4246,7 +4276,6 @@ function renderManor(){
 function renderManorLayered(room, floor, avatar){
   floor.classList.remove("snap-room","amb-on","amb-warm","amb-fire","amb-lamp"); floor.onclick=null; floor.style.aspectRatio="";   // revert to the CSS 16:10 floor
   floor.querySelectorAll(".manor-snap").forEach(e=>e.remove()); delete floor.dataset.snapShown; delete floor.dataset.snapFront;
-  $("manorPct").textContent=Math.round(roomPct(room)*100)+"%";
   // Default to the top-down board floor (fallback); swap to the iso room-shell if one exists.
   floor.style.backgroundImage=`linear-gradient(rgba(8,9,13,.28),rgba(8,9,13,.50)),url("${room.floor}")`;
   floor.classList.remove("iso-bg");
@@ -4281,7 +4310,6 @@ function renderManorSnapshot(room, floor, avatar, snap){
   floor.classList.toggle("amb-fire", cur>=4); floor.classList.toggle("amb-lamp", cur>=6);
   const present=snap.stages.filter(n=>n<=cur);                        // tolerate gaps: show the highest present stage <= cur
   const showN = present.length? present[present.length-1] : snap.stages[0];
-  $("manorPct").textContent=Math.round((snap.max?cur/snap.max:1)*100)+"%";
   if(floor.dataset.snapShown!==String(showN)){ showSnapStage(floor, avatar, snap.urls[showN], false); floor.dataset.snapShown=String(showN); }
   floor.onclick=(e)=>{ if(e.target && e.target.closest && e.target.closest(".manor-avatar")) return; restoreRoomSnapshot(room.id); };   // tap the scene to restore
 }
@@ -4372,7 +4400,6 @@ function restoreRoomSnapshot(roomId){
   const nextN = snap.stages.find(n=>n>cur), ns = (nextN==null)? snap.max : nextN;   // advance to the next present stage
   setSnapStage(roomId, ns);
   $("manorSealCount").textContent=manorSeals();
-  $("manorPct").textContent=Math.round((ns/snap.max)*100)+"%";
   playManorTransition(room, snap, ns, task, ()=>{                    // play the sequence, then land the after-text + Wembly line
     manorToast(task.after || (room.snapLines&&room.snapLines[ns]) || `The ${short} comes a little further back to life.`);
     _manorCtxRoom=room; _manorCtxLine=task.wembly||null; _manorCtx="restored";   // Wembly speaks this task's line (priority 3)
