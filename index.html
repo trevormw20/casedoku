@@ -1101,6 +1101,23 @@
   .stage-seg.stamp{animation:segStamp .5s cubic-bezier(.3,1.5,.5,1);}
   @keyframes segStamp{0%{transform:scale(.55);}60%{transform:scale(1.14);}100%{transform:scale(1);}}
   body.no-motion .stage-seg{animation:none;}
+  /* PRIORITY 6 — room-complete payoff modal */
+  .modal.room-done{max-width:520px;}
+  .rd-stamp{font-family:"Courier New",monospace;font-weight:800;letter-spacing:4px;font-size:21px;color:var(--good);
+    border:2px solid var(--good);border-radius:8px;padding:5px 14px;display:inline-block;transform:rotate(-3deg);margin-bottom:12px;}
+  .rd-compare{position:relative;width:100%;max-width:420px;aspect-ratio:600/448;border-radius:10px;overflow:hidden;border:2px solid #2a2118;margin:0 auto 10px;}
+  .rd-compare img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  .rd-after{clip-path:inset(0 0 0 0);}
+  .rd-compare.play .rd-after{animation:rdWipe 1.1s ease-in-out;}
+  @keyframes rdWipe{0%{clip-path:inset(0 0 0 100%);}100%{clip-path:inset(0 0 0 0);}}
+  body.no-motion .rd-compare.play .rd-after{animation:none;}
+  .rd-title{font-family:Georgia,serif;font-size:18px;color:var(--amber-soft);margin-bottom:9px;}
+  .rd-rewards{display:flex;flex-direction:column;gap:8px;text-align:left;}
+  .rd-reward{display:flex;gap:10px;align-items:flex-start;background:#13151d;border:1px solid var(--line);border-radius:8px;padding:8px 10px;}
+  .rd-reward .rd-ico{font-size:20px;flex:none;line-height:1.2;}
+  .rd-reward b{color:var(--amber-soft);}
+  .rd-sub{font-size:12px;color:var(--ink-dim);line-height:1.4;margin-top:1px;}
+  .rd-cont-note{font-size:11px;color:var(--ink-dim);font-style:italic;margin:10px 0 4px;}
   .manor-tab{display:flex;flex-direction:column;gap:4px;min-width:84px;align-items:stretch;}   /* augments the base .manor-tab: label over a mini bar */
   .manor-tab-label{display:block;text-align:left;white-space:nowrap;}
   .manor-tab-bar{position:relative;height:5px;border-radius:4px;background:#0f1218;border:1px solid var(--line);overflow:hidden;}
@@ -1594,6 +1611,21 @@
       <div class="graves-sub" id="gravesCount"></div>
       <div class="graves-intro">What happened to Inspector Graves? Restore the manor and his own house gives up the clues.</div>
       <div class="graves-clues" id="gravesClues"></div>
+    </div>
+  </div>
+
+  <!-- Room-complete payoff: before/after reveal + ROOM RESTORED stamp + rewards (priority 6) -->
+  <div class="modal-bg" id="roomDoneModal">
+    <div class="modal center room-done">
+      <div class="rd-stamp">ROOM RESTORED</div>
+      <div class="rd-compare" id="rdCompare">
+        <img class="rd-before" id="rdBefore" alt="" draggable="false"/>
+        <img class="rd-after" id="rdAfter" alt="" draggable="false"/>
+      </div>
+      <div class="rd-title" id="rdTitle">Restored</div>
+      <div class="rd-rewards" id="rdRewards"></div>
+      <p class="rd-cont-note">Tap anywhere to continue</p>
+      <button class="btn primary" id="rdContinue">Continue</button>
     </div>
   </div>
 
@@ -4407,15 +4439,27 @@ function restoreRoomSnapshot(roomId){
     if(ns>=snap.max) fireSnapFinal(room);                           // final stage -> Graves reveal + unlock next
   });
 }
-function fireSnapFinal(room){
-  const keyObj=room.objects.find(o=>o.key), reveal=room.snapReveal || (keyObj&&keyObj.reveal);
-  const idx=MANOR_DATA.indexOf(room), next=MANOR_DATA[idx+1], doUnlock=!!(next && !next.locked && !roomUnlocked(next.id));
-  const afterReveal=()=>{ if(doUnlock){ unlockRoom(next.id);
-      showManorStory(`<div class="ms-kicker">${next.name} unlocked</div>${next.beat}`,
-        ()=>{ _manorRoom=next.id; LS.set("manorActiveRoom",next.id); renderManor(); }, "beat");
-    } else renderManor(); };
-  if(reveal) setTimeout(()=>showManorStory(`<div class="ms-kicker">A discovery in ${room.name}</div>${reveal}`, afterReveal, "reveal"), 800);
-  else afterReveal();
+function fireSnapFinal(room){ setTimeout(()=>openRoomDonePayoff(room), 500); }   // let the final upgrade pulse settle, then the payoff
+/* PRIORITY 6 — room-complete payoff: before(s0)->after(sN) reveal + ROOM RESTORED stamp, then the rewards
+   together (Graves clue added to the tracker, a Room Seal, and the next-room unlock + teaser). Tap to continue. */
+function openRoomDonePayoff(room){
+  const snap=_roomSnapCache[room.id], m=$("roomDoneModal");
+  const idx=MANOR_DATA.indexOf(room), next=MANOR_DATA[idx+1], willUnlock=!!(next && !next.locked && !roomUnlocked(next.id));
+  if(willUnlock) unlockRoom(next.id);                                   // unlock now (the clue auto-appears in the tracker)
+  try{ const b=LS.get("manorRoomBadges",{})||{}; b[room.id]=true; LS.set("manorRoomBadges",b); }catch(e){}   // Room Seal badge
+  const cont=()=>{ if(m) m.classList.remove("show"); if(m) m.onclick=null;
+    if(next && roomUnlocked(next.id)){ _manorRoom=next.id; LS.set("manorActiveRoom",next.id); } renderManor(); };
+  if(!m || !snap){ cont(); return; }                                   // graceful fallback
+  $("rdBefore").src=snap.urls[snap.stages[0]]; $("rdAfter").src=snap.urls[snap.max];
+  $("rdTitle").textContent=`The ${shortRoom(room)} Restored`;
+  let rw="";
+  if(room.clueTitle) rw+=`<div class="rd-reward"><span class="rd-ico">🔎</span><div><b>Clue uncovered — ${room.clueTitle}</b><div class="rd-sub">${room.clueShort||""} <i>(added to The Graves Case)</i></div></div></div>`;
+  rw+=`<div class="rd-reward"><span class="rd-ico">🏅</span><div><b>Room Seal earned</b><div class="rd-sub">The ${shortRoom(room)} is fully restored.</div></div></div>`;
+  if(next && roomUnlocked(next.id)) rw+=`<div class="rd-reward"><span class="rd-ico">🚪</span><div><b>${shortRoom(next)} unlocked</b><div class="rd-sub">${next.teaser||next.beat||""}</div></div></div>`;
+  $("rdRewards").innerHTML=rw;
+  m.classList.add("show"); const mc=m.querySelector(".modal"); if(mc) mc.scrollTop=0;
+  const cmp=$("rdCompare"); if(cmp){ cmp.classList.remove("play"); if(motionOK()){ void cmp.offsetWidth; cmp.classList.add("play"); } }
+  m.onclick=cont; const cb=$("rdContinue"); if(cb) cb.onclick=(e)=>{ e&&e.stopPropagation(); cont(); };   // tap anywhere (or the button) to continue
 }
 function showManor(){
   ["winModal","newModal","accuseModal","archiveModal","howtoModal","introModal"].forEach(id=>{ const m=$(id); if(m) m.classList.remove("show"); });
@@ -4490,7 +4534,7 @@ $("archiveClose").onclick=()=>$("archiveModal").classList.remove("show");
   if(m) m.addEventListener("click",e=>{ if(e.target===m) m.classList.remove("show"); }); });   // backdrop click
 window.addEventListener("keydown",e=>{   // Esc closes the front-most open modal (capture+stop so the game's key handler doesn't also fire)
   if(e.key!=="Escape"&&e.key!=="Esc") return;
-  for(const id of ["gravesModal","manorStory","archiveModal","accuseModal","newModal","howtoModal","winModal","introModal"]){
+  for(const id of ["roomDoneModal","gravesModal","manorStory","archiveModal","accuseModal","newModal","howtoModal","winModal","introModal"]){
     const m=$(id); if(!m||!m.classList.contains("show")) continue;
     if(id==="introModal"&&typeof introSkipOrClose==="function") introSkipOrClose();
     else if(id==="manorStory"&&typeof closeManorStory==="function") closeManorStory();
