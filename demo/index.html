@@ -1577,12 +1577,16 @@ function isValidFull(cfg,g){
 const TIERS = {
   // clueGoal = total displayed clues to aim for (required load-bearing set + true
   // corroborating clues). Required-only count is far smaller; see pickExtras().
-  // Gentler curve: lower targetMin => fewer pre-clue arrangements => MORE givens; more
-  // DIRECT bias on the lower tiers. Easy = quick, mostly-sudoku; Extreme = the hard one.
-  easy:    {key:"easy",    label:"Easy",    cfg:{N:6,bh:2,bw:3}, targetMin:2,  cap:6,  bias:"direct",   clueGoal:3},
-  medium:  {key:"medium",  label:"Medium",  cfg:{N:9,bh:3,bw:3}, targetMin:4,  cap:12, bias:"direct",   clueGoal:5},
-  hard:    {key:"hard",    label:"Hard",    cfg:{N:9,bh:3,bw:3}, targetMin:12, cap:36, bias:"mixed",    clueGoal:7},
-  extreme: {key:"extreme", label:"Extreme", cfg:{N:9,bh:3,bw:3}, targetMin:26, cap:72, bias:"indirect", clueGoal:10},
+  // targetMin = how AMBIGUOUS the puzzle is under sudoku alone (pre-clue arrangements);
+  //   higher => fewer givens => more deduction. reqMin = the MINIMUM number of
+  //   load-bearing clues a case must genuinely need; the generator rejects (re-seeds)
+  //   any case below it, so even the easiest case at a tier can't be solved by a single
+  //   deduction. (The covering-set minimiser is efficient, so req tops out ~3-4; tiers
+  //   separate further by board size, pre-clue ambiguity, clue count and weapon planting.)
+  easy:    {key:"easy",    label:"Easy",    cfg:{N:6,bh:2,bw:3}, targetMin:4,  cap:8,  reqMin:2, bias:"direct",   clueGoal:3},
+  medium:  {key:"medium",  label:"Medium",  cfg:{N:9,bh:3,bw:3}, targetMin:8,  cap:16, reqMin:2, bias:"direct",   clueGoal:5},
+  hard:    {key:"hard",    label:"Hard",    cfg:{N:9,bh:3,bw:3}, targetMin:18, cap:44, reqMin:3, bias:"mixed",    clueGoal:7},
+  extreme: {key:"extreme", label:"Extreme", cfg:{N:9,bh:3,bw:3}, targetMin:30, cap:80, reqMin:3, bias:"indirect", clueGoal:10},
 };
 const TIER_CHAR = {easy:"E", medium:"M", hard:"H", extreme:"X"};
 const CHAR_TIER = {E:"easy", M:"medium", H:"hard", X:"extreme"};
@@ -1836,9 +1840,14 @@ function generateCase(opts){
   const withClues=completions.filter(g=>required.every(c=>c.pred(g)));
   const uniqueWithClues = withClues.length===1 && withClues[0].every((v,i)=>v===solution[i]);
   const ambiguousWithout = completions.length>=2 && !capped;
-  if(!uniqueWithClues || !ambiguousWithout){
-    // extremely unlikely; retry with a perturbed seed for robustness
-    return generateCase(Object.assign({},opts,{seed:(seed+0x9E3779B9)>>>0, difficulty:tier}));
+  // difficulty floor: reject cases solvable with fewer load-bearing clues than the tier
+  // demands (e.g. a single deduction) so the easiest case at each tier still needs real work.
+  const tries=(opts._tries|0);
+  const tooEasy = required.length < (T.reqMin||0);
+  if(!uniqueWithClues || !ambiguousWithout || (tooEasy && tries<80)){
+    // re-seed deterministically and retry. Correctness failures always retry; the
+    // too-easy floor retries up to a bound (then accepts — keeps generation terminating).
+    return generateCase(Object.assign({},opts,{seed:(seed+0x9E3779B9)>>>0, difficulty:tier, _tries:tries+1}));
   }
 
   // add true, NON-REDUNDANT corroborating clues for a richer case file; required stay load-bearing
