@@ -3,6 +3,11 @@ node_modules/
 .DS_Store
 Thumbs.db
 
+# Capacitor / Android wrapper (generated; not part of the game source)
+www/
+/android/
+.gradle/
+
 # Manor art: keep raw originals + intermediate processed cutouts on disk but OUT of git.
 # (Named cutouts in assets/manor/<room>/ and manifest.json ARE tracked.)
 assets/manor/_inbox/

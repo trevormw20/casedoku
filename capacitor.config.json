@@ -1,0 +1,8 @@
+{
+  "appId": "com.eternalcrystudio.casedokumanor",
+  "appName": "Casedoku Manor",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  }
+}

@@ -56,6 +56,7 @@
   .layout>*{min-width:0;}   /* allow columns to shrink below content width (no overflow) */
   @media (max-width:1040px){
     .layout{grid-template-columns:1fr;}
+    body:not(.appfit) .casefile{display:none;}   /* stacked layout (phone + narrow desktop): hide the side-panel case file — it's now opened via the Case File button; the objective + status stay near the board */
     body{padding-left:8px;padding-right:8px;}
     /* once stacked, the board becomes the hero: cells GROW to fill the viewport width
        (the 62px --cell-max cap is desktop-only). ~95% of width here, ~98% on phones. */
@@ -185,7 +186,7 @@
   /* tray uses the SAME token disc+ring so the picker matches the board; name above */
   .tray{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:100%;padding-top:4px;}
   .susp{display:flex;flex-direction:column;align-items:center;gap:4px;width:62px;cursor:pointer;
-    transition:transform .16s ease;}   /* smooth lift up/down on select */
+    transition:transform .16s ease,filter .3s ease;}   /* smooth lift on select; .done dims like a candle going out */
   .susp:hover{transform:translateY(-3px);}
   .susp-name{font-size:11px;font-weight:700;color:var(--ink);text-align:center;line-height:1;
     max-width:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -206,7 +207,6 @@
     background:linear-gradient(180deg,#262b38,#1b1f2a);color:var(--ink);
     border:1px solid var(--line);border-radius:8px;padding:8px 13px;font-size:13.5px;transition:.12s;}
   .btn:hover{border-color:var(--amber);color:var(--amber-soft);}
-  .btn:active{transform:translateY(1px);}
   .btn:disabled{opacity:.4;cursor:not-allowed;}
   .btn img{width:17px;height:17px;}
   .btn.primary{background:linear-gradient(180deg,#7a5e1f,#5a4314);border-color:var(--amber);color:#fff;}
@@ -264,7 +264,10 @@
   .briefing summary,.all-ev summary,.poi summary,.ev-block>summary{
     cursor:pointer;font-family:"Courier New",monospace;font-size:10.5px;letter-spacing:1.5px;
     text-transform:uppercase;color:var(--ink-dim);padding:4px 0;list-style:revert;}
-  .briefing[open] .case-story{margin-top:6px;}
+  .briefing .case-story{margin-top:6px;}   /* unconditional — no layout jump when the briefing opens */
+  /* accordion soft-open: the revealed content settles like paper (height still snaps — cheap & robust) */
+  .casefile details[open]>*:not(summary),.co-panel details[open]>*:not(summary){animation:accIn .18s ease-out;}
+  @keyframes accIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
   /* calm single-focus current-evidence card */
   .ev-block{margin:6px 0 2px;}
   .ev-block>summary{color:var(--amber);display:flex;justify-content:space-between;align-items:center;}
@@ -272,6 +275,8 @@
   .ev-card{display:flex;align-items:center;gap:12px;background:#171a22;border:1px solid var(--line);
     border-radius:10px;padding:18px 14px;margin:7px 0 0;min-height:80px;box-shadow:0 2px 8px rgba(0,0,0,.3);}
   .ev-clue{flex:1;margin:0;font-size:16px;line-height:1.55;color:var(--ink);text-align:center;}
+  .ev-clue.ev-swap{animation:evSwap .15s ease-out;}   /* page-turn beat when the clue text changes */
+  @keyframes evSwap{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
   .ev-clue b{color:var(--amber-soft);}
   .ev-clue .keymark{margin-right:4px;opacity:.85;}
   .ev-nav{flex:none;width:30px;height:30px;border:1px solid var(--line);background:#10131a;color:var(--amber-soft);
@@ -330,7 +335,7 @@
   .possible-motives{display:flex;gap:9px;flex-wrap:wrap;}
   .mcand{position:relative;width:108px;height:66px;padding:0;border:none;background:none;cursor:pointer;
     perspective:760px;transform:rotate(var(--jit,0deg));font-family:inherit;}
-  .mcard-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .01s;}
+  .mcard-inner{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .01s;}   /* fill the card box via inset:0 (it's a <span>; percentage width/height collapsed it to ~2px) */
   .mcand.flipped .mcard-inner{transform:rotateY(180deg);}
   .mcand.flipped.just-flip .mcard-inner{animation:mflipIn .55s cubic-bezier(.3,.7,.3,1);}
   @keyframes mflipIn{from{transform:rotateY(0deg);}to{transform:rotateY(180deg);}}
@@ -399,9 +404,15 @@
     border:1px solid var(--amber);border-radius:14px;padding:24px 22px 18px;box-shadow:0 22px 64px rgba(0,0,0,.72);}
   .disc-overlay.show .disc-card{animation:discCardIn .34s cubic-bezier(.25,1.2,.4,1);}
   @keyframes discCardIn{0%{transform:translateY(16px) scale(.9);opacity:0;}100%{transform:translateY(0) scale(1);opacity:1;}}
+  /* dismissal: a brief exit fade instead of a display:none cut */
+  .disc-overlay.hiding{animation:discBgOut .17s ease-in both;}
+  .disc-overlay.hiding .disc-card{animation:discCardOut .17s ease-in both;}
+  @keyframes discCardOut{to{transform:translateY(-10px) scale(.96);opacity:0;}}
+  @keyframes discBgOut{to{opacity:0;}}
+  /* found evidence is GOOD news — warm amber ink (red stays reserved for penalties + the killer) */
   .disc-banner{display:inline-block;font-family:"Courier New",monospace;font-weight:700;font-size:21px;letter-spacing:4px;text-transform:uppercase;
-    color:#ef5b56;border:3px solid rgba(205,48,48,.85);border-radius:7px;padding:7px 16px;transform:rotate(-2.5deg);scale:1;
-    background:rgba(30,12,12,.25);text-shadow:0 0 2px rgba(0,0,0,.5);}
+    color:var(--amber-soft);border:3px solid rgba(231,185,77,.85);border-radius:7px;padding:7px 16px;transform:rotate(-2.5deg);scale:1;
+    background:rgba(231,185,77,.07);text-shadow:0 0 2px rgba(0,0,0,.5);}
   .disc-card.slam .disc-banner{animation:stampSlam .46s cubic-bezier(.3,1.3,.5,1);}
   .disc-text{font-size:15px;line-height:1.55;color:var(--ink);margin:16px 4px 2px;}
   .disc-text .ev-tag{vertical-align:middle;}
@@ -425,8 +436,16 @@
   /* ===== mobile case-file: button + full-screen tabbed overlay (both hidden on desktop) ===== */
   .case-file-btn{display:none;}
   .status-mount:empty{display:none;}
-  .case-overlay{position:fixed;inset:0;z-index:60;background:linear-gradient(180deg,#171a22,#0f1116);display:flex;flex-direction:column;}
+  /* Case File popup: a centered "folder" card on a dim backdrop that swings open (full-screen on phones). */
+  .case-overlay{position:fixed;inset:0;z-index:60;background:rgba(8,9,13,.74);display:flex;align-items:center;justify-content:center;padding:18px;}
   .case-overlay[hidden]{display:none;}
+  .case-overlay:not([hidden]){animation:coBg .2s ease-out;}
+  @keyframes coBg{from{opacity:0}to{opacity:1}}
+  .co-folder{display:flex;flex-direction:column;width:100%;max-width:680px;max-height:88vh;position:relative;
+    background:linear-gradient(180deg,#1d212c,#13151d);border:1px solid var(--amber);border-radius:14px;
+    overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.7);transform-origin:top center;}
+  .case-overlay:not([hidden]) .co-folder{animation:coFolderOpen .44s cubic-bezier(.2,.8,.3,1);}   /* the folder lid swings open (motion-gated by body.no-motion) */
+  @keyframes coFolderOpen{0%{transform:perspective(1400px) rotateX(-80deg);opacity:0}55%{opacity:1}100%{transform:perspective(1400px) rotateX(0);opacity:1}}
   .co-bar{display:flex;align-items:flex-end;gap:8px;padding:max(8px,env(safe-area-inset-top)) 8px 0;border-bottom:1px solid var(--line);}
   .co-tabs{display:flex;gap:2px;flex:1;}
   .co-tab{flex:1;min-width:0;background:none;border:none;border-bottom:3px solid transparent;color:var(--ink-dim);
@@ -443,6 +462,7 @@
     background:#1c1f29;border:1px solid var(--amber);border-radius:9px;padding:9px 14px;
     color:var(--ink);font-size:13.5px;max-width:9*var(--cell);box-shadow:0 4px 14px rgba(0,0,0,.5);}
   .first-tip[hidden]{display:none;}   /* let the hidden attribute actually hide it (beats display:flex) */
+  .first-tip:not([hidden]){animation:popIn .2s ease-out;}   /* the first thing a new player sees shouldn't snap in */
   .first-tip b{color:var(--amber-soft);}
   /* mobile-only host for the Current Evidence stepper, sized to sit by the board */
   .ev-mount{width:100%;max-width:calc(9 * var(--cell));}
@@ -574,6 +594,13 @@
   @keyframes hlCaret{50%{opacity:0;}}
   .news-stamp{position:absolute;right:-10px;top:-14px;width:78px;transform:rotate(9deg);pointer-events:none;
     filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));}
+  /* fail: don't celebrate — the CASE CLOSED art is swapped for a cold grey-blue text stamp */
+  .modal.failed .news-stamp{display:none;}
+  .news-cold{display:none;position:absolute;right:-6px;top:-12px;transform:rotate(9deg);pointer-events:none;
+    font-family:"Courier New",monospace;font-weight:700;font-size:14px;letter-spacing:2px;text-transform:uppercase;
+    color:#8fa3c0;border:3px solid rgba(120,140,170,.8);border-radius:6px;padding:5px 10px;background:rgba(20,26,38,.55);}
+  .modal.failed .news-cold{display:block;}
+  .news-cold.j-thunk{animation:jThunk .42s cubic-bezier(.3,1.25,.5,1);}
   .payoff-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;text-align:left;}
   .po-cell{background:#171a22;border:1px solid var(--line);border-radius:8px;padding:8px 10px;}
   .po-label{display:block;font-family:"Courier New",monospace;font-size:9.5px;letter-spacing:1px;color:var(--amber);text-transform:uppercase;margin-bottom:3px;}
@@ -593,7 +620,7 @@
     border-left:3px solid var(--amber);border-radius:0 6px 6px 0;padding:8px 11px;margin:0 0 6px;}
   .howto-foot b{color:var(--amber-soft);}
   /* RELAXED play mode: timer + guess pills are hidden (no pressure) */
-  body.relaxed #timerPill,body.relaxed #guessPill{display:none;}
+  body.relaxed #guessPill,body.clock #guessPill{display:none;}   /* Relaxed & On-the-Clock hide the guess counter — the clock is the pressure, not guesses */
   /* first-launch play-mode choice */
   .modal.mode-choose{max-width:560px;}
   .mode-sub{color:var(--ink-dim);font-size:13.5px;margin:.2em 0 14px;}
@@ -725,47 +752,74 @@
      detected laying out wide — "desktop site" mode / ignored viewport meta). --ps is a scale
      factor: 1 normally, ~layoutWidth/screenWidth in force-phone so text stays readable after the
      device visually downscales the wide layout. The board fills width via body.phone --cell. */
-  body.phone{font-size:calc(16px * var(--ps,1));
+  body.phone{font-size:calc(17px * var(--ps,1));
        padding:8px max(4px,env(safe-area-inset-left))
               calc(28px + env(safe-area-inset-bottom))
               max(4px,env(safe-area-inset-right));
-       --cell:calc((100vw - calc(30px * var(--ps,1))) / var(--ncols));}   /* board fills the layout width (no 62px cap) */
+       --cell:calc((100vw - calc(30px * var(--ps,1))) / var(--ncols));   /* board fills the layout width (no 62px cap) */
+       --wall:4px;}   /* room walls 50% thinner on mobile (desktop stays 8px) — more floor per cell */
   body.phone .casefile{display:none;}                  /* side panel hidden; the case file is the overlay */
 
   /* COMPACT header: flatten brand + top-controls into one flowing flex (display:contents) so the
      small logo sits inline with the pills, then everything wraps into ~2 tight rows — no logo row,
      so the board starts high on the first screen. */
-  body.phone header.app{gap:calc(6px * var(--ps,1)) calc(7px * var(--ps,1));margin-bottom:calc(8px * var(--ps,1));justify-content:flex-start;align-items:center;width:auto;}   /* phone stays full-width (override the desktop fit-content) */
+  /* ONE-LINE top bar: logo + clock + guesses + difficulty + Accuse + Menu all on a single row.
+     The Case-No. pill is dropped on phone (it lives in the case-file overlay) to make room. Items
+     don't wrap; they hold their width and the difficulty pill can ellipsis if a tiny screen demands. */
+  body.phone header.app{flex-wrap:nowrap;gap:calc(4px * var(--ps,1));margin-bottom:calc(8px * var(--ps,1));justify-content:flex-start;align-items:center;width:auto;min-width:0;overflow:hidden;}
   body.phone .brand,body.phone .top-controls{display:contents;}
-  body.phone header.app img.logo{height:calc(26px * var(--ps,1));}
-  body.phone .pill{padding:calc(6px * var(--ps,1)) calc(9px * var(--ps,1));font-size:calc(14px * var(--ps,1));gap:4px;min-height:0;}
-  body.phone .pill-badge{width:calc(18px * var(--ps,1));height:calc(18px * var(--ps,1));}
-  body.phone .top-controls .btn{padding:calc(8px * var(--ps,1)) calc(11px * var(--ps,1));font-size:calc(14px * var(--ps,1));min-height:calc(40px * var(--ps,1));}
-  body.phone .top-controls .btn img{width:calc(18px * var(--ps,1));height:calc(18px * var(--ps,1));}
+  body.phone header.app img.logo{height:calc(22px * var(--ps,1));flex:0 0 auto;}
+  body.phone .brand-text{font-size:calc(16px * var(--ps,1));letter-spacing:1px;flex:0 0 auto;}   /* compact the text fallback so it never blows the one-line bar (also tames the pre-image-load flash) */
+  body.phone .brand-text small{font-size:calc(8px * var(--ps,1));letter-spacing:2px;margin-top:1px;}
+  /* (the Current Objective stays visible near the board on mobile / stacked layouts) */
+  body.phone .pill{padding:calc(5px * var(--ps,1)) calc(7px * var(--ps,1));font-size:calc(13px * var(--ps,1));gap:3px;min-height:0;white-space:nowrap;flex:0 0 auto;}
+  body.phone .pill-badge{width:calc(16px * var(--ps,1));height:calc(16px * var(--ps,1));}
+  body.phone #diffPill{font-size:calc(12.5px * var(--ps,1));min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;}
+  body.phone #diffPill .pill-size{display:none;}               /* drop the "· 9×9" suffix on the narrow line */
+  body.phone #diffPill .pill-caseword{display:none;}           /* show just the tier adjective (Grim / Troubling / Cold / Routine) */
+  body.phone #diffPill .pill-badge{display:none;}              /* drop the emblem — the tier word carries it */
+  body.phone #guessPill .g-lbl{display:none;}                  /* compact "Guesses: 3" -> "3 left" */
+  body.phone #guessPill b::after{content:" left";font-weight:400;}
+  body.phone .top-controls .btn{padding:calc(7px * var(--ps,1)) calc(9px * var(--ps,1));font-size:calc(14px * var(--ps,1));min-height:calc(38px * var(--ps,1));flex:0 0 auto;}
+  body.phone .top-controls .btn img{width:calc(17px * var(--ps,1));height:calc(17px * var(--ps,1));}
   body.phone .top-controls .btn-tx{display:none;}
-  body.phone #accuseBtn{padding:calc(8px * var(--ps,1)) calc(13px * var(--ps,1));font-size:calc(15px * var(--ps,1));}
+  body.phone .clockpill{font-size:calc(12.5px * var(--ps,1));letter-spacing:0;}
+  body.phone #accuseBtn{padding:calc(7px * var(--ps,1)) calc(9px * var(--ps,1));font-size:calc(14px * var(--ps,1));}
   body.phone #accuseBtn .btn-tx{display:inline;}
 
   /* tray + toolbar + near-board evidence */
   body.phone .board-wrap{gap:calc(9px * var(--ps,1));}   /* tighter vertical rhythm so the board starts higher */
-  body.phone .tray-label{font-size:calc(15px * var(--ps,1));}
-  body.phone .tray-hint{font-size:calc(13px * var(--ps,1));}
-  body.phone .tray{gap:calc(10px * var(--ps,1));}
-  body.phone .susp{width:calc(60px * var(--ps,1));}
-  body.phone .susp .disc{width:calc(52px * var(--ps,1));height:calc(52px * var(--ps,1));}
-  body.phone .susp-name{font-size:calc(14px * var(--ps,1));max-width:calc(62px * var(--ps,1));}
-  body.phone .susp .count{min-width:calc(22px * var(--ps,1));height:calc(22px * var(--ps,1));font-size:calc(13px * var(--ps,1));}
+  body.phone .tray-label{font-size:calc(16px * var(--ps,1));}
+  body.phone .tray-hint{font-size:calc(14px * var(--ps,1));}
+  /* tray sized so all 9 suspects fall into exactly 2 rows (5 + 4): 5 must fit one row at ~360px */
+  body.phone .tray{gap:calc(6px * var(--ps,1));}
+  body.phone .susp{width:calc(62px * var(--ps,1));}
+  body.phone .susp .disc{width:calc(56px * var(--ps,1));height:calc(56px * var(--ps,1));}
+  body.phone .susp-name{font-size:calc(14px * var(--ps,1));max-width:calc(64px * var(--ps,1));}
+  body.phone .susp .count{min-width:calc(23px * var(--ps,1));height:calc(23px * var(--ps,1));font-size:calc(13.5px * var(--ps,1));}
   body.phone .toolbar{gap:calc(10px * var(--ps,1));}
-  body.phone .toolbar .btn{padding:calc(13px * var(--ps,1)) calc(15px * var(--ps,1));font-size:calc(15px * var(--ps,1));min-height:calc(48px * var(--ps,1));}
-  body.phone .btn{font-size:calc(15px * var(--ps,1));}
+  body.phone .toolbar .btn{padding:calc(13px * var(--ps,1)) calc(15px * var(--ps,1));font-size:calc(16px * var(--ps,1));min-height:calc(50px * var(--ps,1));}
+  body.phone .btn{font-size:calc(16px * var(--ps,1));}
   /* slim Current Evidence card: small label band, tight padding, ~2 lines of clue text, inline arrows */
   body.phone .ev-block{margin:2px 0 0;}
   body.phone .ev-block>summary{font-size:calc(11px * var(--ps,1));padding:1px 0;letter-spacing:1px;}
   body.phone .ev-card{padding:calc(8px * var(--ps,1)) calc(10px * var(--ps,1));min-height:0;margin:3px 0 0;gap:calc(8px * var(--ps,1));border-radius:9px;}
   body.phone .ev-clue{font-size:calc(15px * var(--ps,1));line-height:1.4;}
-  body.phone .ev-nav{width:calc(34px * var(--ps,1));height:calc(34px * var(--ps,1));font-size:calc(19px * var(--ps,1));flex:none;}
+  body.phone .ev-nav{width:calc(40px * var(--ps,1));height:calc(40px * var(--ps,1));font-size:calc(20px * var(--ps,1));flex:none;}
   body.phone .keymark{font-size:calc(14px * var(--ps,1));}
-  body.phone .status{font-size:calc(15px * var(--ps,1));margin-top:8px;text-align:center;}
+  /* CONSOLIDATED objective: the "◎ Current Objective" label + "1/6" count become a tight header
+     strip INSIDE the single amber frame, with the clue + ‹ › slider directly below — no box-in-a-box,
+     so it takes far less vertical space. (Objective text itself stays its size — not enlarged.) */
+  body.phone .ev-block.objective-hero{margin:2px 0 0;padding:calc(7px * var(--ps,1)) calc(10px * var(--ps,1)) calc(9px * var(--ps,1));border-radius:11px;box-shadow:none;}
+  body.phone .ev-block.objective-hero>summary{font-size:calc(10.5px * var(--ps,1));padding:0 0 calc(5px * var(--ps,1));margin:0;letter-spacing:1.5px;border-bottom:1px solid rgba(231,185,77,.22);}
+  body.phone .ev-block.objective-hero .ev-card{background:transparent;border:none;box-shadow:none;min-height:0;padding:calc(7px * var(--ps,1)) 0 0;margin:0;}
+  /* mode segment + Settings: bigger tap targets and kept on ONE row (the "Mode" caption is dropped —
+     the two labelled buttons are self-explanatory — so the segment + Settings fit side by side). */
+  body.phone .control-row{gap:calc(8px * var(--ps,1));margin-top:calc(9px * var(--ps,1));}
+  body.phone .mode-seg .seg-label{display:none;}
+  body.phone .seg-btn{padding:calc(9px * var(--ps,1)) calc(14px * var(--ps,1));font-size:calc(14px * var(--ps,1));}
+  body.phone #settingsBtn{min-height:calc(44px * var(--ps,1));font-size:calc(14px * var(--ps,1));}
+  body.phone .status{font-size:calc(16px * var(--ps,1));margin-top:8px;text-align:center;}
 
   /* prominent Case File launcher under the toolbar */
   body.phone .case-file-btn{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
@@ -775,23 +829,23 @@
   body.phone .case-file-btn .cf-sub{font-weight:400;font-size:calc(12.5px * var(--ps,1));color:rgba(255,255,255,.72);letter-spacing:1px;}
 
   /* overlay tab labels (section headers) */
-  body.phone .co-tab{font-size:calc(16px * var(--ps,1));min-height:calc(48px * var(--ps,1));}
+  body.phone .co-tab{font-size:calc(17px * var(--ps,1));min-height:calc(50px * var(--ps,1));}
   body.phone .co-close{width:calc(46px * var(--ps,1));height:calc(46px * var(--ps,1));font-size:calc(22px * var(--ps,1));}
 
   /* overlay content — readable type scale, decluttered (sections show open, no nested boxes) */
   body.phone .co-panel .case-title{font-size:calc(24px * var(--ps,1));line-height:1.2;}
-  body.phone .co-panel .case-story{font-size:calc(16px * var(--ps,1));line-height:1.65;}
-  body.phone .co-panel .case-sub{font-size:calc(15px * var(--ps,1));line-height:1.55;}
+  body.phone .co-panel .case-story{font-size:calc(17px * var(--ps,1));line-height:1.65;}
+  body.phone .co-panel .case-sub{font-size:calc(16px * var(--ps,1));line-height:1.55;}
   body.phone .co-panel .clues{display:flex;flex-direction:column;gap:4px;}
-  body.phone .co-panel .clues li{font-size:calc(16px * var(--ps,1));line-height:1.55;padding:10px 4px;}
+  body.phone .co-panel .clues li{font-size:calc(17px * var(--ps,1));line-height:1.55;padding:11px 4px;}
   body.phone .co-panel .ev-tag{font-size:calc(12px * var(--ps,1));padding:2px 7px;}
-  body.phone .co-panel .star-legend,body.phone .co-panel .ev-note,body.phone .co-panel .hint-note,body.phone .co-panel .scene-obj-info{font-size:calc(15px * var(--ps,1));line-height:1.55;}
-  body.phone .co-panel .ros{font-size:calc(16px * var(--ps,1));}
-  body.phone .co-panel .wcand{font-size:calc(16px * var(--ps,1));padding:12px 14px;min-height:calc(52px * var(--ps,1));}
-  body.phone .co-panel .wcand .wicon{width:calc(30px * var(--ps,1));height:calc(30px * var(--ps,1));}
-  body.phone .co-panel .pw-label{font-size:calc(14px * var(--ps,1));}
-  body.phone .co-panel .pw-hint{font-size:calc(13px * var(--ps,1));}
-  body.phone .co-panel .briefing>summary{font-size:calc(14px * var(--ps,1));}
+  body.phone .co-panel .star-legend,body.phone .co-panel .ev-note,body.phone .co-panel .hint-note,body.phone .co-panel .scene-obj-info{font-size:calc(16px * var(--ps,1));line-height:1.55;}
+  body.phone .co-panel .ros{font-size:calc(17px * var(--ps,1));}
+  body.phone .co-panel .wcand{font-size:calc(17px * var(--ps,1));padding:13px 14px;min-height:calc(54px * var(--ps,1));}
+  body.phone .co-panel .wcand .wicon{width:calc(32px * var(--ps,1));height:calc(32px * var(--ps,1));}
+  body.phone .co-panel .pw-label{font-size:calc(15px * var(--ps,1));}
+  body.phone .co-panel .pw-hint{font-size:calc(14px * var(--ps,1));}
+  body.phone .co-panel .briefing>summary{font-size:calc(15px * var(--ps,1));}
   body.phone .co-panel .victim-portrait{width:calc(78px * var(--ps,1));height:calc(78px * var(--ps,1));}
   body.phone .co-panel .case-head{gap:14px;margin-bottom:10px;}
   body.phone .co-panel .possible-weapons-sec{border-top:none;padding-top:0;}
@@ -823,14 +877,39 @@
      by body.no-motion (Motion toggle OFF) and by prefers-reduced-motion (always honored). */
   @keyframes jPop{0%{transform:scale(.6)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
   .token.j-pop{animation:jPop .19s cubic-bezier(.34,1.56,.64,1);}
+  /* PLAYER placement gets a weighted set-down (squash & settle, bottom-anchored so it reads as
+     contact with the floor); paint()'s generic j-pop still covers undo/redo repaints. */
+  @keyframes jSetDown{0%{transform:translateY(-7%) scale(1.14);opacity:.85}55%{transform:translateY(1%) scale(.97,.9)}80%{transform:scale(1.02,1)}100%{transform:scale(1)}}
+  .token.j-set{animation:jSetDown .24s cubic-bezier(.3,1.2,.4,1);transform-origin:50% 85%;}
+  /* notes: the newly-added pencil mark ticks in */
+  @keyframes candIn{0%{transform:scale(.35);opacity:0}100%{transform:scale(1);opacity:1}}
+  .cand.j-in{animation:candIn .16s cubic-bezier(.34,1.4,.64,1);}
   @keyframes jRing{0%{transform:scale(.72);opacity:.75}100%{transform:scale(1.2);opacity:0}}
   .j-ring{position:absolute;inset:-2px;border:2px solid var(--amber-soft);border-radius:8px;
     pointer-events:none;z-index:6;opacity:0;animation:jRing .4s ease-out;}
+  /* clean placement: a circular candle-glow ripple expanding from the token */
+  .j-ring.place{inset:7%;border-radius:50%;box-shadow:0 0 10px rgba(231,185,77,.35);animation:jRingPlace .42s ease-out;}
+  @keyframes jRingPlace{0%{transform:scale(.7);opacity:.55}100%{transform:scale(1.4);opacity:0}}
+  /* completion sweep: warm candlelight crosses a just-completed row/column/room (injected per-cell
+     overlays, staggered ~180ms across the unit; NOT ::before — that's multiplexed by highlights) */
+  .unit-glow{position:absolute;inset:0;pointer-events:none;z-index:6;border-radius:inherit;opacity:0;
+    background:radial-gradient(circle,rgba(231,185,77,.34),rgba(231,185,77,.10) 70%,transparent);
+    animation:unitGlow .42s ease-out both;}
+  .unit-glow.ug-row{background:linear-gradient(90deg,transparent,rgba(231,185,77,.32),transparent);}
+  .unit-glow.ug-col{background:linear-gradient(180deg,transparent,rgba(231,185,77,.32),transparent);}
+  @keyframes unitGlow{0%{opacity:0;transform:scale(.92)}35%{opacity:.85}100%{opacity:0;transform:scale(1)}}
+  /* finishing a room relights its brass nameplate */
+  .room-tag.plaque-glint{animation:plaqueGlint .5s ease-out;}
+  @keyframes plaqueGlint{0%{filter:brightness(1)}40%{filter:brightness(1.7);text-shadow:0 0 10px rgba(231,185,77,.8)}100%{filter:brightness(1)}}
   @keyframes jShake{0%,100%{transform:translate3d(0,0,0)}15%{transform:translate3d(-4px,0,0)}30%{transform:translate3d(4px,0,0)}45%{transform:translate3d(-3px,0,0)}60%{transform:translate3d(3px,0,0)}80%{transform:translate3d(-1px,0,0)}}
   .j-shake{animation:jShake .32s ease !important;}
   @keyframes jFlash{0%{opacity:0}22%{opacity:.5}100%{opacity:0}}
   .j-flash{position:absolute;inset:0;pointer-events:none;background:var(--blood);opacity:0;z-index:8;border-radius:inherit;animation:jFlash .4s ease;}
-  .j-flash.screen{position:fixed;z-index:80;}
+  /* wrong accusation: the room's lamps gutter red at the edges (not an arcade damage-flash) */
+  .j-flash.screen{position:fixed;z-index:80;background:radial-gradient(ellipse at center,transparent 35%,var(--blood) 130%);}
+  /* undo/redo: a soft amber flash on exactly the cells the rewind touched */
+  .j-flash.amber{background:var(--amber-soft);animation:jFlashSoft .35s ease;}
+  @keyframes jFlashSoft{0%{opacity:0}25%{opacity:.26}100%{opacity:0}}
   @keyframes jBulb{0%{opacity:0}9%{opacity:.85}100%{opacity:0}}
   .j-bulb{position:fixed;inset:0;background:#fff;pointer-events:none;z-index:85;opacity:0;animation:jBulb .5s ease-out;}
   @keyframes jFloat{0%{opacity:0;transform:translate(-50%,4px) scale(.9)}18%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-48px) scale(1)}}
@@ -843,6 +922,9 @@
   @keyframes jPuff{0%{transform:scale(.3);opacity:.55}100%{transform:scale(1.9);opacity:0}}
   .j-puff{width:60px;height:60px;border-radius:50%;pointer-events:none;z-index:86;opacity:0;
     background:radial-gradient(circle,rgba(222,212,182,.75),transparent 68%);animation:jPuff .5s ease-out;}
+  /* erase: the lifted token's ghost drifts up and dissolves, paper-like */
+  .token.j-ghost{position:absolute;inset:9%;width:auto;height:auto;pointer-events:none;z-index:4;animation:jGhost .28s ease-out both;}
+  @keyframes jGhost{0%{opacity:.5;transform:scale(1)}100%{opacity:0;transform:scale(.8) translateY(-6%)}}
   @keyframes jSpin{0%{transform:rotate(-540deg) scale(.16);opacity:0}72%{opacity:1}100%{transform:rotate(0) scale(1);opacity:1}}
   .newspaper.j-spin{animation:jSpin .55s cubic-bezier(.2,.7,.3,1);}
   @keyframes jConfetti{0%{transform:translate3d(0,0,0) rotate(0);opacity:1}100%{transform:translate3d(var(--cx),var(--cy),0) rotate(var(--cr));opacity:0}}
@@ -852,9 +934,19 @@
   @keyframes jBgIn{0%{opacity:0}100%{opacity:1}}
   .modal-bg.show{animation:jBgIn .18s ease-out;}
   .btn:active{transform:translateY(1px) scale(.97);}   /* subtle press feedback */
-  /* Feature A: the Accuse button glows once the board (minus the scene) is complete, or as a nudge */
-  #accuseBtn.nudge{box-shadow:0 0 0 2px var(--amber),0 0 14px rgba(231,185,77,.55)!important;animation:accuseNudge 1.5s ease-in-out infinite;}
-  @keyframes accuseNudge{0%,100%{box-shadow:0 0 0 2px var(--amber),0 0 10px rgba(231,185,77,.4)!important;}50%{box-shadow:0 0 0 2px var(--amber),0 0 20px rgba(231,185,77,.85)!important;}}
+  /* press states for the non-.btn controls — same push-down family as .btn:active */
+  .seg-btn:active,.ev-nav:active,.co-tab:active,.co-close:active{transform:translateY(1px) scale(.97);}
+  .case-file-btn:active{transform:translateY(1px) scale(.985);}
+  .accuse-suspect:active,.accuse-weapon:active,.mode-card:active{transform:translateY(1px);}
+  .susp:active{transform:translateY(-1px);}
+  .susp.sel:active{transform:translateY(-6px) scale(1.04);}   /* pressed-while-selected: ease down, don't drop 9px */
+  /* Feature A: the Accuse button glows once the board (minus the scene) is complete, or as a nudge.
+     The static ring sits on the button; the breathing glow is a pseudo-element OPACITY pulse
+     (compositor-only) instead of a per-frame box-shadow repaint. */
+  #accuseBtn.nudge{position:relative;box-shadow:0 0 0 2px var(--amber);}
+  #accuseBtn.nudge::after{content:"";position:absolute;inset:-3px;border-radius:10px;pointer-events:none;
+    box-shadow:0 0 18px rgba(231,185,77,.8);opacity:.35;animation:nudgeGlow 1.5s ease-in-out infinite;}
+  @keyframes nudgeGlow{50%{opacity:1}}
   .btn.j-pulse{animation:jPulse .5s cubic-bezier(.34,1.56,.64,1);}
   @keyframes jPulse{0%{transform:scale(1)}45%{transform:scale(1.12)}100%{transform:scale(1)}}
   /* the killer slams into the dashed scene on a correct accusation; the body recedes */
@@ -897,11 +989,16 @@
     text-transform:uppercase;color:#5b4a22;}
   .iflap-stamp{transform:rotate(-8deg);border:2px solid rgba(150,32,32,.55);color:rgba(150,32,32,.62);
     font-family:"Courier New",monospace;font-weight:700;font-size:16px;letter-spacing:3px;padding:5px 14px;border-radius:4px;text-transform:uppercase;}
-  /* folder slides up/in */
-  /* the case folder drops DOWN into place (starts above, settles to rest). Higher specificity than
-     `.modal-bg.show .modal`'s jModalIn so the downward slide wins instead of the generic upward pop. */
-  .modal-bg.show .intro-card.seq{animation:introSlide .5s cubic-bezier(.2,.7,.3,1) both;}
-  @keyframes introSlide{from{transform:translateY(-54px) scale(.96);opacity:0;}to{transform:translateY(0) scale(1);opacity:1;}}
+  /* the case folder slides DOWN into place — starts well above its resting spot and drops in with a
+     soft settle, like a file dropped into a tray. Higher specificity than `.modal-bg.show .modal`'s
+     jModalIn so this downward slide wins over the generic upward pop. */
+  .modal-bg.show .intro-card.seq{animation:introSlide .6s cubic-bezier(.22,.78,.31,1) both;}
+  @keyframes introSlide{
+    0%{transform:translateY(-96px);opacity:0;}
+    55%{opacity:1;}
+    82%{transform:translateY(6px);opacity:1;}   /* gentle overshoot past rest... */
+    100%{transform:translateY(0);opacity:1;}     /* ...then settles in */
+  }
   /* flap shown closed during the sequence, then swings open */
   .intro-card.seq .intro-flap{display:flex;transform:rotateX(0deg);transition:transform .55s ease,opacity .35s ease .2s;}
   .intro-card.seq.s-open .intro-flap{transform:rotateX(-112deg);opacity:0;}
@@ -932,10 +1029,14 @@
   #amb.amb-focus{opacity:.82;}   /* Focus/Low: a touch lighter than High, but the effects still show */
   #amb .amb-layer{position:absolute;inset:0;display:none;}
   #amb.amb-paused .amb-layer,#amb.amb-paused .mote,#amb.amb-paused .streak{animation-play-state:paused !important;}
+  /* the opaque manor hub (z-60) fully covers #amb — pause the layers while it's up (battery) */
+  body.manor-open #amb .amb-layer,body.manor-open #amb .mote,body.manor-open #amb .streak{animation-play-state:paused !important;}
   /* vignette breathing — constant base layer; transparent centre so the board stays clear */
   #amb.fx-vignette .amb-vignette{display:block;
     background:radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,.5) 100%);
     animation:ambVignette 13s ease-in-out infinite alternate;}
+  /* candle-lit cases get candlelit shadows — deep warm brown instead of pure void */
+  #amb.fx-candle .amb-vignette{background:radial-gradient(ellipse at center, transparent 52%, rgba(24,12,2,.5) 100%);}
   @keyframes ambVignette{from{opacity:.55;}to{opacity:1;}}
   /* faint falling rain — MANY short, thin, diagonal streaks, scattered & desynced (built in JS),
      NOT full-width lines. Each streak ~12-22px long, ~1.2px wide; transform/opacity only. */
@@ -946,11 +1047,23 @@
   @keyframes ambRainFall{0%{opacity:0;transform:translateY(0) rotate(12deg);}
     12%{opacity:.45;}88%{opacity:.45;}100%{opacity:0;transform:translateY(116vh) rotate(12deg);}}
   body.phone #amb .amb-rain .streak:nth-child(n+14){display:none;}   /* phone: fewer streaks */
-  /* slow candle flicker — warm glow that breathes near a lamp corner */
+  /* rare distant lightning through a window — rides the rain selection (storm stories). Peak
+     opacity capped at .14 and the whole double-flash lives inside ~600ms of a 47s loop (odd
+     period so it never syncs with the 13s vignette breath) — atmosphere, never a strobe. */
+  #amb.fx-rain .amb-lightning{display:block;opacity:0;
+    background:radial-gradient(60% 45% at 78% 0%, rgba(200,214,240,.9), transparent 60%);
+    animation:ambLightning 47s linear infinite;}
+  @keyframes ambLightning{0%,96.5%{opacity:0;}97%{opacity:.11;}97.6%{opacity:.02;}98.4%{opacity:.14;}99.4%,100%{opacity:0;}}
+  body.phone #amb .amb-lightning{display:none;}   /* battery */
+  /* slow candle flicker — warm glow that breathes near a lamp corner, with a sub-1% positional
+     sway so the light source itself gutters (not just a dimmer switch) */
   #amb.fx-candle .amb-candle{display:block;
     background:radial-gradient(circle at 88% 22%, rgba(231,185,77,.26), transparent 48%);
     animation:ambCandle 6.5s ease-in-out infinite;}
-  @keyframes ambCandle{0%{opacity:.55;}18%{opacity:.85;}33%{opacity:.62;}52%{opacity:.95;}68%{opacity:.7;}84%{opacity:.9;}100%{opacity:.58;}}
+  @keyframes ambCandle{0%{opacity:.55;transform:translate(0,0) scale(1);}18%{opacity:.85;transform:translate(.3%,-.2%) scale(1.015);}
+    33%{opacity:.62;transform:translate(-.1%,.1%) scale(1.005);}52%{opacity:.95;transform:translate(-.25%,.15%) scale(1.03);}
+    68%{opacity:.7;transform:translate(.15%,.05%) scale(1.01);}84%{opacity:.9;transform:translate(.2%,0) scale(1.02);}
+    100%{opacity:.58;transform:translate(0,0) scale(1);}}
   /* one thin smoke wisp curling slowly upward */
   #amb.fx-smoke .amb-smoke{display:block;inset:auto;left:12%;bottom:-60px;width:160px;height:340px;
     background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(208,208,218,.15), transparent 70%);
@@ -1031,6 +1144,13 @@
      picture centers within it — same screen-center as the chrome rows, so their edges line up. */
   .manor-head,.manor-overall,.manor-nav,.manor-status,.manor-hub{
     width:100%;max-width:var(--manor-w);margin-left:auto;margin-right:auto;box-sizing:border-box;}
+  /* the Casedoku logo lives on the start/home screen now (removed from the in-game header) */
+  .manor-brand{width:100%;max-width:var(--manor-w);margin:0 auto;display:flex;justify-content:center;align-items:center;padding:12px 0 2px;flex:none;}
+  .manor-brand img.logo{height:66px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));}
+  .manor-brand .brand-text{align-items:center;text-align:center;}
+  body.phone .manor-brand{padding:6px 0 0;}
+  body.phone .manor-brand img.logo{height:46px;}
+  body.phone .manor-brand .brand-text{font-size:calc(24px * var(--ps,1));}
   .manor-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0 5px;flex:none;}
   .manor-room-name{font-family:Georgia,serif;font-size:22px;font-weight:bold;color:var(--amber-soft);letter-spacing:.5px;line-height:1.1;}
   .manor-sub{font-family:"Courier New",monospace;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-dim);}
@@ -1261,6 +1381,90 @@
   .dev-seed input{flex:1 1 auto;min-width:0;background:#0a141a;border:1px solid #2a4a55;color:#cfe;border-radius:4px;padding:3px 6px;font-family:inherit;font-size:11px;}
   .dev-log{flex:none;max-height:90px;overflow-y:auto;border-top:1px solid #144;padding:5px 7px;color:#89a;font-size:10px;line-height:1.5;background:#060f17;}
   .dev-log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+  /* ===== UI refresh: slim top bar, popovers, mode segment, objective hero ===== */
+  /* cozy clock chip in the top bar (the running case time — themed, amber-on-dark) */
+  .pill.clockpill{background:radial-gradient(120% 160% at 0% 0%, #2a2417, #14171f 70%);
+    border-color:rgba(231,185,77,.45);color:var(--amber-soft);font-variant-numeric:tabular-nums;
+    letter-spacing:.5px;box-shadow:inset 0 1px 0 rgba(231,185,77,.12);}
+  .pill.clockpill b{color:#fff;}
+  /* the case chip reads as the current dossier marker */
+  .pill.case-chip{background:rgba(231,185,77,.08);border-color:rgba(231,185,77,.3);color:var(--ink);}
+
+  /* popover (☰ Menu and ⚙ Settings both use this) */
+  .pop-wrap{position:relative;display:inline-flex;}
+  .popover{position:absolute;top:calc(100% + 7px);right:0;z-index:60;min-width:188px;
+    display:flex;flex-direction:column;gap:5px;padding:8px;
+    background:linear-gradient(180deg,#20242f,#171a22);border:1px solid var(--line);
+    border-radius:11px;box-shadow:0 16px 38px rgba(0,0,0,.6);}
+  .popover[hidden]{display:none;}
+  .popover:not([hidden]){animation:popIn .16s ease-out;}   /* candlelit drop-in on every open (hidden toggle restarts it) */
+  @keyframes popIn{from{opacity:0;transform:translateY(-7px)}to{opacity:1;transform:none}}
+  .popover .btn{justify-content:flex-start;width:100%;border-color:transparent;background:transparent;
+    padding:9px 11px;font-size:13.5px;}
+  .popover .btn:hover{background:rgba(231,185,77,.10);border-color:var(--line);}
+  .popover .pop-head{font-family:"Courier New",monospace;font-size:10px;letter-spacing:1.5px;
+    text-transform:uppercase;color:var(--ink-dim);padding:2px 4px 4px;}
+  .popover .pop-sep{height:1px;background:var(--line);margin:3px 2px;}
+  .btn .chev{font-size:10px;opacity:.7;margin-left:2px;}
+
+  /* the row beneath the primary toolbar: mode segment (left) + Settings (right) */
+  .control-row{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    flex-wrap:wrap;margin-top:10px;}
+  .mode-seg{display:inline-flex;align-items:center;gap:9px;}
+  .mode-seg .seg-label{font-family:"Courier New",monospace;font-size:10px;letter-spacing:1.5px;
+    text-transform:uppercase;color:var(--ink-dim);}
+  .seg{display:inline-flex;background:#13161e;border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px;}
+  .seg-btn{background:transparent;border:none;color:var(--ink-dim);cursor:pointer;
+    font-family:inherit;font-size:13px;padding:6px 15px;border-radius:999px;transition:.12s;}
+  .seg-btn:hover{color:var(--amber-soft);}
+  .seg-btn.on{background:linear-gradient(180deg,#7a5e1f,#5a4314);color:#fff;
+    box-shadow:0 1px 4px rgba(0,0,0,.4);animation:segPop .18s ease-out;}   /* masks the un-interpolatable gradient snap */
+  @keyframes segPop{from{transform:scale(.94)}to{transform:scale(1)}}
+
+  /* OBJECTIVE HERO — promote the current-evidence stepper into the panel's lead card */
+  .ev-block.objective-hero{margin:4px 0 14px;border:2px solid var(--amber);
+    border-radius:12px;padding:11px 12px 13px;
+    background:linear-gradient(165deg,rgba(231,185,77,.12),rgba(231,185,77,.03));
+    box-shadow:0 6px 18px rgba(0,0,0,.4),inset 0 1px 0 rgba(231,185,77,.15);}
+  .ev-block.objective-hero>summary{color:var(--amber);font-size:11px;}
+  .ev-block.objective-hero .ev-card{background:#11141b;border-color:rgba(231,185,77,.35);
+    min-height:92px;padding:18px 14px;}
+  .ev-block.objective-hero .ev-clue{font-size:17.5px;line-height:1.5;}
+  @media (max-width:1040px){ .ev-block.objective-hero{margin-bottom:10px;} }
+
+  /* ===== Case File popup button + Settings popup ===== */
+  /* red Case-File button in the top bar — high-visibility, distinct from the amber Case-No. chip */
+  .casefile-open{background:rgba(193,39,45,.16);border-color:rgba(193,39,45,.6);color:#f3b6b6;font-variant:small-caps;letter-spacing:.5px;}
+  .casefile-open:hover{border-color:var(--blood);color:#fff;background:rgba(193,39,45,.26);}
+  /* Settings popup (modal): full-width toggle rows grouped under small headings */
+  .settings-list{display:flex;flex-direction:column;gap:7px;margin-top:8px;}
+  .settings-head{font-family:"Courier New",monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-dim);margin:8px 2px 1px;}
+  .settings-head:first-child{margin-top:0;}
+  .settings-row{justify-content:flex-start;width:100%;}
+  /* Case File popup on phones: full-screen + gentle slide (skip the full-screen lid flip); hide the old big launcher */
+  body.phone .case-overlay{padding:0;background:#0f1116;}
+  body.phone .co-folder{max-width:none;max-height:100dvh;height:100dvh;border-radius:0;border:none;box-shadow:none;}
+  body.phone .case-overlay:not([hidden]) .co-folder{animation:coSlideUp .26s ease-out;}
+  @keyframes coSlideUp{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+  body.phone .case-file-btn{display:none;}
+  body.appfit .co-folder{max-height:94vh;}
+
+  /* ===== On the Clock: mode picker + countdown urgency ===== */
+  .settings-note{font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-dim);font-style:italic;}
+  .mode-pick{display:flex;flex-direction:column;gap:6px;}
+  .mode-opt{justify-content:flex-start;gap:8px;}
+  .mode-opt small{color:var(--ink-dim);font-weight:400;font-size:11.5px;margin-left:auto;}
+  .mode-opt.on{border-color:var(--amber);background:linear-gradient(180deg,#7a5e1f,#5a4314);color:#fff;}
+  .mode-opt.on small{color:rgba(255,255,255,.8);}
+  /* clock chip urgency. Color/border/glow are informational (stay even with Motion off); the
+     scale pulse is an animation (auto-killed by body.no-motion); the SFX is Sound-gated. */
+  .clockpill.clk-warn{color:#f3c969;border-color:rgba(231,185,77,.8);animation:clkPulse 1s ease-in-out infinite;}
+  .clockpill.clk-crit{color:#ff6f62;border-color:rgba(193,39,45,.9);box-shadow:0 0 14px rgba(255,80,70,.5);animation:clkPulse .55s ease-in-out infinite;}
+  @keyframes clkPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+  /* red screen-edge vignette in the final seconds (added only when motionOK; also killed by no-motion) */
+  body.clock-critical::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:69;animation:clkVignette .9s ease-in-out infinite;}
+  @keyframes clkVignette{0%,100%{box-shadow:inset 0 0 60px 2px rgba(193,39,45,.16)}50%{box-shadow:inset 0 0 110px 18px rgba(193,39,45,.42)}}
 </style>
 </head>
 <body>
@@ -1268,25 +1472,29 @@
   <div id="amb" aria-hidden="true">
     <div class="amb-layer amb-vignette"></div>
     <div class="amb-layer amb-rain" id="ambRain"></div>
+    <div class="amb-layer amb-lightning"></div>
     <div class="amb-layer amb-candle"></div>
     <div class="amb-layer amb-smoke"></div>
     <div class="amb-layer amb-grain"></div>
     <div class="amb-layer amb-dust" id="ambDust"></div>
   </div>
   <header class="app">
-    <div class="brand">
-      <img class="logo" id="brandLogo" alt="Casedoku" hidden />
-      <span class="brand-text" id="brandText" hidden>CASEDOKU<small>MANOR</small></span>
-    </div>
     <div class="top-controls">
-      <span class="pill" id="timerPill" title="Time on this case">⏱ 00:00</span>
+      <span class="pill clockpill" id="timerPill" title="Time on this case">🕰 00:00</span>
       <span class="pill" id="guessPill" title="Accusation attempts left (a wrong one costs +1:00)">Guesses: 3</span>
       <span class="pill" id="diffPill">—</span>
-      <span class="pill" id="codePill" title="Copy share code" style="cursor:pointer">Case No. —</span>
+      <button class="btn casefile-open" id="caseFileTopBtn" title="Open the full case file">📁<span class="btn-tx"> Case File</span></button>
       <button class="btn primary" id="accuseBtn" title="Name the killer — you have 3 guesses (full board not required)">⚖ <span class="btn-tx">Accuse</span></button>
-      <button class="btn" id="howtoBtn" title="How to play">?<span class="btn-tx"> How to Play</span></button>
-      <button class="btn" id="archiveBtn"><img src="assets/ui/icon-notebook.png" alt=""/><span class="btn-tx">Archive</span></button>
-      <button class="btn" id="newBtn">🏠<span class="btn-tx"> Manor</span></button>
+      <div class="pop-wrap">
+        <button class="btn" id="menuBtn" title="Menu" aria-haspopup="true" aria-expanded="false">☰<span class="btn-tx"> Menu</span></button>
+        <div class="popover" id="menuPop" hidden role="menu">
+          <button class="btn pop-item pop-nav" id="newCaseBtn" title="Start a new case (pick a difficulty)">🔍 <span>New Case</span></button>
+          <div class="pop-sep"></div>
+          <button class="btn pop-item pop-nav" id="howtoBtn" title="How to play">? <span>How to Play</span></button>
+          <button class="btn pop-item pop-nav" id="archiveBtn"><img src="assets/ui/icon-notebook.png" alt=""/><span>Evidence Archive</span></button>
+          <button class="btn pop-item pop-nav" id="newBtn">🏠 <span>Manor</span></button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -1301,6 +1509,7 @@
       <div class="board" id="board"></div>
       <div class="tray-label">Suspects <span class="tray-hint">— tap to select, then a cell · badge = number left to place</span></div>
       <div class="tray" id="tray"></div>
+      <!-- PRIMARY TOOLBAR: core gameplay actions only -->
       <div class="toolbar">
         <button class="btn" id="undoBtn"><img src="assets/ui/icon-undo.png" alt=""/>Undo</button>
         <button class="btn" id="redoBtn"><img src="assets/ui/icon-redo.png" alt=""/>Redo</button>
@@ -1309,15 +1518,11 @@
         <button class="btn" id="notesBtn" title="Pencil-mark candidates (press N)">✎ Notes</button>
         <button class="btn" id="hintBtn"><img src="assets/ui/icon-hint.png" alt=""/>Ask the Clerk</button>
         <button class="btn" id="checkBtn"><img src="assets/ui/icon-check.png" alt=""/>Check</button>
-        <button class="btn" id="atmoBtn" title="Toggle board atmosphere">Atmosphere: —</button>
-        <button class="btn" id="motionBtn" title="Toggle animations">✨ Motion: On</button>
-        <button class="btn" id="soundBtn" title="Toggle sound effects">♪ Sound: Off</button>
-        <button class="btn" id="musicBtn" title="Toggle background music">🎵 Music: On</button>
-        <button class="btn" id="playModeBtn" title="Switch between Relaxed (cozy) and Detective (timer + limited guesses)">🎚 Play mode: Relaxed</button>
-        <button class="btn" id="introBtn" title="Show the case intro card at the start of each case">📖 Intro: On</button>
-        <button class="btn" id="introSkipBtn" title="After you've read one intro, skip the rest automatically (still in the case file)">⏭ Auto-skip: Off</button>
-        <button class="btn" id="caseTextBtn" title="Case briefing length: a Short intro, or the Full story">📝 Case text: Short</button>
-        <button class="btn" id="evidenceBtn" title="Find extra evidence as you complete rows/columns/rooms, or show it all up front">🔎 Evidence: Discover</button>
+      </div>
+
+      <!-- play mode + all toggles now live in the Settings popup -->
+      <div class="control-row control-row-solo">
+        <button class="btn" id="settingsBtn" title="Settings — play mode, sound, atmosphere…" aria-haspopup="dialog">⚙ <span class="btn-tx">Settings</span></button>
       </div>
       <!-- mobile-only: opens the tabbed case-file overlay (the side panel is hidden on phones) -->
       <button class="case-file-btn" id="caseFileBtn">📁 Case File <span class="cf-sub">Evidence · Weapons · People · Case</span></button>
@@ -1346,7 +1551,7 @@
             <div class="case-sub" id="caseSub"></div>
           </div>
         </div>
-        <details class="briefing" id="briefing" open>
+        <details class="briefing" id="briefing">
           <summary>Case briefing</summary>
           <div class="case-story" id="caseStory"></div>
         </details>
@@ -1355,8 +1560,8 @@
 
       <!-- current-evidence stepper: desktop here; on mobile it relocates near the board (#evMount) -->
       <div id="evHome" hidden></div>
-      <details class="ev-block" id="evBlock" open>
-        <summary>Current Evidence <span class="ev-count" id="evStep">— / —</span></summary>
+      <details class="ev-block objective-hero" id="evBlock" open>
+        <summary>◎ Current Objective <span class="ev-count" id="evStep">— / —</span></summary>
         <div class="ev-card">
           <button class="ev-nav" id="evPrev" title="Previous clue" aria-label="Previous clue">‹</button>
           <p class="ev-clue" id="evClue">—</p>
@@ -1389,7 +1594,7 @@
 
       <div id="homePeople"></div>
       <div class="cf-group" id="grpPeople">
-        <details class="poi" id="poiDetails" open>
+        <details class="poi" id="poiDetails">
           <summary>Persons of Interest</summary>
           <div class="roster" id="roster"></div>
         </details>
@@ -1400,27 +1605,69 @@
     </aside>
   </div>
 
-  <!-- MOBILE case-file overlay: full-screen, tabbed. The cf-group blocks above are moved into
-       these panels on mobile and returned to the side panel on desktop (no duplicated DOM). -->
+  <!-- Case-file popup (opened from the top-bar Case File button on every device, and reused as the
+       phone overlay). The cf-group blocks above are MOVED into these panels while open and returned
+       to the side panel on close (no duplicated DOM). -->
   <div class="case-overlay" id="caseOverlay" hidden>
-    <div class="co-bar">
-      <div class="co-tabs" id="coTabs">
-        <button class="co-tab on" data-tab="evidence">Evidence</button>
-        <button class="co-tab" data-tab="weapons">Leads</button>
-        <button class="co-tab" data-tab="people">People</button>
-        <button class="co-tab" data-tab="case">Case</button>
+    <div class="co-folder">
+      <div class="co-bar">
+        <div class="co-tabs" id="coTabs">
+          <button class="co-tab on" data-tab="evidence">Evidence</button>
+          <button class="co-tab" data-tab="weapons">Leads</button>
+          <button class="co-tab" data-tab="people">People</button>
+          <button class="co-tab" data-tab="case">Case</button>
+        </div>
+        <button class="co-close" id="coClose" aria-label="Close case file">✕</button>
       </div>
-      <button class="co-close" id="coClose" aria-label="Close case file">✕</button>
-    </div>
-    <div class="co-scroll">
-      <div class="co-panel" id="coPanel-evidence"></div>
-      <div class="co-panel" id="coPanel-weapons" hidden></div>
-      <div class="co-panel" id="coPanel-people" hidden></div>
-      <div class="co-panel" id="coPanel-case" hidden></div>
+      <div class="co-scroll">
+        <div class="co-panel" id="coPanel-evidence"></div>
+        <div class="co-panel" id="coPanel-weapons" hidden></div>
+        <div class="co-panel" id="coPanel-people" hidden></div>
+        <div class="co-panel" id="coPanel-case" hidden></div>
+      </div>
     </div>
   </div>
 
   <footer>Casedoku · a cozy detective sudoku · solve the grid, read the clues, name the killer</footer>
+
+  <!-- Settings popup (replaces the old dropdown). Toggle rows keep the modal open so several can be flipped. -->
+  <div class="modal-bg" id="settingsModal">
+    <div class="modal">
+      <button class="x" id="settingsClose"><img src="assets/ui/icon-close.png" alt="close"/></button>
+      <h2 style="text-align:center">Settings</h2>
+      <div class="settings-list">
+        <div class="settings-head">Play mode <span class="settings-note">— switching restarts the case</span></div>
+        <div class="mode-pick" id="modePick">
+          <button class="btn settings-row mode-opt" data-mode="relaxed" title="Relaxed: cozy, no timer or guess limit">🌿 Relaxed <small>cozy · no timer</small></button>
+          <button class="btn settings-row mode-opt" data-mode="detective" title="Detective: count-up timer + 3 guesses">🕵 Detective <small>timer + 3 guesses</small></button>
+          <button class="btn settings-row mode-opt" data-mode="clock" title="On the Clock: a countdown race — catch the culprit before they escape">⏱ On the Clock <small>beat the countdown</small></button>
+        </div>
+        <div class="settings-head">Atmosphere &amp; sound</div>
+        <button class="btn settings-row" id="atmoBtn" title="Toggle board atmosphere">Atmosphere: —</button>
+        <button class="btn settings-row" id="motionBtn" title="Toggle animations">✨ Motion: On</button>
+        <button class="btn settings-row" id="soundBtn" title="Toggle sound effects">♪ Sound: Off</button>
+        <button class="btn settings-row" id="musicBtn" title="Toggle background music">🎵 Music: On</button>
+        <div class="settings-head">Case &amp; intro</div>
+        <button class="btn settings-row" id="introBtn" title="Show the case intro card at the start of each case">📖 Intro: On</button>
+        <button class="btn settings-row" id="introSkipBtn" title="After you've read one intro, skip the rest automatically (still in the case file)">⏭ Auto-skip: Off</button>
+        <button class="btn settings-row" id="caseTextBtn" title="Case briefing length: a Short intro, or the Full story">📝 Case text: Short</button>
+        <button class="btn settings-row" id="evidenceBtn" title="Find extra evidence as you complete rows/columns/rooms, or show it all up front">🔎 Evidence: Discover</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- On the Clock: soft "culprit escaped" outcome when the countdown hits zero -->
+  <div class="modal-bg" id="escapeModal">
+    <div class="modal center confirm-card">
+      <div class="confirm-ico">⏰</div>
+      <h2>The culprit escaped!</h2>
+      <p class="confirm-msg">Time ran out — they slipped away in the confusion.<span class="confirm-sub">Take another run at the same case, or head back to the manor.</span></p>
+      <div class="confirm-actions">
+        <button class="btn primary" id="escapeRetry">↻ Try this case again</button>
+        <button class="btn" id="escapeManor">🏠 Manor</button>
+      </div>
+    </div>
+  </div>
 
   <!-- New case modal -->
   <div class="modal-bg" id="newModal">
@@ -1480,6 +1727,10 @@
           <div class="mode-ico">🔎</div><div class="mode-name">Detective</div>
           <div class="mode-desc">The full investigation. You get a timer and limited guesses — a tougher test for a sharp sleuth.</div>
         </button>
+        <button class="mode-card" id="modeClock">
+          <div class="mode-ico">⏱</div><div class="mode-name">On the Clock</div>
+          <div class="mode-desc">A race against time. The clock counts down from a set budget — catch the culprit before they slip away.</div>
+        </button>
       </div>
     </div>
   </div>
@@ -1519,6 +1770,7 @@
       <button class="x" id="winClose"><img src="assets/ui/icon-close.png" alt="close"/></button>
       <div class="newspaper">
         <img class="news-stamp" src="assets/ui/stamp-caseclosed.png" alt="" />
+        <div class="news-cold">Case Gone Cold</div>
         <div class="news-masthead">The Blackwood Herald</div>
         <div class="news-headline" id="newsHeadline">—</div>
       </div>
@@ -1598,6 +1850,10 @@
 
   <!-- ===== MANOR RESTORATION — the home hub (Inspector Graves' manor) ===== -->
   <div class="manor-screen" id="manorScreen" hidden>
+    <div class="manor-brand">
+      <img class="logo" id="brandLogo" alt="Casedoku" hidden />
+      <span class="brand-text" id="brandText" hidden>CASEDOKU<small>MANOR</small></span>
+    </div>
     <div class="manor-head">
       <div class="manor-wembly" id="manorWembly">
         <img class="manor-wembly-portrait" id="manorWemblyPortrait" alt="" hidden/>
@@ -2897,6 +3153,7 @@ function startCase(opts){
   sel=-1; selSuspect=-1; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false; cluesUsed=new Set(); mistakes=0;
   _sceneMsgShown=false; _nudged=false;   // reset Feature A per-case state
   _discQueue=[]; _discPlaying=false; _discCount=0; endDiscovery();   // reset Feature B transient ceremony state (_unitCredited is loaded per-case by dressStory)
+  _unitGlowed=new Set(); _glowSeeded=false;   // completion-glow tracker: reseed silently on the new board
   accuseCulprit=-1; guessesLeft=MAX_GUESSES; hintLevel=0; hintTarget=-1; updateGuessPill();
   candidates=Array.from({length:cfg.N*cfg.N},()=>new Set());
   notesMode=false; applyNotesMode();
@@ -2912,23 +3169,76 @@ function startCase(opts){
   boardEl.style.gridTemplateColumns=`repeat(${cfg.N}, var(--cell))`;
   renderBoard(); renderTray(); renderCase();
   if(typeof fitBoard==="function") fitBoard();   // appfit: size the board to the new case's grid
+  const _tierLbl=(TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label);
+  const _tierHTML=_tierLbl.replace(/\s+Case$/i,'<span class="pill-caseword"> Case</span>');   // " Case" hidden on phone -> just the adjective fits the one-line bar
   $("diffPill").innerHTML=`<img class="pill-badge" src="assets/ui/badge-${C.tier}.png" alt=""/>`+
-    `<b>${TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label}</b> · ${cfg.N}×${cfg.N}`;
-  $("codePill").textContent=`Case No. ${story.caseNo}`;
+    `<b>${_tierHTML}</b>`;   // grid size (· N×N) intentionally omitted from the label
+  // (Case No. lives in the case file's subtitle now — see caseSub in renderCase — not the top bar.)
   $("loadBearingNote").innerHTML=
     `Sudoku logic alone leaves <b>${C.completionsWithout}</b> possible arrangements of this house — `+
     `only the evidence narrows it to one. The scene (dashed) hides the killer.`;
   setStatus(`Case No. ${story.caseNo} opened — ${board.filter(v=>!v).length} empty spots to fill.`,"");
+  document.body.classList.remove("clock-critical");
+  clockBudget = isClock() ? clockBudgetMs() : 0; _lastTickSec=-1;   // On the Clock: countdown budget for this case
+  if(typeof applyPlayMode==="function") applyPlayMode();            // re-assert mode classes/labels + music track for this case
   startTimer();
   maybeShowIntro();   // case intro card (subject to settings; skippable)
   applyAmbient();     // ambient background life keyed to this case's atmosphere
 }
 function setVar(k,v){ document.documentElement.style.setProperty(k,v); }
-/* ---- simple MM:SS case timer (freezes on solve/accusation; resets each case) ---- */
+/* ---- case timer. Relaxed/Detective COUNT UP (elapsed). "On the Clock" COUNTS DOWN from a
+   per-case budget; at zero the culprit escapes (soft fail). Freezes on solve/accusation. ---- */
 let timerStart=0, timerId=null, timerFrozen=false, frozenMs=0, penaltyMs=0;
+let clockBudget=0, _lastTickSec=-1;   // On the Clock: budget (ms) for this case + last second a tick SFX fired
+/* ===== ON THE CLOCK — tuning (all here so the race can be balanced later) ===== */
+const CLOCK_TUNING = {
+  perEmptySec: 7,                                              // budget seconds per empty cell at case start
+  baseSec: { easy:45, medium:60, hard:75, extreme:90 },       // flat buffer per difficulty tier
+  minSec: 45,                                                  // never less than this
+  wrongAccusePenaltySec: 30,                                   // a wrong accusation burns time (doesn't fail)
+  warnSec: 30,                                                 // ticking + amber urgent pulse begin
+  criticalSec: 12,                                             // red + heartbeat + edge vignette
+};
+function clockBudgetMs(){
+  if(!C) return 60000;
+  const empty = board.filter(v=>!v).length;                   // empty spots at case start (matches the "X spots to fill" line)
+  const base = CLOCK_TUNING.baseSec[C.tier] || 60;
+  return Math.max(CLOCK_TUNING.minSec, base + empty*CLOCK_TUNING.perEmptySec) * 1000;
+}
+function remainingMs(){ return Math.max(0, clockBudget - elapsedMs()); }
 function fmtTime(ms){ const s=Math.max(0,Math.floor(ms/1000)); return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`; }
 function elapsedMs(){ return (timerFrozen?frozenMs:Math.max(0,Date.now()-timerStart)) + penaltyMs; }
-function tickTimer(){ $("timerPill").textContent=`⏱ ${fmtTime(elapsedMs())}`; }
+function tickTimer(){
+  const pill=$("timerPill"); if(!pill) return;
+  if(isClock() && clockBudget>0){
+    const rem=remainingMs();
+    pill.textContent=`🕰 ${fmtTime(rem)}`;
+    if(!solved){ applyClockUrgency(rem); if(rem<=0) onClockExpired(); }
+  } else {
+    pill.textContent=`🕰 ${fmtTime(elapsedMs())}`;
+  }
+}
+/* clock-chip urgency + final-stretch ticking. Color/glow is informational (stays even with Motion off);
+   the pulse + edge vignette are CSS animations (auto-killed by body.no-motion); SFX is Sound-gated. */
+function applyClockUrgency(rem){
+  const pill=$("timerPill"); if(!pill) return;
+  const sec=Math.ceil(rem/1000);
+  const warn = sec<=CLOCK_TUNING.warnSec, crit = sec<=CLOCK_TUNING.criticalSec;
+  pill.classList.toggle("clk-warn", warn && !crit);
+  pill.classList.toggle("clk-crit", crit);
+  document.body.classList.toggle("clock-critical", crit && motionOK());   // edge vignette (motion-gated)
+  if(warn && sec>0 && sec!==_lastTickSec){ _lastTickSec=sec; sfx(crit?"heartbeat":"tick"); }   // intensifies: ticks -> heartbeat in the final ~12s
+}
+function onClockExpired(){
+  if(solved) return;
+  solved=true; freezeTimer();
+  if($("accuseModal")) $("accuseModal").classList.remove("show");
+  document.body.classList.remove("clock-critical");
+  const pill=$("timerPill"); if(pill){ pill.classList.remove("clk-warn","clk-crit"); pill.textContent="🕰 00:00"; }
+  showEscape();
+}
+function showEscape(){ sfx("buzz"); const m=$("escapeModal"); if(m) m.classList.add("show"); }
+function restartCurrentCase(){ if(C) startCase({seed:C.code}); }   // replays the EXACT same case (in the current play mode)
 function startTimer(){ if(timerId)clearInterval(timerId); timerStart=Date.now(); penaltyMs=0; frozenMs=0; timerFrozen=false; tickTimer(); timerId=setInterval(tickTimer,1000); }
 function freezeTimer(){ if(!timerFrozen){ frozenMs=Math.max(0,Date.now()-timerStart); timerFrozen=true; } if(timerId){ clearInterval(timerId); timerId=null; } }
 function addPenalty(ms){ penaltyMs+=ms; tickTimer(); }   // reflected in the timer immediately (running or frozen)
@@ -3007,8 +3317,9 @@ function renderCase(){
   $("caseVictim").title=story.victimDisplay;
   renderCaseBriefing();   // Short (tight intro) by default; Full adds the atmospheric narrative
   const so=Skin.weaponBySlug(THEME,story.sceneObject);
-  $("caseSub").innerHTML=`Cold Case No. ${story.caseNo} · <b>${TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label}</b> · ${THEME.place}`+
+  $("caseSub").innerHTML=`<span class="copycode" title="Tap to copy this case's share code" style="cursor:pointer">Cold Case No. ${story.caseNo}</span> · <b>${TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label}</b> · ${THEME.place}`+
     ` · Found beside victim: <img class="wicon" src="${tAsset('weapons','weapon-'+story.sceneObject+'.png')}" alt="">${so.n}.`;
+  { const cc=$("caseSub").querySelector(".copycode"); if(cc) cc.onclick=()=>{ try{ navigator.clipboard.writeText(C.code); setStatus(`Case code ${C.code} copied.`,"good"); }catch(e){} }; }   // copy the share code (was the old top-bar pill)
   // evidence list — each clue prefixed with a TYPE TAG chip (★ = key required; ✦ = discovered extra)
   renderClueList();
   if($("sceneObjInfo")) $("sceneObjInfo").innerHTML=`<span class="soi-label">Found beside the body</span>`+
@@ -3023,7 +3334,7 @@ function renderCase(){
   const ros=$("roster"); ros.innerHTML="";
   for(let v=1;v<=cfg.N;v++){ const s=Skin.sName(THEME,v); const d=document.createElement("div"); d.className="ros";
     d.innerHTML=`<span class="dot" style="background:${s.color}">${s.L}</span>`+
-      `<span><span class="nm">${s.name}</span> — <span class="mo">${s.motive}</span></span>`;
+      `<span><span class="nm">${s.name}</span></span>`;   // motive intentionally NOT shown here — it would let a MOTIVE clue map straight to a suspect, solving the case without the board
     ros.appendChild(d); }
 }
 /* ===== Feature B: milestone evidence discovery — ★ required clues are visible from the start;
@@ -3052,12 +3363,16 @@ function renderClueList(){
   });
 }
 function renderEvidenceUI(){ renderClueList(); renderEvCurrent(); }
+let _evClueHTML="";
 function renderEvCurrent(){
-  const vis=visibleEv(); const n=vis.length; if(!n){ $("evClue").textContent="—"; $("evStep").textContent=""; return; }
+  const vis=visibleEv(); const n=vis.length; if(!n){ $("evClue").textContent="—"; $("evStep").textContent=""; _evClueHTML=""; return; }
   clueStep=((clueStep%n)+n)%n;
   const e=vis[clueStep].e;
   const star=e.key?`<span class="keymark" title="key evidence">★</span>`:`<span class="disc-mark">✦</span>`;
-  $("evClue").innerHTML=`<span class="ev-tag tag-${e.tag.toLowerCase()}">${e.tag}</span>${star}${e.text}`;
+  const html=`<span class="ev-tag tag-${e.tag.toLowerCase()}">${e.tag}</span>${star}${e.text}`;
+  if(html!==_evClueHTML && motionOK()) restartAnim($("evClue"),"ev-swap");   // page-turn only when the clue actually changes
+  _evClueHTML=html;
+  $("evClue").innerHTML=html;
   $("evStep").textContent=`${clueStep+1} / ${n}`;
   revealMotivesIfMotiveClue(e);   // stepper landing on a MOTIVE clue flips the motive cards
 }
@@ -3083,6 +3398,28 @@ function syncUnitsSilently(){ if(!C||!story) return; const N=cfg.N;   // mark cu
   for(let b=0;b<N;b++){ const {r0,c0}=E.rcOfBox(cfg,b); const a=[]; for(let i=0;i<cfg.bh;i++)for(let j=0;j<cfg.bw;j++)a.push((r0+i)*N+(c0+j)); mark("b"+b,a); }
   saveEvidenceState();
 }
+/* completion GLOW (presentation only, fully separate from the persisted crediting above): EVERY
+   broken->complete transition of a row/column/room sweeps warm light across its cells, so finishing
+   a unit always pays off — even in "Evidence: All" mode, after extras run out, or on re-completion.
+   Keys drop out when a unit breaks (undo/erase), so re-completing re-earns the moment. The first
+   pass after a case loads seeds silently (givens / restored saves must not fire a light show). */
+let _unitGlowed=new Set(), _glowSeeded=false;
+function checkUnitGlow(){
+  if(!C) return;
+  const N=cfg.N, seed=!_glowSeeded; _glowSeeded=true;
+  let fired=0;
+  const test=(key,idxs,kind)=>{ const done=idxs.every(i=>board[i]===C.solution[i]);
+    if(done && !_unitGlowed.has(key)){ _unitGlowed.add(key);
+      if(!seed && !solved){ fxUnitSweep(idxs,kind); if(kind==="b") glintRoomTag(idxs[0]); fired++; } }
+    else if(!done) _unitGlowed.delete(key); };
+  for(let r=0;r<N;r++){ const a=[]; for(let c=0;c<N;c++)a.push(r*N+c); test("r"+r,a,"r"); }
+  for(let c=0;c<N;c++){ const a=[]; for(let r=0;r<N;r++)a.push(r*N+c); test("c"+c,a,"c"); }
+  for(let b=0;b<N;b++){ const {r0,c0}=E.rcOfBox(cfg,b); const a=[]; for(let i=0;i<cfg.bh;i++)for(let j=0;j<cfg.bw;j++)a.push((r0+i)*N+(c0+j)); test("b"+b,a,"b"); }
+  if(fired && !_discFired && !_discPlaying && !_discQueue.length) sfx("confirm");   // one warm note — unless a discovery brings its own audio (_discFired covers the Motion-off synchronous path)
+  _discFired=false;
+}
+function glintRoomTag(firstIdx){ if(!motionOK())return; const cell=boardEl.children[firstIdx]; if(!cell)return;
+  const tag=cell.querySelector(".room-tag"); if(tag) restartAnim(tag,"plaque-glint"); }
 function discoverNextExtra(){
   if(!story || story.discoveredExtras>=story.extraOrder.length) return;
   story.discoveredExtras++; saveEvidenceState();
@@ -3101,28 +3438,42 @@ function maybeDiscoverHint(){ if(LS.get("seenDiscoverHint",false)) return; LS.se
    with a stamp-style slam on the banner. On dismiss the stepper counter flashes so the eye lands
    where the clue now lives. Queued one-at-a-time, tap-to-dismiss, motion/sound gated (Motion off =
    instant: the clue is already revealed in the list, so we just flash, no card). */
-let _discTimer=null, _discSkip=null;
+let _discTimer=null, _discSkip=null, _discShowT=null, _discStampT=null, _discFired=false;
 function discTextHTML(e){ if(!e) return ""; return `<span class="ev-tag tag-${e.tag.toLowerCase()}">${e.tag}</span><span class="disc-mark">✦</span>${e.text}`; }
-function queueDiscovery(e){ _discQueue.push(discTextHTML(e)); runDiscoveryQueue(); }
+function queueDiscovery(e){ _discFired=true; _discQueue.push(discTextHTML(e)); runDiscoveryQueue(); }   // _discFired: this tick produced a discovery (consumed by checkUnitGlow's audio dedup — motion-independent, unlike _discPlaying)
 function runDiscoveryQueue(){
   if(_discPlaying || !_discQueue.length) return;
   _discPlaying=true; _discCount++;
   const html=_discQueue.shift();
-  sfx("paper");                                   // soft paper rustle (Sound-gated inside sfx)
   const ov=$("discOverlay");
-  if(!motionOK() || !ov){ flashCounter(); _discPlaying=false; runDiscoveryQueue(); return; }   // Motion off: clue already in the list — just flash, no card
-  const txt=$("discText"); if(txt) txt.innerHTML=html;
-  ov.classList.add("show"); ov.setAttribute("aria-hidden","false");
-  const card=ov.querySelector(".disc-card"); if(card) restartAnim(card,"slam");   // card slides in + the NEW EVIDENCE banner slams (scale)
-  const hold=_discCount>2 ? 1150 : 1400;          // hold long enough to read; a touch shorter after the first couple in a case
-  _discTimer=setTimeout(endDiscovery, hold);
-  _discSkip=()=>endDiscovery(); setTimeout(()=>{ if(_discSkip&&ov) ov.addEventListener("pointerdown",_discSkip,{once:true}); },80);   // tap anywhere to dismiss (defer so the triggering click doesn't insta-skip)
+  if(!motionOK() || !ov){ sfx("paper"); flashCounter(); _discPlaying=false; runDiscoveryQueue(); return; }   // Motion off: clue already in the list — just flash, no card
+  const show=()=>{ _discShowT=null;
+    sfx("paper");                                 // soft paper rustle (Sound-gated inside sfx)
+    const txt=$("discText"); if(txt) txt.innerHTML=html;
+    ov.classList.remove("hiding");
+    ov.classList.add("show"); ov.setAttribute("aria-hidden","false");
+    const card=ov.querySelector(".disc-card"); if(card) restartAnim(card,"slam");   // card slides in + the NEW EVIDENCE banner slams (scale)
+    _discStampT=setTimeout(()=>{ _discStampT=null; sfx("stamp"); },170);   // …and the slam lands with a thud (cleared on dismiss so a fast tap can't orphan it)
+    const hold=_discCount>2 ? 1150 : 1400;        // hold long enough to read; a touch shorter after the first couple in a case
+    _discTimer=setTimeout(endDiscovery, hold);
+    _discSkip=()=>endDiscovery(); setTimeout(()=>{ if(_discSkip&&ov) ov.addEventListener("pointerdown",_discSkip,{once:true}); },80);   // tap anywhere to dismiss (defer so the triggering click doesn't insta-skip)
+  };
+  _discShowT=setTimeout(show, 300);               // cause then effect: the board's completion sweep leads, the card follows
 }
 function endDiscovery(){
+  if(_discShowT){ clearTimeout(_discShowT); _discShowT=null; }
+  if(_discStampT){ clearTimeout(_discStampT); _discStampT=null; }
   if(_discTimer){ clearTimeout(_discTimer); _discTimer=null; }
   const ov=$("discOverlay");
   if(_discSkip&&ov){ ov.removeEventListener("pointerdown",_discSkip); } _discSkip=null;
-  if(ov){ ov.classList.remove("show"); ov.setAttribute("aria-hidden","true"); const card=ov.querySelector(".disc-card"); if(card) card.classList.remove("slam"); }
+  if(ov){
+    if(ov.classList.contains("show") && motionOK()){          // brief exit fade instead of a display:none cut
+      ov.classList.add("hiding");
+      setTimeout(()=>{ ov.classList.remove("show","hiding"); },180);
+    } else ov.classList.remove("show","hiding");
+    ov.setAttribute("aria-hidden","true");
+    const card=ov.querySelector(".disc-card"); if(card) card.classList.remove("slam");
+  }
   flashCounter();                                 // draw the eye to where the clue landed
   _discPlaying=false;
   if(_discQueue.length) setTimeout(runDiscoveryQueue, 180);   // small breath between queued moments
@@ -3270,8 +3621,10 @@ function applyAction(cells, mutate){
   for(const c of list) paint(c);
 }
 function toggleNote(i,v){ if(board[i]!==0 || (C&&i===C.murderCell)) return;       // notes only on empty cells; never the scene cell
+  const adding=!candidates[i].has(v);
   applyAction([i], ()=>{ if(candidates[i].has(v)) candidates[i].delete(v); else candidates[i].add(v); });
-  refresh(); }
+  refresh();
+  if(adding && motionOK()){ const slot=boardEl.children[i].querySelector(`.cand[data-v="${v}"]`); if(slot) slot.classList.add("j-in"); } }   // the new mark ticks in (fresh node from paint -> replays per tap only)
 function place(i,v){ if(given[i]||board[i]===v||(C&&i===C.murderCell))return;   // the scene cell is accusation-only
   // every cell this action changes: the target + peers holding this suspect as a pencil mark
   const cells=[i];
@@ -3281,11 +3634,13 @@ function place(i,v){ if(given[i]||board[i]===v||(C&&i===C.murderCell))return;   
   clearHints(); refresh(); renderTray(); updateBtns();
   if(C && C.solution && board[i]!==C.solution[i]) mistakes++;   // committing a wrong suspect to a cell = a "mistake" (Clean Case trophy)
   if(conflicts().has(i)){ fxShake(boardEl.children[i]); fxFlash(boardEl.children[i]); sfx("buzz"); }  // duplicate -> shake + red flash
-  else sfx("place");
+  else { sfx("place"); fxSetDown(boardEl.children[i]); fxPlaceRing(boardEl.children[i]); }   // clean placement: weighted set-down + candle-glow ripple, landing WITH the knock
   checkWin(); }
 function erase(){ if(solved||sel<0||given[sel])return;
   if(board[sel]===0 && (!candidates[sel]||!candidates[sel].size)) return;
+  const _cell=boardEl.children[sel], _tok=_cell?_cell.querySelector(".token"):null;   // capture before paint() clears the cell
   applyAction([sel], ()=>{ board[sel]=0; candidates[sel].clear(); });
+  fxEraseGhost(_cell,_tok); fxPuff(_cell); sfx("erase");   // the token lifts off and dissolves (notes-only erase still puffs)
   clearHints(); refresh(); renderTray(); updateBtns(); }
 /* Clear: reset the CURRENT puzzle to its starting givens (same case/seed). Confirmed so it
    isn't triggered by accident, and undoable (one snapshot of every cell). */
@@ -3301,14 +3656,19 @@ function doClearPuzzle(){ if(solved||!C)return;
   sel=-1; clearHints(); refresh(); renderTray(); updateBtns();
   setStatus("Board cleared back to the starting clues.","");
   sfx("place"); }
+function flashSnapDiff(e){ if(!motionOK()||!e)return;   // amber-flash exactly the cells the rewind touched
+  for(let k=0;k<e.before.length;k++){ const b=e.before[k], a=e.after[k];
+    if(b.v!==a.v || b.cand.length!==a.cand.length) fxUndoFlash(boardEl.children[b.c]); } }
 function undo(){ if(!undoStack.length)return; const e=undoStack.pop(); restoreSnap(e.before); redoStack.push(e);
+  flashSnapDiff(e); sfx("paper");
   clearHints(); refresh(); renderTray(); updateBtns(); }
 function redo(){ if(!redoStack.length)return; const e=redoStack.pop(); restoreSnap(e.after); undoStack.push(e);
+  flashSnapDiff(e); sfx("paper");
   clearHints(); refresh(); renderTray(); updateBtns(); }
 function candGrid(i){
   const g=document.createElement("div"); g.className="cand-grid";
   candidates[i].forEach(v=>{ const s=Skin.sName(THEME,v), idx=v-1;
-    const slot=document.createElement("div"); slot.className="cand";
+    const slot=document.createElement("div"); slot.className="cand"; slot.dataset.v=v;
     slot.style.gridRow=Math.floor(idx/3)+1; slot.style.gridColumn=(idx%3)+1;   // fixed, learnable sub-position
     const dot=document.createElement("i"); dot.style.background=RING[v-1]||s.color; dot.textContent=s.L;
     slot.appendChild(dot); g.appendChild(slot); });
@@ -3430,6 +3790,9 @@ function check(){ if(solved)return;
     setStatus(`Nothing in the wrong place yet. ${empty} spot${empty>1?"s":""} left — use the evidence to fill them in.`,"good");
   } else if(wrong>0){
     setStatus(`${wrong} suspect${wrong>1?"s are":" is"} in the wrong place (circled red).`,"bad");
+    sfx("buzz");
+    if(motionOK()){ let k=0;   // walk the eye across the wrong cells in reading order (capped so a disaster doesn't ripple for seconds)
+      for(let i=0;i<cfg.N*cfg.N && k<7;i++){ const t=boardEl.children[i].querySelector(".token.bad"); if(t){ setTimeout(()=>fxShake(t),k*55); k++; } } }
   }
   setTimeout(()=>{ for(let i=0;i<cfg.N*cfg.N;i++){ const t=boardEl.children[i].querySelector(".token"); if(t)t.classList.remove("bad"); } },2200);
 }
@@ -3477,12 +3840,13 @@ function refresh(){ const bad=conflicts(); const N=cfg.N;
     const t=cell.querySelector(".token"); if(t)t.classList.toggle("bad",bad.has(i)); }
   maybeNudge();   // keep the Accuse glow in sync with completion (handles erase/undo too)
   checkUnitMilestones();   // surface a hidden extra when a row/column/room is newly completed
+  checkUnitGlow();         // …and ALWAYS sweep warm light across a newly-completed unit (after milestones, so audio defers to a discovery)
 }
 
 /* ---- grid complete -> player makes the accusation -> payoff ---- */
 function gridComplete(){ for(let i=0;i<cfg.N*cfg.N;i++){ if(i===C.murderCell) continue; if(board[i]!==C.solution[i]) return false; } return true; }   // all cells EXCEPT the scene
 function checkWin(){ if(solved) return; maybeNudge(); }   // never auto-opens — the player makes the accusation
-function updateGuessPill(){ const p=$("guessPill"); if(!p)return; p.textContent=`Guesses: ${guessesLeft}`;
+function updateGuessPill(){ const p=$("guessPill"); if(!p)return; p.innerHTML=`<span class="g-lbl">Guesses:</span> <b>${guessesLeft}</b>`;   // g-lbl hidden on phone -> compact "3 left"
   p.style.color = guessesLeft<=1 ? "var(--bad)" : (guessesLeft<=2 ? "var(--amber-soft)" : ""); }
 
 function openAccusation(){
@@ -3530,11 +3894,19 @@ function submitAccusation(){
     // a wrong accusation proves them innocent -> slam a "SUSPECT CLEARED" stamp on the accused (both modes)
     const sb=document.querySelector(`#accuseSuspects .accuse-suspect[data-v="${accuseCulprit}"]`);
     if(sb && !sb.querySelector(".payoff-stamp")){ sb.insertAdjacentHTML("beforeend", mkStampHTML("Suspect Cleared","stamp-suspect",-9));
-      const st=sb.querySelector(".payoff-stamp"); if(st && motionOK()) restartAnim(st,"slam"); }
+      const st=sb.querySelector(".payoff-stamp"); if(st && motionOK()) restartAnim(st,"slam");
+      setTimeout(()=>sfx("stamp"),170); }   // the cleared-stamp's thud lands ON the slam's impact frame, a beat after the buzz
     if(isRelaxed()){                                          // RELAXED: no guess limit, no penalty, never fails — just keep deducing
       fxShake($("accuseModal").querySelector(".modal")); sfx("buzz");
       setAccuseFeedback("Not them — that suspect is cleared. No penalty here, so keep going.","");
       updateGuessPill(); return;
+    }
+    if(isClock()){                                            // ON THE CLOCK: wrong burns time (the deadline is the only fail) — no guess limit
+      fxShake($("accuseModal").querySelector(".modal")); sfx("buzz");
+      addPenalty(CLOCK_TUNING.wrongAccusePenaltySec*1000);    // reduces remaining (addPenalty -> tickTimer; can trip onClockExpired)
+      fxFloat("-0:"+String(CLOCK_TUNING.wrongAccusePenaltySec).padStart(2,"0"));   // floating time loss (self-gated by Motion)
+      setAccuseFeedback(`Not them — cleared. The clock keeps running (−${CLOCK_TUNING.wrongAccusePenaltySec}s).`,"bad");
+      return;
     }
     guessesLeft--; addPenalty(60000); updateGuessPill();      // DETECTIVE: wrong -> lose a guess, +1:00 penalty
     fxFlash(); fxShake($("accuseModal").querySelector(".modal")); fxFloat("+1:00"); sfx("buzz");  // screen shake + red flash + floating penalty
@@ -3588,7 +3960,8 @@ function buildAccuseTrio(grade, won){
   return wrap;
 }
 function payoff(grade, won){
-  solved=true; freezeTimer();
+  solved=true; freezeTimer(); _stripChimed=false;   // re-arm the once-per-payoff trophy chime
+  document.body.classList.remove("clock-critical"); { const _cp=$("timerPill"); if(_cp) _cp.classList.remove("clk-warn","clk-crit"); }   // stop On-the-Clock urgency on a win
   if($("trophyStrip")){ $("trophyStrip").hidden=true; $("trophyStrip").innerHTML=""; }   // clear any prior trophy strip
   if($("winSeals")) $("winSeals").hidden=true;   // clear any prior seal banner
   const an=$("accuseBtn"); if(an) an.classList.remove("nudge");   // clear the nudge glow
@@ -3613,13 +3986,13 @@ function payoff(grade, won){
     const acc=1+(grade.weaponRight?1:0)+(grade.motiveRight?1:0)+(grade.evidenceRight?1:0), perfect=acc===4; isPerfect=perfect;
     const plantNote=story.weaponPlanted?` (the ${Skin.weaponBySlug(THEME,story.sceneObject).n} by the body was planted)`:"";
     const sc=$("accuseScore"); sc.innerHTML=
-      `<div class="acc-stars">${"★".repeat(acc)}${"☆".repeat(4-acc)} <span class="acc-num">Accuracy ${acc}/4 · ${isRelaxed()?"Relaxed":`⏱ ${totalTime}${penaltyStr} · ${guessesUsed+1}/${MAX_GUESSES} guesses`}</span></div>`+
+      `<div class="acc-stars">${"★".repeat(acc)}${"☆".repeat(4-acc)} <span class="acc-num">Accuracy ${acc}/4 · ${isClock()?`⏱ On the Clock · caught in ${totalTime}`:(isRelaxed()?"Relaxed":`⏱ ${totalTime}${penaltyStr} · ${guessesUsed+1}/${MAX_GUESSES} guesses`)}</span></div>`+
       (perfect?`<div class="acc-correct good">Flawless deduction.${plantNote}</div>`:``);
     sc.appendChild(buildAccuseTrio(grade,true));
     sc.insertAdjacentHTML("beforeend",`<div class="trio-proof"><span class="trio-proof-label">Proof</span>“${correctProof}”${grade.evidenceRight?mkStampHTML("Evidence Found","stamp-proof",-7):""}</div>`);
     recordSolved(makeHeadline(k.name), perfect);
-    if(!isRelaxed()) recordLeaderboard({ tier:C.tier, ms:elapsedMs(), timeStr:totalTime, no:story.caseNo, code:C.code,
-      attempts:guessesUsed+1, acc, perfect:acc===4, date:nowStr() });   // Detective only — Relaxed runs aren't time-ranked
+    if(isDetective()) recordLeaderboard({ tier:C.tier, ms:elapsedMs(), timeStr:totalTime, no:story.caseNo, code:C.code,
+      attempts:guessesUsed+1, acc, perfect:acc===4, date:nowStr() });   // Detective only — Relaxed / On-the-Clock runs aren't time-ranked
     const tr=evalTrophiesOnWin(grade); _payoffStrip={fresh:tr.fresh, ctx:tr.ctx, teases:missedTeases(grade), memorial:tr.memorial};   // claim trophies + queue the post-case strip
     $("poTrophy").innerHTML=tr.fresh.length?`<b style="color:var(--amber-soft)">${tr.fresh.length}</b> new ${tr.fresh.length>1?"trophies":"trophy"} 🏆`:`<span class="muted">${tr.memorial?"memorial added":"none new"}</span>`;
     const sealsEarned=grantSeals(perfect);   // MANOR: +1 Case Seal per win, +1 for a flawless 4/4 — always grants progress
@@ -3637,9 +4010,13 @@ function payoff(grade, won){
   }
   setResolution(won);   // 2-3 sentence story closer (different flavor on a fail)
   buildChain();
-  $("winModal").classList.add("show");
-  { const _m=$("winModal").querySelector(".modal"); if(_m) _m.scrollTop=0; }   // open at the top so the headline is seen first; trophy strip is below as you scroll
-  playPayoff(grade, won, isPerfect, won?makeHeadline(k.name):failHeadline());   // sequenced stamp reveal -> CASE CLOSED -> headline
+  const _openWin=()=>{
+    $("winModal").classList.add("show");
+    { const _m=$("winModal").querySelector(".modal"); if(_m) _m.scrollTop=0; }   // open at the top so the headline is seen first; trophy strip is below as you scroll
+    playPayoff(grade, won, isPerfect, won?makeHeadline(k.name):failHeadline());   // sequenced stamp reveal -> CASE CLOSED -> headline
+  };
+  if(won && motionOK()) _revealTimers.push(setTimeout(_openWin,550));   // let the killer's slam into the scene be SEEN before the news covers it (solved=true already blocks input)
+  else _openWin();
 }
 function failHeadline(){
   const opts=["THE KILLER WALKS FREE — CASE GOES COLD","NO ARREST AT {PLACE}: KILLER ESCAPES","{PLACE} MURDER LEFT UNSOLVED"];
@@ -3939,7 +4316,7 @@ function trophyCardHTML(t, unlock, opts){
     (locked?"":`<span class="tc-rar">${rar.label}</span>`)+body+`</div></div>`;
 }
 /* the post-case strip: collection progress, newly-unlocked cards (motion-gated slide-in), memorial, teases */
-let _payoffStrip=null;
+let _payoffStrip=null, _stripChimed=false;   // chime once per payoff (skipPayoff re-renders the strip)
 function renderTrophyStrip(data){
   const strip=$("trophyStrip"); if(!strip) return;
   if(!data){ strip.hidden=true; strip.innerHTML=""; return; }
@@ -3950,7 +4327,7 @@ function renderTrophyStrip(data){
   if(data.fresh.length){
     html+=`<div class="ts-new">${data.fresh.length===1?"New trophy claimed":data.fresh.length+" new trophies claimed"}</div>`;
     html+=`<div class="ts-cards">`+data.fresh.map((t,i)=>trophyCardHTML(t,trophyUnlock(t,map,seals),{strip:true,idx:i})).join("")+`</div>`;
-    if(motionOK()) sfx("confirm");
+    if(!_stripChimed){ _stripChimed=true; sfx("confirm"); }   // once per payoff, motion-independent (skip/tap re-renders stay silent)
   } else if(!data.memorial){
     html+=`<div class="ts-none">No new trophies this time — but the case file is closed.</div>`;
   }
@@ -4636,6 +5013,7 @@ function showCaseCodeHint(){ const h=$("codeHint"); if(!h||!C) return;
   h.innerHTML=`This case's code: <b id="copyCode" title="Tap to copy">${C.code}</b> — share it or paste it to replay this exact case.`;
   const cc=$("copyCode"); if(cc) cc.onclick=()=>{ try{ navigator.clipboard.writeText(C.code); cc.textContent=C.code+" ✓"; }catch(e){} }; }
 $("newBtn").onclick=()=>showManor();                                   // header "Manor" -> home hub (leaving a case)
+if($("newCaseBtn")) $("newCaseBtn").onclick=()=>openNewCaseModal();    // menu "New Case" -> difficulty picker directly (skips the Manor detour)
 $("newClose").onclick=$("newBack").onclick=()=>$("newModal").classList.remove("show");
 $("winClose").onclick=()=>$("winModal").classList.remove("show");
 $("winNew").onclick=()=>{ $("winModal").classList.remove("show"); showManor(); };   // finishing a case returns to the manor
@@ -4648,11 +5026,12 @@ $("howtoClose").onclick=()=>$("howtoModal").classList.remove("show");
 $("howtoGo").onclick=()=>{ $("howtoModal").classList.remove("show"); LS.set("seenHowTo",true); openNewCaseModal(); };   // after the how-to, pick a case
 $("archiveClose").onclick=()=>$("archiveModal").classList.remove("show");
 /* ---- consistent modal dismissal: click the backdrop (outside the panel) or press Esc closes ---- */
-["newModal","accuseModal","archiveModal","howtoModal","gravesModal"].forEach(id=>{ const m=$(id);
+["newModal","accuseModal","archiveModal","howtoModal","gravesModal","settingsModal"].forEach(id=>{ const m=$(id);
   if(m) m.addEventListener("click",e=>{ if(e.target===m) m.classList.remove("show"); }); });   // backdrop click
 window.addEventListener("keydown",e=>{   // Esc closes the front-most open modal (capture+stop so the game's key handler doesn't also fire)
   if(e.key!=="Escape"&&e.key!=="Esc") return;
-  for(const id of ["confirmModal","roomDoneModal","gravesModal","manorStory","archiveModal","accuseModal","newModal","howtoModal","winModal","introModal"]){
+  const co=$("caseOverlay"); if(co && !co.hidden){ closeCaseFile(); e.preventDefault(); e.stopPropagation(); return; }   // Esc closes the Case File popup first
+  for(const id of ["confirmModal","roomDoneModal","gravesModal","manorStory","settingsModal","archiveModal","accuseModal","newModal","howtoModal","winModal","introModal"]){
     const m=$(id); if(!m||!m.classList.contains("show")) continue;
     if(id==="confirmModal"&&typeof closeConfirm==="function") closeConfirm("cancel");
     else if(id==="introModal"&&typeof introSkipOrClose==="function") introSkipOrClose();
@@ -4691,30 +5070,46 @@ $("evBlock").addEventListener("toggle",()=>{ if(isPhone())return;
 $("allEv").addEventListener("toggle",()=>{ if(isPhone())return;
   if($("allEv").open){ if($("evBlock").open) $("evBlock").open=false; } else if(!$("evBlock").open){ $("evBlock").open=true; } });  // collapsing the list opens the stepper
 function isPhone(){ return document.body.classList.contains("phone"); }
+/* stacked single-column layout (phone OR narrow desktop ≤1040px, but not the Steam-Deck appfit fit):
+   the side-panel case file is hidden, so status/objective relocate near the board. */
+function isStacked(){ return window.matchMedia("(max-width:1040px)").matches && !document.body.classList.contains("appfit"); }
 
-/* ---- mobile case-file overlay: reparent the cf-group blocks into tabs (one source of truth) ---- */
+/* ---- case-file popup: reparent the cf-group blocks into the overlay tabs (one source of truth).
+   The blocks live in the overlay while it's open (forced on every device) OR always on phones
+   (where the side panel is hidden); otherwise they sit in the desktop side panel. ---- */
+let _coForced=false;            // the popup is open (overlay holds the blocks regardless of device)
+let _coRestore=null;            // desktop accordion states to restore after closing the popup
 function placeCaseFile(){
-  const mobile=isPhone();
+  const overlay = _coForced || isPhone();
   const groups=[["grpCase","coPanel-case","homeCase"],["grpEvidence","coPanel-evidence","homeEvidence"],
                 ["grpWeapons","coPanel-weapons","homeWeapons"],["grpPeople","coPanel-people","homePeople"]];
   for(const [g,p,h] of groups){ const grp=$(g),panel=$(p),home=$(h); if(!grp||!panel||!home) continue;
-    if(mobile){ if(grp.parentNode!==panel) panel.appendChild(grp); }
+    if(overlay){ if(grp.parentNode!==panel) panel.appendChild(grp); }
     else { if(grp.previousElementSibling!==home || grp.parentNode!==home.parentNode) home.after(grp); } }
-  // status: near the board on mobile so feedback stays visible; back in the case file on desktop
+  // status: near the board whenever the side panel is hidden (stacked layout) so feedback stays visible; in the case file on wide desktop (never into the popup)
   const st=$("status"), sh=$("statusHome"), sm=$("statusMount");
-  if(st&&sh&&sm){ if(mobile){ if(st.parentNode!==sm) sm.appendChild(st); }
+  if(st&&sh&&sm){ if(isStacked()){ if(st.parentNode!==sm) sm.appendChild(st); }
                   else if(st.previousElementSibling!==sh||st.parentNode!==sh.parentNode){ sh.after(st); } }
-  if(!mobile){ const ov=$("caseOverlay"); if(ov){ ov.hidden=true; } document.body.classList.remove("co-open"); }   // never overlay on desktop
-  // on mobile the full evidence list and roster read as always-open inside their tab
-  if(mobile){ if($("allEv")) $("allEv").open=true; if($("poiDetails")) $("poiDetails").open=true; }
+  if(!overlay){ const ov=$("caseOverlay"); if(ov){ ov.hidden=true; } document.body.classList.remove("co-open"); }   // overlay closed -> blocks back in the side panel
+  if(overlay){ if($("allEv")) $("allEv").open=true; if($("poiDetails")) $("poiDetails").open=true; }   // show the full file (lists expanded)
 }
 function coTab(name){ document.querySelectorAll(".co-tab").forEach(t=>t.classList.toggle("on",t.dataset.tab===name));
   document.querySelectorAll(".co-panel").forEach(p=>p.hidden = p.id!=="coPanel-"+name);
   const sc=document.querySelector(".co-scroll"); if(sc) sc.scrollTop=0; }
-function openCaseFile(){ placeCaseFile(); const ov=$("caseOverlay"); if(!ov) return; ov.hidden=false; document.body.classList.add("co-open"); coTab("evidence"); }
-function closeCaseFile(){ const ov=$("caseOverlay"); if(ov) ov.hidden=true; document.body.classList.remove("co-open"); }
-if($("caseFileBtn")) $("caseFileBtn").onclick=openCaseFile;
+function openCaseFile(){
+  if(!isPhone()){ const a=$("allEv"),pi=$("poiDetails"); _coRestore={a:a?a.open:null, p:pi?pi.open:null}; }   // remember desktop states
+  _coForced=true; placeCaseFile();
+  const ov=$("caseOverlay"); if(!ov) return; ov.hidden=false; document.body.classList.add("co-open"); coTab("evidence");
+}
+function closeCaseFile(){
+  const ov=$("caseOverlay"); if(ov) ov.hidden=true; document.body.classList.remove("co-open");
+  _coForced=false; placeCaseFile();   // return blocks to the desktop side panel (or keep on phone)
+  if(_coRestore){ const a=$("allEv"),pi=$("poiDetails"); if(a&&_coRestore.a!=null)a.open=_coRestore.a; if(pi&&_coRestore.p!=null)pi.open=_coRestore.p; _coRestore=null; }
+}
+if($("caseFileTopBtn")) $("caseFileTopBtn").onclick=openCaseFile;   // top-bar Case File button (all devices)
+if($("caseFileBtn")) $("caseFileBtn").onclick=openCaseFile;          // legacy phone launcher (now hidden, kept harmless)
 if($("coClose")) $("coClose").onclick=closeCaseFile;
+if($("caseOverlay")) $("caseOverlay").addEventListener("click",e=>{ if(e.target===$("caseOverlay")) closeCaseFile(); });   // click the dim backdrop (desktop) to close
 document.querySelectorAll(".co-tab").forEach(t=>t.onclick=()=>coTab(t.dataset.tab));
 
 /* ===== robust phone detection: the phone CSS is gated by body.phone (NOT a media query), so it
@@ -4794,6 +5189,9 @@ function pickAmbient(s){
   if(/candle|candlelight|fire\b|hearth|flame|lantern|guttering|firelight/.test(txt)) add("candle");
   if(/fog|mist|smoke|haze|vapou?r/.test(txt)) add("smoke");
   if(set.length) return set.slice(0,2);              // story cue(s) override -> at most 2 effects
+  // quiet atmospheres get QUIET rooms (they used to fall through to the busiest 4-layer set):
+  if(/hush|silence|silent|\bstill\b/.test(txt)) return ["grain","candle"];   // a near-still room, one guttering light
+  if(/chill|frost|\bcold\b|autumn|winter/.test(txt)) return ["dust","smoke"]; // cold drafty air, no warm glow
   // no weather/story cue -> run the FULL ambient set together (dust + candle + smoke + grain +
   // the always-on vignette). NOT rain — rain stays tied to rain/storm stories. Each effect keeps
   // its existing extremely-subtle opacity/speed, so all of them together still reads as ambient.
@@ -4858,7 +5256,6 @@ function placeEvidence(){
 if(evStackMQ.addEventListener) evStackMQ.addEventListener("change",placeEvidence); else evStackMQ.addListener(placeEvidence);
 window.addEventListener("resize",placeEvidence);   // fallback: re-home on any width change (placeEvidence is idempotent)
 placeEvidence();
-$("codePill").onclick=()=>{ try{ navigator.clipboard.writeText(C.code); setStatus(`Case code ${C.code} copied.`,"good"); }catch(e){} };
 
 let pendingDiff="medium";
 document.querySelectorAll("#diffRow [data-diff]").forEach(b=>b.onclick=()=>{
@@ -4928,12 +5325,33 @@ function setupBars(){
 const reduceMQ = window.matchMedia("(prefers-reduced-motion: reduce)");
 function motionOK(){ return !!settings.motion && !reduceMQ.matches; }
 function applyMotion(){ document.body.classList.toggle("no-motion", !settings.motion); }
+// honor an OS reduced-motion flip mid-session (applyAmbient clears every layer when motionOK() is false)
+try{ if(reduceMQ.addEventListener) reduceMQ.addEventListener("change",()=>{ applyMotion(); if(typeof applyAmbient==="function") applyAmbient(); }); }catch(e){}
 const _revealTimers=[];
 function clearRevealTimers(){ while(_revealTimers.length) clearTimeout(_revealTimers.pop()); }
 function _autorem(el){ el.addEventListener("animationend",()=>el.remove(),{once:true}); return el; }
 function restartAnim(el,cls){ if(!el)return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
 
 function fxPop(cell){ if(!motionOK()||!cell)return; const t=cell.querySelector(".token"); if(t) restartAnim(t,"j-pop"); }
+function fxSetDown(cell){ if(!motionOK()||!cell)return; const t=cell.querySelector(".token"); if(!t)return;
+  t.classList.remove("j-pop");   // paint() pops every repaint; the player's own placement gets the weighted set-down instead
+  restartAnim(t,"j-set"); }
+function fxPlaceRing(cell){ if(!motionOK()||!cell)return; const r=_autorem(document.createElement("div")); r.className="j-ring place"; cell.appendChild(r); }
+function fxUndoFlash(cell){ if(!motionOK()||!cell)return; const f=_autorem(document.createElement("div")); f.className="j-flash amber"; cell.appendChild(f); }
+function fxEraseGhost(cell,tok){ if(!motionOK()||!cell||!tok)return;   // tok = the token captured BEFORE paint() cleared it
+  const g=tok.cloneNode(true); g.classList.remove("j-pop","j-set","bad"); g.classList.add("j-ghost"); cell.appendChild(_autorem(g)); }
+/* completion sweep: rows travel left->right, columns top->bottom, rooms bloom from the center */
+function fxUnitSweep(idxs,kind){ if(!motionOK()||!idxs||!idxs.length)return;
+  const n=idxs.length, bw=cfg.bw||3, bh=cfg.bh||3; let delays;
+  if(kind==="b"){ const cr=(bh-1)/2, cc=(bw-1)/2; let maxD=0;
+    delays=idxs.map((_,k)=>{ const d=Math.max(Math.abs(Math.floor(k/bw)-cr),Math.abs(k%bw-cc)); if(d>maxD)maxD=d; return d; });
+    delays=delays.map(d=>maxD ? d/maxD*180 : 0);
+  } else delays=idxs.map((_,k)=> n>1 ? k/(n-1)*180 : 0);
+  idxs.forEach((idx,k)=>{ const cell=boardEl.children[idx]; if(!cell)return;
+    const g=_autorem(document.createElement("div"));
+    g.className="unit-glow"+(kind==="r"?" ug-row":kind==="c"?" ug-col":"");
+    g.style.animationDelay=delays[k].toFixed(0)+"ms";
+    cell.appendChild(g); }); }
 function fxPulse(cell){ if(!motionOK()||!cell)return; const r=_autorem(document.createElement("div")); r.className="j-ring"; cell.appendChild(r); }
 function fxShake(el){ if(!motionOK()||!el)return; restartAnim(el,"j-shake"); el.addEventListener("animationend",()=>el.classList.remove("j-shake"),{once:true}); }
 function fxFlash(el){ if(!motionOK())return; const f=_autorem(document.createElement("div")); f.className="j-flash"+(el?"":" screen"); (el||document.body).appendChild(f); }
@@ -4988,14 +5406,20 @@ function _knock(){ const a=audioCtx(); if(!a) return; const t0=a.currentTime; co
   const f=150+Math.random()*28; o.frequency.setValueAtTime(f,t0); o.frequency.exponentialRampToValueAtTime(f*0.6,t0+0.07);
   og.gain.setValueAtTime(0.0001,t0); og.gain.exponentialRampToValueAtTime(0.17*v,t0+0.003); og.gain.exponentialRampToValueAtTime(0.0001,t0+0.11);
   o.connect(og).connect(a.destination); o.start(t0); o.stop(t0+0.13); }
-function sfx(name){ if(!settings.sound) return; if(!audioCtx()) return;
+function sfx(name,opt){ if(!settings.sound) return; if(!audioCtx()) return;
   if(name==="place") _knock();
-  else if(name==="thunk"){ _tone(120,0.2,"sine",0.22); _noise(0.08,0.1); }
+  else if(name==="thunk"){ _tone((opt&&opt.f)||120,0.2,"sine",0.22); _noise(0.08,0.1); }   // opt.f lets stamp runs escalate in weight
+  else if(name==="thunkBig"){ _tone(105,0.2,"sine",0.22); _tone(78,0.3,"sine",0.26,0.01); _noise(0.12,0.12); }   // the climactic CASE CLOSED fist
   else if(name==="buzz"){ _tone(150,0.22,"sawtooth",0.14); _tone(146,0.22,"sawtooth",0.1); }
-  else if(name==="win"){ [523.25,659.25,783.99].forEach((f,i)=>_tone(f,0.22,"sine",0.14,i*0.11)); }
+  else if(name==="win"){ _tone(261.63,0.5,"sine",0.10);   // warm low root under the arpeggio…
+    [523.25,659.25,783.99].forEach((f,i)=>_tone(f,0.22,"sine",0.14,i*0.11));
+    _tone(1046.5,0.3,"sine",0.07,0.33); }                 // …and a resolving top note — a brass-lamp chord, not a fanfare
   else if(name==="paper"){ _noise(0.17,0.05); }     // soft paper slide for the case-open sequence
+  else if(name==="erase"){ _noise(0.09,0.045); }    // soft brush — a token lifted off the board
   else if(name==="stamp"){ _tone(90,0.16,"sine",0.16); _noise(0.06,0.07); }                       // soft "Cleared" stamp thud
-  else if(name==="confirm"){ _tone(523.25,0.14,"sine",0.06); _tone(783.99,0.16,"sine",0.05,0.06); } }   // soft warm "Confirmed"
+  else if(name==="confirm"){ _tone(523.25,0.14,"sine",0.06); _tone(783.99,0.16,"sine",0.05,0.06); }   // soft warm "Confirmed"
+  else if(name==="tick"){ _tone(900,0.035,"square",0.05); }                                            // On the Clock: a quiet clock tick (final ~30s)
+  else if(name==="heartbeat"){ _tone(150,0.085,"sine",0.16); _tone(115,0.11,"sine",0.13,0.11); } }     // …intensifies to a lub-dub heartbeat in the final ~12s
 /* ---- very quiet footstep shuffle that rides the footprint walk-out trail (cell selection) ---- */
 let _lastSteps=-1e9;   // far in the past so the first footstep sequence is never rate-limited
 function _step(delay){ const a=audioCtx(); if(!a) return; const t0=a.currentTime+(delay||0);
@@ -5036,37 +5460,20 @@ function setHeadline(text){ const el=$("newsHeadline"); if(!el) return; _hlFull=
 }
 function skipHeadline(){ _clearHlTimers(); const el=$("newsHeadline"); if(el){ el.textContent=_hlFull; el.classList.remove("typing"); } }
 
-/* the big solved-case reveal: flashbulb -> bars slam -> stamp thunk + dust -> confetti (3/3).
-   Final state is the CSS resting state, so skip / Motion-off just shows the end immediately. */
-function playReveal(won, perfect){
-  const wrap=$("revealWrap"), stamp=document.querySelector("#winModal .news-stamp"), paper=document.querySelector("#winModal .newspaper");
-  clearRevealTimers();
-  if(wrap)wrap.classList.remove("j-slam"); if(stamp)stamp.classList.remove("j-thunk"); if(paper)paper.classList.remove("j-spin");
-  if(!motionOK()) return;                          // reduced motion / Motion off -> static final state
-  sfx(won?"win":"buzz");
-  if(paper) restartAnim(paper,"j-spin");
-  fxBulb();
-  if(won && wrap) _revealTimers.push(setTimeout(()=>wrap.classList.add("j-slam"),150));
-  _revealTimers.push(setTimeout(()=>{ if(stamp){ restartAnim(stamp,"j-thunk"); fxPuff(stamp); } sfx("thunk"); },440));
-  if(won && perfect) _revealTimers.push(setTimeout(fxConfetti,640));
-}
-function skipReveal(){ clearRevealTimers();
-  const wrap=$("revealWrap"), stamp=document.querySelector("#winModal .news-stamp"), paper=document.querySelector("#winModal .newspaper");
-  if(wrap)wrap.classList.remove("j-slam"); if(stamp)stamp.classList.remove("j-thunk"); if(paper)paper.classList.remove("j-spin");
-  document.querySelectorAll(".j-confetti,.j-bulb,.j-puff").forEach(e=>e.remove()); }
-
 /* ===== sequenced stamp payoff: bars -> trio reveals + themed stamp slams -> CASE CLOSED -> headline.
    Motion-gated (instant static when off); tap the win modal to skip straight to the final state. ===== */
 let _payoffHeadline="";
-function slamStamp(sel){ const s=document.querySelector("#winModal "+sel); if(!s) return;
-  s.classList.remove("pre"); restartAnim(s,"slam"); fxPuff(s); sfx("thunk");
+function slamStamp(sel,depth){ const s=document.querySelector("#winModal "+sel); if(!s) return;
+  s.classList.remove("pre"); restartAnim(s,"slam"); fxPuff(s); sfx("thunk",{f:138-(depth||0)*11});   // each successive stamp lands a little heavier
   const host=s.closest(".trio-cell")||s.closest(".trio-proof"); if(host) fxShake(host); }   // tiny localized "screen" shake
 function playPayoff(grade, won, perfect, headlineText){
   _payoffHeadline=headlineText||"";
   clearRevealTimers();
   const trio=document.querySelector("#accuseScore .accuse-trio");
-  const wrap=$("revealWrap"), stamp=document.querySelector("#winModal .news-stamp"), paper=document.querySelector("#winModal .newspaper");
+  const wrap=$("revealWrap"), stamp=document.querySelector("#winModal .news-stamp"), paper=document.querySelector("#winModal .newspaper"),
+        cold=document.querySelector("#winModal .news-cold");
   if(wrap)wrap.classList.remove("j-slam"); if(stamp)stamp.classList.remove("j-thunk"); if(paper)paper.classList.remove("j-spin");
+  if(cold)cold.classList.remove("j-thunk");
   if(trio) trio.classList.remove("seq");
   document.querySelectorAll("#winModal .trio-cell").forEach(c=>c.classList.remove("in"));
   document.querySelectorAll("#winModal .payoff-stamp").forEach(s=>s.classList.remove("pre","slam"));
@@ -5075,19 +5482,21 @@ function playPayoff(grade, won, perfect, headlineText){
   if(trio) trio.classList.add("seq");
   document.querySelectorAll("#winModal .payoff-stamp").forEach(s=>s.classList.add("pre"));
   if(paper) restartAnim(paper,"j-spin");
-  fxBulb(); sfx(won?"win":"buzz");
+  if(won) fxBulb();                                          // the press flashbulb is for an ARREST — a fail gets no celebration
+  sfx(won?"win":"buzz");
   const cells = trio?[...trio.querySelectorAll(".trio-cell")]:[];
   const cell=cls=>cells.find(c=>c.classList.contains(cls)), show=cls=>{ const c=cell(cls); if(c)c.classList.add("in"); };
   const T=(ms,fn)=>_revealTimers.push(setTimeout(fn,ms));
   if(won && wrap) T(120,()=>wrap.classList.add("j-slam"));   // culprit behind bars (existing)
-  T(300,()=>{ show("tc-culprit"); slamStamp(".stamp-falsealibi"); });   // FALSE ALIBI
+  T(300,()=>{ show("tc-culprit"); slamStamp(".stamp-falsealibi",0); });  // FALSE ALIBI
   T(680,()=> show("tc-weapon"));                                         // weapon slides in
-  T(980,()=> slamStamp(".stamp-weapon"));                                // WEAPON CONFIRMED (if right)
+  T(980,()=> slamStamp(".stamp-weapon",1));                              // WEAPON CONFIRMED (if right)
   T(1280,()=> show("tc-motive"));                                        // motive flips
-  T(1580,()=> slamStamp(".stamp-motive"));                               // MOTIVE CONFIRMED (if right)
-  T(1820,()=> slamStamp(".stamp-proof"));                                // EVIDENCE FOUND (if right)
-  T(2120,()=>{ if(stamp){ restartAnim(stamp,"j-thunk"); fxPuff(stamp); } sfx("thunk");
-    fxShake($("winModal").querySelector(".modal")); if(perfect) fxConfetti(); });   // CASE CLOSED
+  T(1580,()=> slamStamp(".stamp-motive",2));                             // MOTIVE CONFIRMED (if right)
+  T(1820,()=> slamStamp(".stamp-proof",3));                              // EVIDENCE FOUND (if right)
+  T(2120,()=>{ const big = won ? stamp : cold;               // win: CASE CLOSED art; fail: the cold grey text stamp
+    if(big){ restartAnim(big,"j-thunk"); fxPuff(big); } sfx(won?"thunkBig":"buzz");
+    fxShake($("winModal").querySelector(".modal")); if(perfect) fxConfetti(); });
   T(2460,()=> setHeadline(_payoffHeadline));                             // typewriter headline (existing)
   T(2680,()=> renderTrophyStrip(_payoffStrip));                          // trophies strip slides in after the stamps
 }
@@ -5097,6 +5506,7 @@ function skipPayoff(){ clearRevealTimers();
   document.querySelectorAll("#winModal .payoff-stamp").forEach(s=>s.classList.remove("pre","slam"));
   const wrap=$("revealWrap"); if(wrap) wrap.classList.remove("j-slam");
   const stamp=document.querySelector("#winModal .news-stamp"); if(stamp) stamp.classList.remove("j-thunk");
+  const cold=document.querySelector("#winModal .news-cold"); if(cold) cold.classList.remove("j-thunk");
   document.querySelectorAll(".j-confetti,.j-bulb,.j-puff").forEach(e=>e.remove());
   const el=$("newsHeadline"); if(el){ _clearHlTimers(); el.textContent=_payoffHeadline; el.classList.remove("typing"); }
   renderTrophyStrip(_payoffStrip);   // jump the trophy strip to its final state too
@@ -5109,20 +5519,66 @@ function applyJuiceButtons(){ const m=$("motionBtn"), s=$("soundBtn"), mu=$("mus
 if($("motionBtn")) $("motionBtn").onclick=()=>{ settings.motion=!settings.motion; LS.set("settings",settings); applyMotion(); applyJuiceButtons(); applyAmbient(); };
 if($("soundBtn")) $("soundBtn").onclick=()=>{ settings.sound=!settings.sound; LS.set("settings",settings); applyJuiceButtons(); if(settings.sound){ warmAudio(); sfx("place"); } };
 /* ---- PLAY MODE: Relaxed (cozy, default) vs Detective (timer + limited guesses). Persisted; changeable in the toolbar. ---- */
-function isRelaxed(){ return settings.playMode!=="detective"; }   // default = Relaxed (the cozy front door)
+/* ---- PLAY MODES: Relaxed (cozy), Detective (timer + 3 guesses), On the Clock (countdown race) ---- */
+const MODE_LABEL={relaxed:"Relaxed", detective:"Detective", clock:"On the Clock"};
+const MODE_ICON ={relaxed:"🌿", detective:"🕵", clock:"⏱"};
+function isDetective(){ return settings.playMode==="detective"; }
+function isClock(){ return settings.playMode==="clock"; }
+function isRelaxed(){ return !isDetective() && !isClock(); }   // default = Relaxed (the cozy front door)
 function applyPlayMode(){
-  const r=isRelaxed(); document.body.classList.toggle("relaxed", r);   // CSS hides timer + guess pills in Relaxed
-  const pb=$("playModeBtn"); if(pb){ pb.textContent="🎚 Play mode: "+(r?"Relaxed":"Detective"); pb.classList.toggle("on", !r); }
-  const ab=$("accuseBtn"); if(ab) ab.title=r?"Name the culprit — accuse freely, no timer or guess limit":"Name the killer — you have 3 guesses (full board not required)";
+  const r=isRelaxed(), clk=isClock();
+  document.body.classList.toggle("relaxed", r);          // hides the guess counter (count-up clock)
+  document.body.classList.toggle("clock", clk);          // hides the guess counter; the clock chip becomes the countdown
+  document.body.classList.toggle("detective", isDetective());
+  if(!clk){ document.body.classList.remove("clock-critical"); const p=$("timerPill"); if(p) p.classList.remove("clk-warn","clk-crit"); }
+  updateModeButtons();
+  const ab=$("accuseBtn"); if(ab) ab.title = clk?"Name the culprit before the clock runs out":(r?"Name the culprit — accuse freely, no timer or guess limit":"Name the killer — you have 3 guesses (full board not required)");
+  if(typeof applyMusic==="function") applyMusic();        // swap to/from countdown.mp3 for clock mode
 }
+function updateModeButtons(){ const cur=settings.playMode||"relaxed";
+  document.querySelectorAll("#modePick .mode-opt").forEach(b=>b.classList.toggle("on", b.dataset.mode===cur)); }
 function setPlayMode(mode){ settings.playMode=mode; LS.set("settings",settings); LS.set("modeChosen",true); applyPlayMode(); }
 function maybeShowModeChoice(){ if(LS.get("modeChosen",false) || settings.playMode) return; const m=$("modeModal"); if(m) m.classList.add("show"); }
-if($("playModeBtn")) $("playModeBtn").onclick=()=>setPlayMode(isRelaxed()?"detective":"relaxed");
+/* Selecting a mode from Settings RESTARTS the current case in that mode (Trevor's call — apply on restart, not live). */
+function selectPlayMode(mode){
+  const cur=settings.playMode||"relaxed";
+  if(mode===cur) return;                                  // already this mode
+  if($("settingsModal")) $("settingsModal").classList.remove("show");
+  if(!C || solved){ setPlayMode(mode); return; }          // no live case -> switch silently
+  gameConfirm(`Switch to <b>${MODE_LABEL[mode]}</b>?<span class="confirm-sub">This restarts the current case in the new mode.</span>`,
+    { icon:MODE_ICON[mode], okText:"Switch & restart", cancelText:"Stay", onOk:()=>{ setPlayMode(mode); restartCurrentCase(); } });
+}
+document.querySelectorAll("#modePick .mode-opt").forEach(b=> b.onclick=()=>selectPlayMode(b.dataset.mode));
 if($("modeRelaxed")) $("modeRelaxed").onclick=()=>{ setPlayMode("relaxed"); const m=$("modeModal"); if(m) m.classList.remove("show"); };
 if($("modeDetective")) $("modeDetective").onclick=()=>{ setPlayMode("detective"); const m=$("modeModal"); if(m) m.classList.remove("show"); };
+if($("modeClock")) $("modeClock").onclick=()=>{ setPlayMode("clock"); const m=$("modeModal"); if(m) m.classList.remove("show"); };
+if($("escapeRetry")) $("escapeRetry").onclick=()=>{ $("escapeModal").classList.remove("show"); restartCurrentCase(); };
+if($("escapeManor")) $("escapeManor").onclick=()=>{ $("escapeModal").classList.remove("show"); showManor(); };
+
+/* ---- top-bar / toolbar popovers (☰ Menu, ⚙ Settings): toggle + outside-click + Esc to close ---- */
+function wirePopover(btnId, popId){
+  const btn=$(btnId), pop=$(popId); if(!btn||!pop) return;
+  const close=()=>{ pop.hidden=true; btn.setAttribute("aria-expanded","false"); };
+  const open =()=>{ document.querySelectorAll(".popover").forEach(p=>{ if(p!==pop){ if(p._closePopover) p._closePopover(); else p.hidden=true; } });   // only one open at a time (close via the sibling's own routine so its trigger's aria-expanded resets)
+                    pop.hidden=false; btn.setAttribute("aria-expanded","true"); };
+  btn.addEventListener("click",e=>{ e.stopPropagation(); pop.hidden?open():close(); });
+  pop.addEventListener("click",e=>{ if(e.target.closest(".pop-nav")) close(); else e.stopPropagation(); });   // navigation item -> close; settings toggles stay open so you can flip several
+  pop._closePopover=close;
+}
+wirePopover("menuBtn","menuPop");
+document.addEventListener("click",()=>document.querySelectorAll(".popover").forEach(p=>{ if(p._closePopover) p._closePopover(); }));   // outside click closes any open popover
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") document.querySelectorAll(".popover").forEach(p=>{ if(p._closePopover) p._closePopover(); }); });
+/* Settings is now a modal popup (not a dropdown) */
+if($("settingsBtn")) $("settingsBtn").onclick=()=>$("settingsModal").classList.add("show");
+if($("settingsClose")) $("settingsClose").onclick=()=>$("settingsModal").classList.remove("show");
 /* ---- looping background music: own toggle, default ON, separate from the SFX "Sound" toggle ---- */
 let bgMusic=null;
-function ensureBgMusic(){ if(!bgMusic){ bgMusic=new Audio("assets/music/Final%20Accusation.mp3"); bgMusic.loop=true; bgMusic.volume=0.4; bgMusic.preload="auto"; } return bgMusic; }
+const MUSIC_TRACKS = { normal:"assets/music/Final%20Accusation.mp3", clock:"assets/music/countdown.mp3" };   // countdown.mp3 → drop it in assets/music/ (same folder); plays only in On the Clock
+let _musicTrack=null;
+function ensureBgMusic(){ if(!bgMusic){ bgMusic=new Audio(); bgMusic.loop=true; bgMusic.volume=0.4; bgMusic.preload="auto"; }
+  const want = isClock() ? MUSIC_TRACKS.clock : MUSIC_TRACKS.normal;
+  if(_musicTrack!==want){ _musicTrack=want; bgMusic.src=want; }   // swap track when the mode changes (a missing file just stays silent)
+  return bgMusic; }
 function applyMusic(){ const a=ensureBgMusic(); if(settings.music){ const p=a.play(); if(p&&p.catch) p.catch(()=>{}); } else { a.pause(); } }  // attempt; first-gesture handler retries if blocked
 function startMusicIfOn(){ if(settings.music){ const a=ensureBgMusic(); if(a.paused){ const p=a.play(); if(p&&p.catch) p.catch(()=>{}); } } }
 if($("musicBtn")) $("musicBtn").onclick=()=>{ settings.music=!settings.music; LS.set("settings",settings); applyJuiceButtons(); applyMusic(); };
@@ -5273,7 +5729,7 @@ function devStart(diff){ startCase({difficulty:diff, rand:Math.random()}); devLo
 function devFillSolution(){ if(!C||solved){ devLog("No active case."); return; }
   for(let i=0;i<cfg.N*cfg.N;i++){ if(i===C.murderCell||given[i]) continue; if(board[i]!==C.solution[i]) place(i,C.solution[i]); } devLog("Filled solution."); }
 function devPlanted(){ for(let s=1;s<=90;s++){ startCase({difficulty:"extreme",seed:s}); if(story&&story.weaponPlanted){ devLog("Planted-weapon case: "+C.code); return; } } devLog("No planted case found (1–90)."); }
-function devToggleMotion(){ settings.motion=!settings.motion; LS.set("settings",settings); applyMotion(); if(typeof applyJuiceButtons==="function") applyJuiceButtons(); devLog("Motion "+(settings.motion?"ON":"OFF")); }
+function devToggleMotion(){ settings.motion=!settings.motion; LS.set("settings",settings); applyMotion(); if(typeof applyJuiceButtons==="function") applyJuiceButtons(); if(typeof applyAmbient==="function") applyAmbient(); devLog("Motion "+(settings.motion?"ON":"OFF")); }
 function devToggleAppfit(){ const on=document.body.classList.toggle("appfit");
   if(on){ if(typeof fitBoard==="function") fitBoard(); } else { document.documentElement.style.removeProperty("--cell"); const l=document.querySelector(".layout"); if(l) l.style.removeProperty("height"); }
   devLog("App-fit layout "+(on?"ON":"OFF")); }
