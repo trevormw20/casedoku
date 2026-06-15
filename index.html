@@ -74,6 +74,14 @@
     :root{--cell:calc((100vw - 40px) / var(--ncols));}
   }
 
+  /* Desktop ≥1240: the Case File occupies a fixed 410px RIGHT grid column, so the board lives in the LEFT column.
+     Reserve that column's width (410px + 24px gap) as header right-padding so the centered top bar sits OVER THE
+     BOARD — lining up with the board and the (already board-centered) toolbar. (Trevor's "over the board" choice.)
+     padding (not transform) on purpose: a transformed ancestor would re-anchor the position:fixed menu popover. */
+  @media (min-width:1240px){
+    body:not(.appfit):not(.phone) header.app{ width:100%; box-sizing:border-box; padding-right:434px; }
+  }
+
   .board-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;}
   /* the board is Inspector Graves' abstract deduction grid, not a crime-scene map */
   .board-title{font-family:Georgia,serif;font-size:13px;letter-spacing:1.5px;color:var(--ink-dim);
@@ -167,48 +175,40 @@
     box-shadow:0 1px 2px rgba(0,0,0,.5),inset 0 0 0 1px rgba(231,185,77,.4);}
   /* scene weapon: clean transparent cutout (drop-shadow only) — no dark backing box, even when covered */
   .cell-weapon.chip{background:none;}
-  /* ---- suspect token: colored disc + per-case ring + portrait/letter ---- */
-  .token{position:relative;width:82%;height:82%;border-radius:50%;z-index:2;  /* above the room object (z1), below scene weapon/victim */
+  /* ---- suspect token: PORTRAIT ART ONLY — each portrait carries its own baked-in coloured outline, so
+     there is NO disc fill, NO ring, and NO circular clip. Interactive state (selection / lens / conflict /
+     given) is conveyed by cell glow + scale/brightness, not a ring (see the state rules below). ---- */
+  .token{position:relative;width:82%;height:82%;z-index:2;  /* above the room object (z1), below scene weapon/victim */
     display:flex;align-items:center;justify-content:center;
-    background:var(--disc, #888);                 /* fallback: suspect-color disc (set inline) */
-    /* rings are DIM by default (muted toward the dark panel); they light up on selection (.match / .susp.sel) */
-    box-shadow:0 0 0 var(--ring-w) color-mix(in srgb, var(--ring,#888) var(--ring-rest,54%), #1b1f29), 0 2px 4px rgba(0,0,0,.55);
-    transition:box-shadow .12s;}
-  .token .tletter{font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.75);
-    font-size:inherit;line-height:1;}
-  .token .tportrait{position:absolute;inset:0;border-radius:50%;
-    background:var(--disc-cream);                 /* cream so transparent cutouts pop */
-    background-size:cover;background-position:center;display:none;}
-  .token.has-img{background:var(--disc-cream);}
+    transition:transform .12s ease, filter .12s ease;}
+  .token .tletter{font-weight:700;color:var(--ink);text-shadow:0 0 3px var(--panel),0 1px 2px rgba(0,0,0,.6);
+    font-size:inherit;line-height:1;}   /* lettered fallback (rare — portraits normally load): dark ink so it reads with no disc behind it */
+  .token .tportrait{position:absolute;inset:0;
+    background-size:contain;background-repeat:no-repeat;background-position:center;display:none;}   /* contain so the baked outline is never cropped, whatever shape the art is */
   .token.has-img .tportrait{display:block;}
   .token.has-img .tletter{display:none;}
-  /* given/locked suspects: darker disc behind the portrait + subtle lock badge */
-  .cell.given .token{background:var(--disc-given);}
-  .cell.given .token.has-img{background:var(--disc-given);}
-  .cell.given .tportrait{background-color:var(--disc-given);box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.5);}   /* P6: engraved rim so "given/locked" still reads when the portrait covers the dark disc */
+  /* given/locked suspects: portrait stays; a lock badge + a faint "fixed" mute mark them as pre-filled (no disc) */
+  .cell.given .tportrait{filter:saturate(.9) brightness(.95);}
   .cell.given .token::after{content:"";position:absolute;right:-1px;bottom:-1px;
     width:42%;height:42%;max-width:15px;max-height:15px;border-radius:50%;
     background:#1a1a22 center/64% no-repeat url("assets/ui/icon-lock.png");
     box-shadow:0 0 0 1px rgba(0,0,0,.55);opacity:1;pointer-events:none;}
-  .token.big{width:84px;height:84px;font-size:40px;box-shadow:0 0 0 3.5px var(--ring,#fff),0 8px 20px rgba(0,0,0,.6);}
+  .token.big{width:84px;height:84px;font-size:40px;}
   .token.tray{width:100%;height:100%;font-size:22px;}
-  /* selected cell's token: thicker glowing ring */
-  .cell.sel .token{box-shadow:0 0 0 calc(var(--ring-w) + 1px) var(--ring,#fff),
-    0 0 0 calc(var(--ring-w) + 4px) rgba(231,185,77,.6), 0 2px 6px rgba(0,0,0,.6);}
-  /* selected suspect lights up: every matching token gets a bright full-colour ring + glow,
-     a strong jump from the dim default so it's obvious even at mobile token size */
-  .cell.match{z-index:3;}
-  /* matching placed suspects: a GENTLE breathing pulse of the lit ring/glow while selected.
-     The declared box-shadow below is the resting/static lit ring — shown as-is when Motion is off
-     (body.no-motion / reduced-motion disable the animation), so it degrades to a solid lit ring. */
-  .cell.match .token{box-shadow:0 0 0 calc(var(--ring-w) + 2px) var(--ring,#fff),
-    0 0 18px 5px var(--ring,#fff), 0 0 0 6px color-mix(in srgb, var(--ring,#fff) 48%, transparent), 0 2px 4px rgba(0,0,0,.55);
-    filter:brightness(1.06);animation:matchPulse 1.8s ease-in-out infinite;}
+  /* selected cell's occupant: the CELL already carries the amber border+glow (.cell.sel, above); the token
+     just lifts + brightens so the picked suspect pops (no ring). */
+  .cell.sel .token{transform:scale(1.06);filter:brightness(1.08) drop-shadow(0 1px 3px rgba(0,0,0,.5));}
+  /* suspect-focus lens "lit": every instance of the focused suspect gets a soft AMBER cell halo + a brighter,
+     slightly larger portrait — a strong jump above the dimmed rest (body.suspect-focus). The declared cell
+     box-shadow is the resting/static halo (shown when Motion is off); matchPulse breathes it. */
+  .cell.match{z-index:3;box-shadow:inset 0 0 0 2px rgba(231,185,77,.55), 0 0 14px 2px rgba(231,185,77,.4);
+    animation:matchPulse 1.8s ease-in-out infinite;}
+  .cell.match .token{transform:scale(1.06);filter:brightness(1.14) saturate(1.12) drop-shadow(0 0 6px rgba(231,185,77,.55));}
   @keyframes matchPulse{
-    0%,100%{box-shadow:0 0 0 calc(var(--ring-w) + 2px) var(--ring,#fff), 0 0 12px 3px var(--ring,#fff), 0 0 0 5px color-mix(in srgb, var(--ring,#fff) 40%, transparent), 0 2px 4px rgba(0,0,0,.55);}
-    50%{box-shadow:0 0 0 calc(var(--ring-w) + 2px) var(--ring,#fff), 0 0 24px 7px var(--ring,#fff), 0 0 0 7px color-mix(in srgb, var(--ring,#fff) 58%, transparent), 0 2px 4px rgba(0,0,0,.55);}}
-  /* conflict: red ring layered OUTSIDE the colour ring so it never clashes with it */
-  .token.bad{outline:2.5px solid var(--bad);outline-offset:2px;}
+    0%,100%{box-shadow:inset 0 0 0 2px rgba(231,185,77,.5), 0 0 10px 1px rgba(231,185,77,.3);}
+    50%{box-shadow:inset 0 0 0 2px rgba(231,185,77,.72), 0 0 20px 5px rgba(231,185,77,.5);}}
+  /* conflict: a red outline + glow on the marker (no disc to layer onto) */
+  .token.bad{outline:2.5px solid var(--bad);outline-offset:2px;filter:drop-shadow(0 0 5px rgba(193,39,45,.8));}
   /* ---- suspect-focus lens (P5): spotlight one suspect's markers, calm the rest of the grid ----
      The lit markers reuse .cell.match (its breathing pulse is already motion-gated). The dimming is
      opacity/filter TRANSITIONS (not animations), so the board still calms down with Motion off — it
@@ -216,7 +216,7 @@
   body.suspect-focus .cell:not(.match):not(.sel):not(.peer-row):not(.peer-col){
     opacity:.34;filter:grayscale(.4) brightness(.82);transition:opacity .22s ease,filter .22s ease;}
 
-  /* tray uses the SAME token disc+ring so the picker matches the board; name above */
+  /* tray uses the SAME portrait-only marker so the picker matches the board; name above */
   .tray{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:100%;padding-top:4px;}
   .susp{display:flex;flex-direction:column;align-items:center;gap:4px;width:62px;cursor:pointer;
     transition:transform .16s ease,filter .3s ease;
@@ -226,8 +226,7 @@
     max-width:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .susp.sel .susp-name{color:var(--amber-soft);}
   .susp .disc{position:relative;width:52px;height:52px;}
-  .susp.sel .token{box-shadow:0 0 0 calc(var(--ring-w) + 1.5px) var(--ring,#fff),
-    0 0 16px 4px var(--ring,#fff), 0 0 0 calc(var(--ring-w) + 5px) rgba(231,185,77,.7), 0 4px 10px rgba(0,0,0,.6);}
+  .susp.sel .token{transform:scale(1.08);filter:brightness(1.1) drop-shadow(0 2px 7px rgba(231,185,77,.6));}
   .susp.done{filter:grayscale(.75) brightness(.6);}
   /* count badge sits ABOVE the token (token is z-index:2, so the badge needs a higher z or the
      portrait/ring paints over the number); bottom-right corner, chip backing for legibility */
@@ -511,9 +510,7 @@
      ring, and a prominent "N left" badge. focPulse is killed by body.no-motion -> static lit ring. */
   .susp.foc{transform:translateY(-8px) scale(1.06);}
   .susp.foc .susp-name{color:var(--amber);font-weight:800;}
-  .susp.foc .token{box-shadow:0 0 0 calc(var(--ring-w) + 1.5px) var(--ring,#fff),
-    0 0 18px 5px var(--ring,#fff), 0 0 0 calc(var(--ring-w) + 6px) rgba(231,185,77,.85), 0 4px 12px rgba(0,0,0,.6);
-    animation:focPulse 1.6s ease-in-out infinite;}
+  .susp.foc .token{filter:brightness(1.12) drop-shadow(0 0 9px rgba(231,185,77,.8));}
   .susp.foc .count{background:var(--amber);color:#1a1a22;border-color:var(--amber);
     transform:scale(1.24);box-shadow:0 0 0 2px rgba(231,185,77,.5),0 1px 4px rgba(0,0,0,.75);}
   @keyframes focPulse{
@@ -881,6 +878,20 @@
 
   /* tray + toolbar + near-board evidence */
   body.phone .board-wrap{gap:calc(9px * var(--ps,1));}   /* tighter vertical rhythm so the board starts higher */
+  /* PHONE-ONLY reorder (desktop + appfit untouched): move the Objective, the deduction-grid caption, and the
+     Suspects label BELOW the controls. .board-wrap is a flex column, so this is pure CSS `order` — no DOM move,
+     fully reversible. Order: board → tray → toolbar → Settings → Objective → grid caption → Suspects label → (Case File · status · Wembly). */
+  body.phone .board-wrap > #firstTip{order:0;}
+  body.phone .board-wrap > #board{order:1;}
+  body.phone .board-wrap > .tray{order:2;}
+  body.phone .board-wrap > .toolbar{order:3;}
+  body.phone .board-wrap > .control-row-solo{order:4;}
+  body.phone .board-wrap > #evMount{order:5;}        /* Current Objective (relocated into #evMount on phone) */
+  body.phone .board-wrap > .board-title{order:6;}     /* "🔍 Inspector Graves' Deduction Grid" caption */
+  body.phone .board-wrap > .tray-label{order:7;}      /* "Suspects — tap to select…" label */
+  body.phone .board-wrap > #caseFileBtn{order:8;}
+  body.phone .board-wrap > #statusMount{order:9;}
+  body.phone .board-wrap > #assistant{order:10;}
   body.phone .tray-label{font-size:calc(16px * var(--ps,1));}
   body.phone .tray-hint{font-size:calc(14px * var(--ps,1));}
   /* tray sized so all 9 suspects fall into exactly 2 rows (5 + 4): 5 must fit one row at ~360px */
@@ -1085,15 +1096,19 @@
     text-transform:uppercase;color:#5b4a22;}
   .iflap-stamp{transform:rotate(-8deg);border:2px solid rgba(150,32,32,.55);color:rgba(150,32,32,.62);
     font-family:"Courier New",monospace;font-weight:700;font-size:16px;letter-spacing:3px;padding:5px 14px;border-radius:4px;text-transform:uppercase;}
-  /* the case folder slides DOWN into place — starts well above its resting spot and drops in with a
-     soft settle, like a file dropped into a tray. Higher specificity than `.modal-bg.show .modal`'s
-     jModalIn so this downward slide wins over the generic upward pop. */
-  .modal-bg.show .intro-card.seq{animation:introSlide .6s cubic-bezier(.22,.78,.31,1) both;}
+  /* the case folder slides DOWN into place — starts above its resting spot and drops in with a soft settle,
+     like a file dropped into a tray. The intro card must NEVER use the generic .modal jModalIn (an upward pop),
+     so (1) we null jModalIn out for the card, and (2) the .seq variant gets introSlide. CRUCIAL: the fade-in
+     finishes EARLY (20%) while the card is still high up, so the DOWNWARD travel is what the player actually
+     sees. (Before, opacity hit 1 only at 55% and the ease-out front-loaded the whole drop into the invisible
+     fade — leaving just the tail overshoot settling UPWARD visible, which read as "slides up".) */
+  .modal-bg.show .intro-card{animation:none;}   /* kill the generic upward jModalIn pop on the case folder (introSlide below wins when .seq is present) */
+  .modal-bg.show .intro-card.seq{animation:introSlide .55s cubic-bezier(.33,0,.25,1) both;}
   @keyframes introSlide{
-    0%{transform:translateY(-96px);opacity:0;}
-    55%{opacity:1;}
-    82%{transform:translateY(6px);opacity:1;}   /* gentle overshoot past rest... */
-    100%{transform:translateY(0);opacity:1;}     /* ...then settles in */
+    0%{transform:translateY(-90px);opacity:0;}    /* above the resting spot, hidden */
+    20%{transform:translateY(-72px);opacity:1;}   /* fade in fast WHILE still high up, so the drop is visible */
+    78%{transform:translateY(6px);opacity:1;}     /* drop down PAST rest — visible downward travel */
+    100%{transform:translateY(0);opacity:1;}      /* gentle settle into place */
   }
   /* flap shown closed during the sequence, then swings open */
   .intro-card.seq .intro-flap{display:flex;transform:rotateX(0deg);transition:transform .55s ease,opacity .35s ease .2s;}
@@ -4022,8 +4037,8 @@ function _shoeURI(orient, hw, op){
       "%3Crect x='22' y='"+(15-hw)+"' width='15' height='"+(2*hw)+"' rx='"+hw+"'/%3E%3C/svg%3E";
 }
 function _mkShoe(hwmap, op){ const o={}; for(const g in hwmap) o[g]={ h:'url("'+_shoeURI('h',hwmap[g],op)+'")', v:'url("'+_shoeURI('v',hwmap[g],op)+'")' }; return o; }
-const SHOE     =_mkShoe({male:5, female:3, neutral:4}, ".74");   // desktop: a little more visible than before (.6 -> .74)
-const SHOE_BOLD=_mkShoe({male:5, female:3, neutral:4}, ".85");   // mobile: ORIGINAL size (reverted from the too-big bump); just a modest opacity boost
+const SHOE     =_mkShoe({male:4, female:4, neutral:4}, ".74");   // uniform sole width for ALL suspects + open space (Trevor: men / woman / empty all the same size)
+const SHOE_BOLD=_mkShoe({male:4, female:4, neutral:4}, ".85");   // mobile: same uniform width; modest opacity boost
 function setShoeTrail(){ let g="neutral";
   if(sel>=0 && board[sel]>0){ const su=Skin.sName(THEME,board[sel]); if(su&&su.gender) g=(su.gender==="female"?"female":"male"); }
   const set = document.body.classList.contains("phone") ? SHOE_BOLD : SHOE;
@@ -5685,7 +5700,7 @@ function _step(delay){ const a=audioCtx(); if(!a) return; const t0=a.currentTime
   const s=a.createBufferSource(); s.buffer=buf;
   const lp=a.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=380+Math.random()*300;   // muffled, varied
   const g=a.createGain(); g.gain.setValueAtTime(0.0001,t0);
-  g.gain.exponentialRampToValueAtTime(0.045+Math.random()*0.03,t0+0.005);    // VERY quiet
+  g.gain.exponentialRampToValueAtTime(0.08+Math.random()*0.045,t0+0.005);    // a touch louder than before (was 0.045) — still soft
   g.gain.exponentialRampToValueAtTime(0.0001,t0+0.06);
   s.connect(lp).connect(g).connect(a.destination); s.start(t0); s.stop(t0+0.09); }
 function playFootsteps(){
@@ -5818,9 +5833,16 @@ if($("escapeManor")) $("escapeManor").onclick=()=>{ $("escapeModal").classList.r
 /* ---- top-bar / toolbar popovers (☰ Menu, ⚙ Settings): toggle + outside-click + Esc to close ---- */
 function wirePopover(btnId, popId){
   const btn=$(btnId), pop=$(popId); if(!btn||!pop) return;
-  const close=()=>{ pop.hidden=true; btn.setAttribute("aria-expanded","false"); };
+  const close=()=>{ pop.hidden=true; btn.setAttribute("aria-expanded","false");
+    pop.style.position=pop.style.top=pop.style.left=pop.style.right=""; };   // drop the inline clamp so the CSS position resumes
+  const place=()=>{   // BUGFIX: keep the dropdown on-screen at ANY width. It was anchored right:0 to the trigger, so on
+    const b=btn.getBoundingClientRect();   // narrow/wrapped headers (and phones) the 188px panel overflowed off the LEFT edge -> "menu does nothing".
+    pop.style.position="fixed"; pop.style.top=Math.round(b.bottom+7)+"px"; pop.style.right="auto";
+    let left=Math.round(b.right-pop.offsetWidth);                                   // prefer aligning the panel's right edge with the trigger (matches the old look on wide desktop)
+    left=Math.max(8, Math.min(left, window.innerWidth-pop.offsetWidth-8));          // …but clamp fully into the viewport
+    pop.style.left=left+"px"; };
   const open =()=>{ document.querySelectorAll(".popover").forEach(p=>{ if(p!==pop){ if(p._closePopover) p._closePopover(); else p.hidden=true; } });   // only one open at a time (close via the sibling's own routine so its trigger's aria-expanded resets)
-                    pop.hidden=false; btn.setAttribute("aria-expanded","true"); };
+                    pop.hidden=false; btn.setAttribute("aria-expanded","true"); place(); };
   btn.addEventListener("click",e=>{ e.stopPropagation(); pop.hidden?open():close(); });
   pop.addEventListener("click",e=>{ if(e.target.closest(".pop-nav")) close(); else e.stopPropagation(); });   // navigation item -> close; settings toggles stay open so you can flip several
   pop._closePopover=close;
@@ -5860,9 +5882,10 @@ if($("evidenceBtn")) $("evidenceBtn").onclick=()=>{ settings.evidence=settings.e
   if(story){ if(settings.evidence==="discover") syncUnitsSilently(); renderEvidenceUI(); } };   // back to Discover shows SAVED progress (no re-credit); All shows every clue
 // tap anywhere / X / Begin during the sequence -> jump to the fully-revealed card; once revealed -> close & play
 function introSkipOrClose(e){ if(e) e.stopPropagation(); if(introAnimating) introRevealAll(); else hideIntro(); }
-if($("introModal")) $("introModal").onclick=introSkipOrClose;
-if($("introClose")) $("introClose").onclick=introSkipOrClose;
-if($("introBegin")) $("introBegin").onclick=introSkipOrClose;
+function introDismiss(e){ if(e) e.stopPropagation(); hideIntro(); }   // explicit controls (Begin / ✕) ALWAYS close — even mid-animation — so there's no skip-then-second-click
+if($("introModal")) $("introModal").onclick=introSkipOrClose;          // tapping the backdrop still skips the animation (or closes once it's finished)
+if($("introClose")) $("introClose").onclick=introDismiss;
+if($("introBegin")) $("introBegin").onclick=introDismiss;
 applyCaseButtons();
 
 setupBrand();
