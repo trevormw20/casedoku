@@ -19,6 +19,8 @@
     --disc-cream:#efe6d0;   /* token disc fill behind transparent cutouts (theme can override) */
     --disc-given:#473f2c;   /* darker disc for given/locked suspects (vs player-placed cream) */
     --ring-w:2.4px;         /* token ring thickness */
+    --ring-rest:54%;        /* P6: resting token-ring colour mix toward the panel (lower = calmer; lit/selected/focus rings stay 100%) */
+    --wall-color:#a89668;   /* P6: region "house walls" get a lighter warm tan so the 3x3 rooms read as blocks (inter-cell gaps stay --grid-thick) */
   }
   *{box-sizing:border-box;}
   /* hard guard: the page can never be wider than the device, so the browser renders at
@@ -49,6 +51,15 @@
     color:var(--ink);font-size:13px;display:inline-flex;align-items:center;gap:6px;}
   .pill b{color:var(--amber-soft);}
   .pill-badge{width:20px;height:20px;flex:none;}   /* difficulty emblem; hidden by global handler if missing */
+  /* P10: current play-mode chip — looks like a pill, taps through to Settings; icon-only on the tight phone bar */
+  .mode-pill{cursor:pointer;font-family:inherit;line-height:1;margin:0;}
+  .mode-pill:hover{border-color:var(--amber);color:var(--amber-soft);}
+  body.phone .mode-pill .mode-pill-name{display:none;}
+  /* P10 #2 (light): display-only "Deduction → Accusation" phase indicator. Reflects EXISTING state (gridComplete) — never gates; accusing stays allowed anytime. */
+  .phase-pill{cursor:default;user-select:none;font-family:inherit;line-height:1;margin:0;transition:border-color .3s,color .3s,background .3s,box-shadow .3s;}
+  .phase-pill.accuse{border-color:var(--amber);color:var(--amber-soft);background:rgba(231,185,77,.1);box-shadow:0 0 0 1px rgba(231,185,77,.25);}   /* soft amber once the grid completes — echoes, doesn't compete with, the Accuse glow */
+  body.manor-open #phasePill{display:none;}   /* in-play chrome only — hidden on the manor home screen */
+  body.phone #phasePill{display:none;}         /* dense phone header + would duplicate the Accuse ⚖ glyph; the accuse glow + status carry the phase there */
   select,button,input{font-family:inherit;}
 
   .layout{display:grid;grid-template-columns:auto 410px;gap:24px;
@@ -64,14 +75,24 @@
   }
 
   .board-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;}
+  /* the board is Inspector Graves' abstract deduction grid, not a crime-scene map */
+  .board-title{font-family:Georgia,serif;font-size:13px;letter-spacing:1.5px;color:var(--ink-dim);
+    text-transform:uppercase;text-align:center;margin:0;line-height:1.2;
+    padding-bottom:5px;border-bottom:1px solid rgba(231,185,77,.22);}   /* P6: frame it as a deliberate caption */
+  .board-title b{color:var(--amber-soft);font-weight:600;}
+  body.phone .board-title{font-size:calc(12px * var(--ps,1));}
+  /* persistent reminder that clues describe the deduction grid, not a manor map */
+  .clue-grid-note{font-size:11px;font-style:italic;color:var(--ink-dim);text-align:center;margin:6px 0 0;opacity:.85;}
+  body.phone .clue-grid-note{font-size:calc(11px * var(--ps,1));}
   .board{display:grid;background:var(--grid-thick);gap:1px;padding:3px;
     border:3px solid var(--grid-thick);border-radius:6px;
     box-shadow:0 14px 40px rgba(0,0,0,.6),inset 0 0 0 1px #000;user-select:none;}
   .cell{position:relative;display:flex;align-items:center;justify-content:center;
     background:var(--panel);cursor:pointer;width:var(--cell);height:var(--cell);
-    font-size:calc(var(--cell)*.34);transition:background .12s;}
-  .cell.bt{border-top:var(--wall) solid var(--grid-thick);}
-  .cell.bl{border-left:var(--wall) solid var(--grid-thick);}
+    font-size:calc(var(--cell)*.34);transition:background .12s;
+    -webkit-tap-highlight-color:transparent;touch-action:manipulation;}   /* P2: kill the native grey tap-flash (can land on the wrong cell) + double-tap-zoom delay on the dense grid */
+  .cell.bt{border-top:var(--wall) solid var(--wall-color);}
+  .cell.bl{border-left:var(--wall) solid var(--wall-color);}
   /* DOORWAYS (purely visual): a fixed floor-plan breaks one cell-segment of every internal
      room wall so the mansion reads as connected. The border keeps its width but goes
      transparent, so the floor shows through the opening (flanked by the neighbours' wall as
@@ -105,6 +126,12 @@
   body.phone .cell.peer-col::before{background-size:15px 26px;}
   .cell.sel::before{background:rgba(231,185,77,.20);}
   .cell.sel{box-shadow:inset 0 0 0 3px var(--amber), 0 0 13px rgba(231,185,77,.7) !important;z-index:3;}
+  /* P2 (mobile): a selected EMPTY cell is the placement target — a clear amber centre dot keeps it
+     unmistakable through the cell -> tray -> cell round trip where touch mis-placements happen.
+     Static (no animation), so motion-off is unaffected; occupied/given cells are not .empty. */
+  body.phone .cell.sel.empty::before{background:
+    radial-gradient(circle at center, rgba(231,185,77,.55) 0 20%, transparent 23%),
+    rgba(231,185,77,.26);}
   .cell.scene::after{content:"";position:absolute;inset:3px;border:2px dashed rgba(193,39,45,.7);
     border-radius:5px;pointer-events:none;}
   /* room name sits like a plaque CENTERED on the room's top wall: anchored in the region's
@@ -145,7 +172,7 @@
     display:flex;align-items:center;justify-content:center;
     background:var(--disc, #888);                 /* fallback: suspect-color disc (set inline) */
     /* rings are DIM by default (muted toward the dark panel); they light up on selection (.match / .susp.sel) */
-    box-shadow:0 0 0 var(--ring-w) color-mix(in srgb, var(--ring,#888) 68%, #1b1f29), 0 2px 4px rgba(0,0,0,.55);
+    box-shadow:0 0 0 var(--ring-w) color-mix(in srgb, var(--ring,#888) var(--ring-rest,54%), #1b1f29), 0 2px 4px rgba(0,0,0,.55);
     transition:box-shadow .12s;}
   .token .tletter{font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.75);
     font-size:inherit;line-height:1;}
@@ -158,11 +185,11 @@
   /* given/locked suspects: darker disc behind the portrait + subtle lock badge */
   .cell.given .token{background:var(--disc-given);}
   .cell.given .token.has-img{background:var(--disc-given);}
-  .cell.given .tportrait{background-color:var(--disc-given);}
+  .cell.given .tportrait{background-color:var(--disc-given);box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.5);}   /* P6: engraved rim so "given/locked" still reads when the portrait covers the dark disc */
   .cell.given .token::after{content:"";position:absolute;right:-1px;bottom:-1px;
     width:42%;height:42%;max-width:15px;max-height:15px;border-radius:50%;
     background:#1a1a22 center/64% no-repeat url("assets/ui/icon-lock.png");
-    box-shadow:0 0 0 1px rgba(0,0,0,.55);opacity:.9;pointer-events:none;}
+    box-shadow:0 0 0 1px rgba(0,0,0,.55);opacity:1;pointer-events:none;}
   .token.big{width:84px;height:84px;font-size:40px;box-shadow:0 0 0 3.5px var(--ring,#fff),0 8px 20px rgba(0,0,0,.6);}
   .token.tray{width:100%;height:100%;font-size:22px;}
   /* selected cell's token: thicker glowing ring */
@@ -182,11 +209,18 @@
     50%{box-shadow:0 0 0 calc(var(--ring-w) + 2px) var(--ring,#fff), 0 0 24px 7px var(--ring,#fff), 0 0 0 7px color-mix(in srgb, var(--ring,#fff) 58%, transparent), 0 2px 4px rgba(0,0,0,.55);}}
   /* conflict: red ring layered OUTSIDE the colour ring so it never clashes with it */
   .token.bad{outline:2.5px solid var(--bad);outline-offset:2px;}
+  /* ---- suspect-focus lens (P5): spotlight one suspect's markers, calm the rest of the grid ----
+     The lit markers reuse .cell.match (its breathing pulse is already motion-gated). The dimming is
+     opacity/filter TRANSITIONS (not animations), so the board still calms down with Motion off — it
+     just doesn't fade. .sel + cross peers stay legible so you can still aim while the lens is on. */
+  body.suspect-focus .cell:not(.match):not(.sel):not(.peer-row):not(.peer-col){
+    opacity:.34;filter:grayscale(.4) brightness(.82);transition:opacity .22s ease,filter .22s ease;}
 
   /* tray uses the SAME token disc+ring so the picker matches the board; name above */
   .tray{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:100%;padding-top:4px;}
   .susp{display:flex;flex-direction:column;align-items:center;gap:4px;width:62px;cursor:pointer;
-    transition:transform .16s ease,filter .3s ease;}   /* smooth lift on select; .done dims like a candle going out */
+    transition:transform .16s ease,filter .3s ease;
+    -webkit-tap-highlight-color:transparent;touch-action:manipulation;}   /* smooth lift on select; .done dims like a candle going out; P2: no native tap-flash / double-tap-zoom on tray markers */
   .susp:hover{transform:translateY(-3px);}
   .susp-name{font-size:11px;font-weight:700;color:var(--ink);text-align:center;line-height:1;
     max-width:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -206,8 +240,10 @@
   .btn{display:inline-flex;align-items:center;gap:6px;cursor:pointer;
     background:linear-gradient(180deg,#262b38,#1b1f2a);color:var(--ink);
     border:1px solid var(--line);border-radius:8px;padding:8px 13px;font-size:13.5px;transition:.12s;}
-  .btn:hover{border-color:var(--amber);color:var(--amber-soft);}
-  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn:not(:disabled):hover{border-color:var(--amber);color:var(--amber-soft);}   /* P7: disabled tools no longer light up like they're tappable */
+  .btn:disabled{opacity:.42;cursor:not-allowed;filter:grayscale(1);box-shadow:none;}   /* P7: disabled tools read as inert (drained tint), not merely dimmed */
+  .btn.danger{border-color:#5a3530;}                          /* P7: Clear wipes the board — a muted rust border sets it apart from the safe tools */
+  .btn.danger:hover{border-color:#c0563f;color:#e8917c;}      /* rust hover, deliberately distinct from the amber hover of safe tools */
   .btn img{width:17px;height:17px;}
   .btn.primary{background:linear-gradient(180deg,#7a5e1f,#5a4314);border-color:var(--amber);color:#fff;}
 
@@ -471,6 +507,18 @@
   .susp.sel{transform:translateY(-8px) scale(1.06);}   /* selected suspect lifts higher and stays up while selected */
   .susp.sel .susp-name{color:var(--amber-soft);}
   .susp.sel .count{background:var(--amber);color:#1a1a22;border-color:var(--amber);}
+  /* spotlighted (armed) suspect — the deduction lens (P5): unmistakable lift + amber halo + breathing
+     ring, and a prominent "N left" badge. focPulse is killed by body.no-motion -> static lit ring. */
+  .susp.foc{transform:translateY(-8px) scale(1.06);}
+  .susp.foc .susp-name{color:var(--amber);font-weight:800;}
+  .susp.foc .token{box-shadow:0 0 0 calc(var(--ring-w) + 1.5px) var(--ring,#fff),
+    0 0 18px 5px var(--ring,#fff), 0 0 0 calc(var(--ring-w) + 6px) rgba(231,185,77,.85), 0 4px 12px rgba(0,0,0,.6);
+    animation:focPulse 1.6s ease-in-out infinite;}
+  .susp.foc .count{background:var(--amber);color:#1a1a22;border-color:var(--amber);
+    transform:scale(1.24);box-shadow:0 0 0 2px rgba(231,185,77,.5),0 1px 4px rgba(0,0,0,.75);}
+  @keyframes focPulse{
+    0%,100%{box-shadow:0 0 0 calc(var(--ring-w) + 1.5px) var(--ring,#fff), 0 0 14px 4px var(--ring,#fff), 0 0 0 calc(var(--ring-w) + 5px) rgba(231,185,77,.7), 0 4px 12px rgba(0,0,0,.6);}
+    50%{box-shadow:0 0 0 calc(var(--ring-w) + 1.5px) var(--ring,#fff), 0 0 22px 7px var(--ring,#fff), 0 0 0 calc(var(--ring-w) + 8px) rgba(231,185,77,.95), 0 4px 12px rgba(0,0,0,.6);}}
   /* Focus / Atmosphere mode (P4) — reduce texture competition during play */
   body.focus .cell.empty{outline:1px solid rgba(231,185,77,.13);outline-offset:-3px;}
   body.focus .cell:not(.given):hover{outline:2px solid var(--amber);outline-offset:-2px;cursor:pointer;}
@@ -487,6 +535,36 @@
   body.focus .cell.bt{border-top-width:var(--wall);border-top-color:#a89668;}
   body.focus .cell.bl{border-left-width:var(--wall);border-left-color:#a89668;}
   body.focus .room-tag{background:rgba(8,9,13,.86);}
+  /* P13 capture view: a clean, distraction-free frame for screenshots / trailer footage. Hides utility chrome
+     (top-bar buttons, toolbar, status, dev panel, onboarding tip/hint) — KEEPS the board, tray, objective,
+     the deduction-grid caption, and the info pills (incl. the clock for On-the-Clock urgency shots).
+     Toggle with Ctrl+Shift+C or the dev panel. Pure presentation — no gameplay change. */
+  body.capture #devPanel{display:none!important;}
+  body.capture .top-controls .btn{display:none;}
+  body.capture .toolbar{display:none;}
+  body.capture .status{display:none;}
+  body.capture .tray-hint{display:none;}
+  body.capture .first-tip{display:none;}
+  .capture-hint{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:10000;
+    background:rgba(13,15,20,.85);color:var(--amber-soft);border:1px solid var(--line);border-radius:8px;
+    padding:5px 12px;font-size:12px;font-family:"Courier New",monospace;letter-spacing:1px;
+    opacity:0;transition:opacity .3s;pointer-events:none;}
+  .capture-hint.show{opacity:1;}
+  /* P13b: aspect-ratio framing guides (Ctrl+Shift+F) — a centered safe-frame: dim outside + crisp amber outline,
+     non-interactive (pointer-events:none), no layout effect. Sized in JS to contain within the viewport. */
+  .framing-guide{position:fixed;inset:0;z-index:9998;pointer-events:none;display:flex;align-items:center;justify-content:center;}
+  .framing-guide .frame-box{position:relative;pointer-events:none;
+    box-shadow:0 0 0 100vmax rgba(0,0,0,.38);outline:2px solid rgba(231,185,77,.9);outline-offset:-1px;}
+  .framing-guide .frame-label{position:absolute;top:5px;left:6px;font:11px/1 "Courier New",monospace;letter-spacing:1.5px;
+    color:var(--amber-soft);opacity:.7;text-shadow:0 1px 2px #000;background:rgba(13,15,20,.5);padding:2px 5px;border-radius:4px;}
+  /* rule-of-thirds gridlines INSIDE the safe-frame — same amber family as the outline, much lower opacity so they
+     read as a compositional aid (clearly croppable), not clutter. Percentage-positioned so they auto-scale with the box. */
+  .framing-guide .frame-thirds{position:absolute;inset:0;pointer-events:none;}
+  .framing-guide .frame-thirds i{position:absolute;background:rgba(231,185,77,.3);pointer-events:none;}
+  .framing-guide .frame-thirds i.v{top:0;bottom:0;width:1px;}
+  .framing-guide .frame-thirds i.h{left:0;right:0;height:1px;}
+  .framing-guide .frame-thirds i.v1{left:33.333%;}  .framing-guide .frame-thirds i.v2{left:66.667%;}
+  .framing-guide .frame-thirds i.h1{top:33.333%;}    .framing-guide .frame-thirds i.h2{top:66.667%;}
   /* Case Assistant + hint highlights (P7) */
   .assistant{display:flex;gap:10px;align-items:flex-start;background:#15171f;border:1px solid var(--line);
     border-left:3px solid var(--amber);border-radius:8px;padding:9px 12px;font-size:13.5px;color:var(--ink);
@@ -508,6 +586,11 @@
   .cell.clue-cell,.cell.clue-object{box-shadow:inset 0 0 0 3px var(--amber),0 0 16px rgba(231,185,77,.75)!important;
     z-index:6;animation:cluePulseCell 1.6s ease-in-out;}
   .cell.clue-object .cell-object{animation:cluePulseObj 1.6s ease-in-out;}
+  /* P4 clue-to-board: keep the active clue's room SECTION visible even under the suspect-focus lens dim */
+  body.suspect-focus .cell.clue-hl{opacity:1;filter:none;}
+  /* P4: a gentle, NON-arming cue ring on the referenced marker(s) in the tray (distinct from .foc/.sel — never arms) */
+  .susp.clue-ref .token{box-shadow:0 0 0 2px var(--amber-soft),0 0 10px rgba(231,185,77,.4);}
+  .susp.clue-ref .susp-name{color:var(--amber-soft);}
   @keyframes cluePulseRoom{0%,100%{box-shadow:inset 0 0 0 2px rgba(231,185,77,.3);}50%{box-shadow:inset 0 0 0 3px rgba(231,185,77,.72);}}
   @keyframes cluePulseCell{0%,100%{box-shadow:inset 0 0 0 3px var(--amber),0 0 10px rgba(231,185,77,.55);}50%{box-shadow:inset 0 0 0 3px var(--amber),0 0 22px rgba(231,185,77,.95);}}
   @keyframes cluePulseObj{0%,100%{transform:scale(1);}50%{transform:scale(1.3);}}
@@ -521,6 +604,7 @@
     text-shadow:0 1px 1px rgba(0,0,0,.8);box-shadow:0 0 0 1px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.3);}
   /* notes-mode active: toolbar button lit + selected cell turns teal so the mode is obvious */
   .btn.on{border-color:var(--amber);background:linear-gradient(180deg,#7a5e1f,#5a4314);color:#fff;}
+  #notesBtn.on{box-shadow:0 0 0 2px var(--amber),0 0 10px rgba(231,185,77,.45);}   /* P7: Notes ON = an unmistakable amber ring (static, motion-safe) beyond the shared brown fill */
   body.notes .cell.sel{box-shadow:inset 0 0 0 3px #34a8bc, 0 0 13px rgba(52,168,188,.6) !important;}
   body.notes .cell.sel::before{background:rgba(52,168,188,.18);}
   .board-wrap{position:relative;}
@@ -758,6 +842,14 @@
               max(4px,env(safe-area-inset-right));
        --cell:calc((100vw - calc(30px * var(--ps,1))) / var(--ncols));   /* board fills the layout width (no 62px cap) */
        --wall:4px;}   /* room walls 50% thinner on mobile (desktop stays 8px) — more floor per cell */
+  /* P6: phone portraits shrink to ~32px and get muddy — keep the bold per-suspect INITIAL always
+     visible as a small dark-backed monogram (bottom-left, opposite the bottom-right lock badge), so
+     suspects stay tellable apart without squinting. Overrides the desktop "hide the letter once a
+     portrait loads" rule (.token.has-img .tletter{display:none}) for phones only. */
+  body.phone .token.has-img .tletter{display:flex;align-items:center;justify-content:center;
+    position:absolute;left:-2px;bottom:-2px;z-index:4;min-width:14px;height:14px;padding:0 2px;
+    border-radius:5px;font-size:calc(var(--cell)*.28);line-height:1;font-weight:800;color:#fff;
+    background:rgba(13,15,20,.82);text-shadow:0 1px 1px rgba(0,0,0,.95);box-shadow:0 1px 2px rgba(0,0,0,.6);}
   body.phone .casefile{display:none;}                  /* side panel hidden; the case file is the overlay */
 
   /* COMPACT header: flatten brand + top-controls into one flowing flex (display:contents) so the
@@ -813,6 +905,10 @@
   body.phone .ev-block.objective-hero{margin:2px 0 0;padding:calc(7px * var(--ps,1)) calc(10px * var(--ps,1)) calc(9px * var(--ps,1));border-radius:11px;box-shadow:none;}
   body.phone .ev-block.objective-hero>summary{font-size:calc(10.5px * var(--ps,1));padding:0 0 calc(5px * var(--ps,1));margin:0;letter-spacing:1.5px;border-bottom:1px solid rgba(231,185,77,.22);}
   body.phone .ev-block.objective-hero .ev-card{background:transparent;border:none;box-shadow:none;min-height:0;padding:calc(7px * var(--ps,1)) 0 0;margin:0;}
+  body.phone .ev-block.objective-hero .ev-clue{font-size:17.5px;}   /* mobile objective unchanged — desktop-only size bump stays off phones */
+  body.phone .ev-pager{margin-top:calc(7px * var(--ps,1));gap:calc(22px * var(--ps,1));}
+  body.phone .ev-block.objective-hero .ev-pager .ev-nav{width:calc(40px * var(--ps,1));height:calc(40px * var(--ps,1));font-size:calc(22px * var(--ps,1));}
+  body.phone .ev-pager .ev-count{font-size:calc(13px * var(--ps,1));}
   /* mode segment + Settings: bigger tap targets and kept on ONE row (the "Mode" caption is dropped —
      the two labelled buttons are self-explanatory — so the segment + Settings fit side by side). */
   body.phone .control-row{gap:calc(8px * var(--ps,1));margin-top:calc(9px * var(--ps,1));}
@@ -933,7 +1029,7 @@
   .modal-bg.show .modal{animation:jModalIn .2s ease-out;}
   @keyframes jBgIn{0%{opacity:0}100%{opacity:1}}
   .modal-bg.show{animation:jBgIn .18s ease-out;}
-  .btn:active{transform:translateY(1px) scale(.97);}   /* subtle press feedback */
+  .btn:not(:disabled):active{transform:translateY(1px) scale(.97);}   /* P7: subtle press feedback — not on disabled tools (the only tap cue on touch) */
   /* press states for the non-.btn controls — same push-down family as .btn:active */
   .seg-btn:active,.ev-nav:active,.co-tab:active,.co-close:active{transform:translateY(1px) scale(.97);}
   .case-file-btn:active{transform:translateY(1px) scale(.985);}
@@ -1104,7 +1200,7 @@
   /* controls stay on ONE row; scroll horizontally if the window is too narrow (keeps header height fixed) */
   body.appfit .top-controls{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;min-width:0;justify-content:flex-end;gap:5px;align-items:center;scrollbar-width:thin;}
   body.appfit .top-controls>*{flex:0 0 auto;}
-  body.appfit .pill{padding:4px 8px;font-size:12px;min-height:0;}
+  body.appfit .pill{padding:4px 8px;font-size:13px;min-height:0;}   /* P11: top-bar info (timer/guesses/difficulty) a touch larger at handheld distance */
   body.appfit .pill-badge{width:16px;height:16px;}
   body.appfit .top-controls .btn{padding:5px 9px;font-size:12.5px;min-height:0;}
   body.appfit .demo-badge{font-size:10px;padding:2px 6px;}
@@ -1117,17 +1213,26 @@
   body.appfit .top-controls .btn-tx{display:none;}   /* icon-only header buttons -> header stays one row */
   /* toolbar: ONE row that scrolls horizontally (never wraps to many rows / never steals board height) */
   body.appfit .toolbar{gap:5px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;justify-content:flex-start;
-    width:100%;padding-bottom:2px;scrollbar-width:thin;}
-  body.appfit .toolbar .btn{padding:5px 8px;font-size:11.5px;min-height:0;white-space:nowrap;flex:0 0 auto;}
+    width:100%;padding-bottom:2px;scrollbar-width:thin;flex:0 0 auto;}   /* P11: never let the column crush the toolbar (fitBoard measures it to size the board) */
+  body.appfit .toolbar .btn{padding:8px 9px;font-size:11.5px;min-height:36px;white-space:nowrap;flex:0 0 auto;}   /* P7: keep a ~36px tap floor in the narrow scrolling toolbar (esp. for destructive Clear) */
   /* tray: ONE compact row (smaller tokens) that scrolls horizontally if it can't fit */
-  body.appfit .tray{gap:6px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;justify-content:flex-start;padding-top:2px;scrollbar-width:thin;}
+  body.appfit .tray{gap:6px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;justify-content:flex-start;padding-top:2px;scrollbar-width:thin;flex:0 0 auto;}   /* P11 FIX: the tray must NOT be vertically crushed by the column (was collapsing to ~2px, hiding the suspect markers); fitBoard then sizes the board to leave room */
   body.appfit .tray .susp{width:46px;flex:0 0 auto;}
   body.appfit .tray .susp .disc{width:40px;height:40px;}
-  body.appfit .tray .susp-name{font-size:10px;max-width:46px;}
+  body.appfit .tray .susp-name{font-size:12px;max-width:46px;}
   body.appfit .tray-label{font-size:11px;margin:0;}
+  /* P11 (Steam Deck / appfit): bump the smallest playing text to comfortable handheld sizes.
+     Scoped to body.appfit so normal desktop + phone layouts are untouched. */
+  body.appfit .room-tag{font-size:11px;}
+  body.appfit .board-title{font-size:14px;}
+  body.appfit .star-legend{font-size:13px;}
+  body.appfit .pw-label{font-size:12px;}
+  body.appfit .pw-hint{font-size:11.5px;}
+  body.appfit .clue-grid-note{font-size:12px;opacity:1;}   /* P11: rely on colour, not colour x .85 opacity, for handheld contrast */
+  body.appfit{--ink-dim:#b6bcca;}                          /* P11: lift dim secondary text (hints, notes, labels) for arm's-length contrast — appfit only, desktop/phone keep #9aa0ae */
   body.appfit .first-tip{display:none;}            /* the first-run tip would eat board height — hidden in appfit */
   body.appfit .ev-mount{display:none;}            /* keep the stepper in the right pane -> more board height */
-  body.appfit .assistant{margin:0;padding:6px 8px;font-size:12px;}
+  body.appfit .assistant{margin:0;padding:6px 8px;font-size:13px;}   /* P11: the Clerk's hint line readable at arm's length */
   /* every overlay/modal fits within the viewport height and scrolls internally if tall */
   body.appfit .modal-bg{align-items:flex-start;padding:10px;}
   body.appfit .modal{max-height:calc(100dvh - 20px);overflow-y:auto;}
@@ -1423,14 +1528,23 @@
   @keyframes segPop{from{transform:scale(.94)}to{transform:scale(1)}}
 
   /* OBJECTIVE HERO — promote the current-evidence stepper into the panel's lead card */
-  .ev-block.objective-hero{margin:4px 0 14px;border:2px solid var(--amber);
+  .ev-block.objective-hero{margin:4px 0 16px;border:2px solid var(--amber);
     border-radius:12px;padding:11px 12px 13px;
     background:linear-gradient(165deg,rgba(231,185,77,.12),rgba(231,185,77,.03));
     box-shadow:0 6px 18px rgba(0,0,0,.4),inset 0 1px 0 rgba(231,185,77,.15);}
   .ev-block.objective-hero>summary{color:var(--amber);font-size:11px;}
   .ev-block.objective-hero .ev-card{background:#11141b;border-color:rgba(231,185,77,.35);
-    min-height:92px;padding:18px 14px;}
-  .ev-block.objective-hero .ev-clue{font-size:17.5px;line-height:1.5;}
+    min-height:92px;padding:20px 16px;justify-content:center;}
+  .ev-block.objective-hero .ev-clue{font-size:18.5px;line-height:1.5;font-weight:500;}
+  /* pager footer: arrows flank a clear progress count, separate from the clue itself */
+  .ev-pager{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:11px;}
+  .ev-pager .ev-count{font-family:"Courier New",monospace;font-size:13.5px;letter-spacing:1.5px;
+    color:var(--amber-soft);min-width:52px;text-align:center;font-weight:600;}
+  .ev-block.objective-hero .ev-pager .ev-nav{width:34px;height:34px;font-size:21px;
+    border-color:rgba(231,185,77,.4);background:rgba(231,185,77,.06);color:var(--amber);}
+  .ev-block.objective-hero .ev-pager .ev-nav:hover{border-color:var(--amber);background:rgba(231,185,77,.16);}
+  .ev-block.objective-hero .clue-grid-note{margin-top:10px;padding-top:9px;
+    border-top:1px dashed rgba(231,185,77,.2);}
   @media (max-width:1040px){ .ev-block.objective-hero{margin-bottom:10px;} }
 
   /* ===== Case File popup button + Settings popup ===== */
@@ -1465,6 +1579,34 @@
   /* red screen-edge vignette in the final seconds (added only when motionOK; also killed by no-motion) */
   body.clock-critical::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:69;animation:clkVignette .9s ease-in-out infinite;}
   @keyframes clkVignette{0%,100%{box-shadow:inset 0 0 60px 2px rgba(193,39,45,.16)}50%{box-shadow:inset 0 0 110px 18px rgba(193,39,45,.42)}}
+
+  /* ===== First-run onboarding: animated "Graves' Deduction Grid" demo (lives in How to Play) ===== */
+  .grid-demo{max-width:280px;margin:12px auto 2px;}
+  .gd-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;background:var(--grid-thick);
+    padding:3px;border:2px solid var(--grid-thick);border-radius:9px;aspect-ratio:1/1;}
+  .gd-cell{position:relative;display:flex;align-items:center;justify-content:center;background:#1b1f2a;
+    border-radius:3px;transition:background .25s ease;}
+  .gd-cell[data-c="1"]{border-right:2px solid rgba(150,110,70,.55);}   /* 2×2 "room" divider */
+  .gd-cell[data-r="1"]{border-bottom:2px solid rgba(150,110,70,.55);}
+  .gd-mark{width:64%;height:64%;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font:700 13px Georgia,serif;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);
+    box-shadow:0 1px 3px rgba(0,0,0,.5);transition:transform .25s ease,box-shadow .25s ease;}
+  .gd-cell.gd-row-on,.gd-cell.gd-col-on,.gd-cell.gd-box-on{background:rgba(231,185,77,.24);}
+  .gd-cell.gd-mark-on .gd-mark{transform:scale(1.18);box-shadow:0 0 0 2px var(--amber),0 0 12px rgba(231,185,77,.85);}
+  .gd-cell:not(.gd-mark-on) .gd-mark{opacity:.9;}
+  .gd-caption{text-align:center;font-style:italic;color:var(--ink);font-size:14.5px;line-height:1.4;
+    margin:10px 4px 2px;min-height:2.7em;}
+  .gd-caption b{color:var(--amber-soft);font-style:normal;}
+  /* Wembly's framing aside, in his voice */
+  .howto-wembly{background:rgba(231,185,77,.07);border-left:3px solid var(--amber);border-radius:0 8px 8px 0;
+    padding:9px 13px;margin:12px 0;font-style:italic;color:var(--ink);font-size:14px;line-height:1.5;}
+  .howto-wembly b{color:var(--amber-soft);font-style:normal;}
+  .howto-rule{text-align:center;font-size:15.5px;line-height:1.5;color:var(--ink);margin:6px 4px;}
+  .howto-rule b{color:var(--amber-soft);}
+  .howto-second{text-align:center;font-family:Georgia,serif;font-size:15px;color:var(--amber-soft);margin:4px 4px 10px;letter-spacing:.3px;}
+  .howto-divider{border:none;border-top:1px dashed var(--line);margin:14px 0 10px;}
+  /* motion off: hold still — no animated sequence, no transitions */
+  body.no-motion .gd-cell,body.no-motion .gd-mark{transition:none;}
 </style>
 </head>
 <body>
@@ -1483,6 +1625,8 @@
       <span class="pill clockpill" id="timerPill" title="Time on this case">🕰 00:00</span>
       <span class="pill" id="guessPill" title="Accusation attempts left (a wrong one costs +1:00)">Guesses: 3</span>
       <span class="pill" id="diffPill">—</span>
+      <button class="pill mode-pill" id="modePill" title="Play mode">—</button>
+      <span class="pill phase-pill" id="phasePill" title="Deduction phase — fill Inspector Graves' grid. You can accuse anytime; a full board isn't required.">🔍 <span class="phase-pill-name">Deduction</span></span>
       <button class="btn casefile-open" id="caseFileTopBtn" title="Open the full case file">📁<span class="btn-tx"> Case File</span></button>
       <button class="btn primary" id="accuseBtn" title="Name the killer — you have 3 guesses (full board not required)">⚖ <span class="btn-tx">Accuse</span></button>
       <div class="pop-wrap">
@@ -1501,23 +1645,24 @@
   <div class="layout">
     <div class="board-wrap">
       <div class="first-tip" id="firstTip" hidden>
-        <span>📓 Each suspect appears <b>exactly once</b> in every row, every column, and every room — then use the evidence to finish.</span>
+        <span>📓 Each suspect marker appears <b>exactly once</b> in every row, every column, and every room — then use the evidence to finish.</span>
         <button class="btn" id="firstTipOk">Got it</button>
       </div>
       <!-- on mobile, the Current Evidence stepper (#evBlock) is relocated here once the tip is dismissed -->
       <div class="ev-mount" id="evMount" hidden></div>
+      <div class="board-title">🔍 Inspector Graves' <b>Deduction Grid</b></div>
       <div class="board" id="board"></div>
       <div class="tray-label">Suspects <span class="tray-hint">— tap to select, then a cell · badge = number left to place</span></div>
       <div class="tray" id="tray"></div>
       <!-- PRIMARY TOOLBAR: core gameplay actions only -->
       <div class="toolbar">
-        <button class="btn" id="undoBtn"><img src="assets/ui/icon-undo.png" alt=""/>Undo</button>
-        <button class="btn" id="redoBtn"><img src="assets/ui/icon-redo.png" alt=""/>Redo</button>
-        <button class="btn" id="eraseBtn"><img src="assets/ui/icon-erase.png" alt=""/>Erase</button>
-        <button class="btn" id="clearBtn" title="Reset the whole puzzle back to its starting clues">🧹 Clear</button>
-        <button class="btn" id="notesBtn" title="Pencil-mark candidates (press N)">✎ Notes</button>
-        <button class="btn" id="hintBtn"><img src="assets/ui/icon-hint.png" alt=""/>Ask the Clerk</button>
-        <button class="btn" id="checkBtn"><img src="assets/ui/icon-check.png" alt=""/>Check</button>
+        <button class="btn" id="undoBtn" title="Undo your last move"><img src="assets/ui/icon-undo.png" alt=""/>Undo</button>
+        <button class="btn" id="redoBtn" title="Redo the move you undid"><img src="assets/ui/icon-redo.png" alt=""/>Redo</button>
+        <button class="btn" id="eraseBtn" title="Erase the selected square (Backspace or Delete)"><img src="assets/ui/icon-erase.png" alt=""/>Erase</button>
+        <button class="btn danger" id="clearBtn" title="Reset the WHOLE puzzle to its starting clues — asks first, and you can undo it">🧹 Clear</button>
+        <button class="btn" id="notesBtn" title="Pencil-mark candidates (press N)" aria-pressed="false">✎ Notes</button>
+        <button class="btn" id="hintBtn" title="Ask the Clerk for a nudge — tap again for a stronger hint"><img src="assets/ui/icon-hint.png" alt=""/>Ask the Clerk</button>
+        <button class="btn" id="checkBtn" title="Check your work — circles any suspect in the wrong place"><img src="assets/ui/icon-check.png" alt=""/>Check</button>
       </div>
 
       <!-- play mode + all toggles now live in the Settings popup -->
@@ -1561,12 +1706,16 @@
       <!-- current-evidence stepper: desktop here; on mobile it relocates near the board (#evMount) -->
       <div id="evHome" hidden></div>
       <details class="ev-block objective-hero" id="evBlock" open>
-        <summary>◎ Current Objective <span class="ev-count" id="evStep">— / —</span></summary>
+        <summary>◎ Current Objective</summary>
         <div class="ev-card">
-          <button class="ev-nav" id="evPrev" title="Previous clue" aria-label="Previous clue">‹</button>
           <p class="ev-clue" id="evClue">—</p>
+        </div>
+        <div class="ev-pager">
+          <button class="ev-nav" id="evPrev" title="Previous clue" aria-label="Previous clue">‹</button>
+          <span class="ev-count" id="evStep">— / —</span>
           <button class="ev-nav" id="evNext" title="Next clue" aria-label="Next clue">›</button>
         </div>
+        <p class="clue-grid-note" title="The board is Inspector Graves' deduction grid — not a map of the manor.">Clues refer to Graves' deduction grid.</p>
       </details>
 
       <div id="homeEvidence"></div>
@@ -1638,9 +1787,9 @@
       <div class="settings-list">
         <div class="settings-head">Play mode <span class="settings-note">— switching restarts the case</span></div>
         <div class="mode-pick" id="modePick">
-          <button class="btn settings-row mode-opt" data-mode="relaxed" title="Relaxed: cozy, no timer or guess limit">🌿 Relaxed <small>cozy · no timer</small></button>
-          <button class="btn settings-row mode-opt" data-mode="detective" title="Detective: count-up timer + 3 guesses">🕵 Detective <small>timer + 3 guesses</small></button>
-          <button class="btn settings-row mode-opt" data-mode="clock" title="On the Clock: a countdown race — catch the culprit before they escape">⏱ On the Clock <small>beat the countdown</small></button>
+          <button class="btn settings-row mode-opt" data-mode="relaxed" title="Relaxed — cozy and pressure-free: no timer, no guess limit, hints whenever. Best for your first cases.">🍵 Relaxed <small>cozy · no timer or limit</small></button>
+          <button class="btn settings-row mode-opt" data-mode="detective" title="Detective — the real investigation: a count-up timer and just 3 guesses (a wrong one costs time). A sharper test.">🔎 Detective <small>timer · 3 guesses</small></button>
+          <button class="btn settings-row mode-opt" data-mode="clock" title="On the Clock — a race: the clock counts down, so name the culprit before they slip away. Tense and fast.">⏱ On the Clock <small>race · beat the clock</small></button>
         </div>
         <div class="settings-head">Atmosphere &amp; sound</div>
         <button class="btn settings-row" id="atmoBtn" title="Toggle board atmosphere">Atmosphere: —</button>
@@ -1700,15 +1849,23 @@
   <div class="modal-bg" id="howtoModal">
     <div class="modal">
       <button class="x" id="howtoClose"><img src="assets/ui/icon-close.png" alt="close"/></button>
-      <h2 style="text-align:center">How to Play</h2>
+      <h2 style="text-align:center">Graves' Deduction Grid</h2>
       <p class="howto-promise">Solve cold cases. Restore the manor. Uncover the truth.<br><span class="howto-nopressure">Play at your pace — hints are always here.</span></p>
+      <div class="grid-demo" id="gridDemo">
+        <div class="gd-grid" id="gdGrid"></div>
+        <div class="gd-caption" id="gdCaption">Each suspect marker works like a Sudoku number.</div>
+      </div>
+      <p class="howto-rule">Each <b>suspect marker</b> works like a Sudoku number. Place each one <b>once in every row, column, and room</b>.</p>
+      <p class="howto-wembly"><b>Wembly, the Clerk:</b> “If I may — the grid itself is not the crime scene. It is how Inspector Graves organized the truth.”</p>
+      <p class="howto-second">Follow the clues. Complete the grid. Then close the case.</p>
+      <hr class="howto-divider">
       <p class="howto-lead">It's a sudoku you solve like a detective. The starting clues are <b>not enough on their own</b> — that's on purpose. You need <b>both</b> sudoku logic and the evidence. Use them together.</p>
       <ol class="howto-steps">
-        <li><b>Place the suspects</b> so each one shows up exactly once in every <b>row</b>, every <b>column</b>, and every <b>room</b> (a 3×3 block).</li>
+        <li><b>Place the suspect markers</b> on Graves' grid so each one shows up exactly once in every <b>row</b>, every <b>column</b>, and every <b>room</b> (a 3×3 block).</li>
         <li><b>Use the evidence</b> to work out what sudoku alone can't. The clues break the ties the grid leaves open. (You can't win by sudoku alone.)</li>
-        <li><b>Accuse</b> once every other guest is seated. Name the killer, the proof, and the motive. <b>The dashed scene is the victim's spot — only your accusation fills it.</b></li>
+        <li><b>Accuse</b> once the rest of the grid is filled in. Name the killer, the proof, and the motive. <b>The dashed scene is the victim's spot — only your accusation fills it.</b></li>
       </ol>
-      <p class="howto-foot">Tap a cell to pick it, then tap a suspect to place them. <b>★</b> marks <b>key</b> evidence — you need it to solve the case. The rest just back it up. <b>Every clue is true.</b><br>Accuse whenever you like. In <b>Detective</b> mode you get <b>3 guesses</b>, and a wrong one adds <b>1:00</b> to your time. In <b>Relaxed</b> mode there's no limit and no penalty — just keep solving.</p>
+      <p class="howto-foot">Tap a cell to pick it, then tap a suspect marker to place it. <b>★</b> marks <b>key</b> evidence — you need it to solve the case. The rest just back it up. <b>Every clue is true.</b><br>Accuse whenever you like. In <b>Detective</b> mode you get <b>3 guesses</b>, and a wrong one adds <b>1:00</b> to your time. In <b>Relaxed</b> mode there's no limit and no penalty — just keep solving.</p>
       <button class="btn primary" id="howtoGo" style="margin-top:6px">Start sleuthing</button>
     </div>
   </div>
@@ -1717,19 +1874,19 @@
   <div class="modal-bg" id="modeModal">
     <div class="modal center mode-choose">
       <h2>How would you like to play?</h2>
-      <p class="mode-sub">Pick how your cases feel. You can switch any time from the toolbar.</p>
+      <p class="mode-sub">Pick how your cases feel. You can switch anytime in ⚙ Settings.</p>
       <div class="mode-cards">
         <button class="mode-card" id="modeRelaxed">
           <div class="mode-ico">🍵</div><div class="mode-name">Relaxed</div>
-          <div class="mode-desc">Play at your own pace. No timer, no penalties — just cozy puzzle-solving, with hints whenever you want.</div>
+          <div class="mode-desc">Cozy and pressure-free — no timer, no limit on guesses, hints whenever. Best for your first cases or a calm evening.</div>
         </button>
         <button class="mode-card" id="modeDetective">
           <div class="mode-ico">🔎</div><div class="mode-name">Detective</div>
-          <div class="mode-desc">The full investigation. You get a timer and limited guesses — a tougher test for a sharp sleuth.</div>
+          <div class="mode-desc">The real investigation — a count-up timer and just 3 guesses (a wrong one costs time). Pick this for a sharper test.</div>
         </button>
         <button class="mode-card" id="modeClock">
           <div class="mode-ico">⏱</div><div class="mode-name">On the Clock</div>
-          <div class="mode-desc">A race against time. The clock counts down from a set budget — catch the culprit before they slip away.</div>
+          <div class="mode-desc">A race — the clock counts down, so catch the culprit before they slip away. Pick this for a tense, fast solve.</div>
         </button>
       </div>
     </div>
@@ -1742,13 +1899,13 @@
       <h2 style="text-align:center">Final Deduction</h2>
       <p class="accuse-intro" id="accuseIntro">Name the killer. You don't have to finish the grid first — but you get only <b>3 guesses</b>, and a wrong one adds <b>1:00</b> to your time.</p>
       <div class="accuse-guesses" id="accuseGuesses"></div>
-      <div class="accuse-q">1 · Who did it? <span class="accuse-q-hint">(this decides the case)</span></div>
+      <div class="accuse-q">1 · Name the killer <span class="accuse-q-hint">(this decides the case)</span></div>
       <div class="accuse-suspects" id="accuseSuspects"></div>
-      <div class="accuse-q">2 · What was the <b>real</b> weapon? <span class="accuse-q-hint">(from the [WEAPON] clues)</span></div>
+      <div class="accuse-q">2 · Prove the <b>weapon</b> <span class="accuse-q-hint">(from the [WEAPON] clues)</span></div>
       <div class="accuse-weapons" id="accuseWeapons"></div>
-      <div class="accuse-q">3 · What was the motive? <span class="accuse-q-hint">(from the [MOTIVE] clues)</span></div>
+      <div class="accuse-q">3 · Prove the motive <span class="accuse-q-hint">(from the [MOTIVE] clues)</span></div>
       <select id="accuseMotive" class="accuse-select"></select>
-      <div class="accuse-q">4 · Which clue proves it? <span class="accuse-q-hint">(the one that cracks the case)</span></div>
+      <div class="accuse-q">4 · The clue that breaks their alibi <span class="accuse-q-hint">(the one that cracks the case)</span></div>
       <select id="accuseEvidence" class="accuse-select"></select>
       <div class="accuse-feedback" id="accuseFeedback"></div>
       <button class="btn primary" id="accuseSubmit" style="margin-top:8px;width:100%">⚖ Name the Killer</button>
@@ -2513,8 +2670,8 @@ const MANOR = {
     {role:"gardener",    L:"G", name:"The Gardener",    color:"#D86A1E", gender:"female", mtag:"revenge",     motive:"a dismissed grievance, repaid"},
     {role:"captain",     L:"H", name:"The Captain",     color:"#2471A3", gender:"male",   mtag:"betrayal",    motive:"a mutinous betrayal"},
     {role:"doctor",      L:"I", name:"The Doctor",      color:"#17A2A2", gender:"female", mtag:"coverup",     motive:"a malpractice cover-up"},
-    {role:"actress",     L:"J", name:"The Actress",     color:"#B03060", gender:"female", mtag:"jealousy",    motive:"a jealous rivalry"},
-    {role:"inspector",   L:"K", name:"The Inspector",   color:"#3A4250", gender:"male",   mtag:"blackmail",   motive:"a blackmailer's hold over him"},
+    {role:"actress",     L:"J", name:"The Actress",     color:"#94283C", gender:"female", mtag:"jealousy",    motive:"a jealous rivalry"},
+    {role:"inspector",   L:"K", name:"The Inspector",   color:"#5A4632", gender:"male",   mtag:"blackmail",   motive:"a blackmailer's hold over him"},
     {role:"maid",        L:"L", name:"The Maid",        color:"#4FA3D1", gender:"female", mtag:"money",       motive:"a withheld wage"},
     {role:"heir",        L:"M", name:"The Heir",        color:"#7A8B3C", gender:"male",   mtag:"debt",        motive:"gambling debts and an impatient fortune"},
     {role:"magician",    L:"N", name:"The Magician",    color:"#3D348B", gender:"male",   mtag:"reputation",  motive:"an exposed trick"},
@@ -2655,10 +2812,10 @@ const MANOR = {
       "Every one of the {n} guests has an alibi. Only one of them is lying.",
     ],
     hook:[
-      "Only one alibi will crack. Seat every guest by the evidence to unmask the killer.",
-      "Read the evidence, place each suspect, and the murderer will have nowhere left to hide.",
-      "Work the room. When every guest is in their place, only the truth will be left standing.",
-      "Follow the clues, fill every room, and the one whose story fails is your culprit.",
+      "Only one alibi will crack. Place every marker by the evidence to unmask the killer.",
+      "Read the evidence, place each marker, and the murderer will have nowhere left to hide.",
+      "Work the grid. When every marker is in its place, only the truth will be left standing.",
+      "Follow the clues, complete the grid, and the one whose story fails is your culprit.",
     ],
     // newspaper headlines for the payoff screen. {KILLER} {VICTIM} {PLACE} are upper-cased.
     headlines:[
@@ -2751,18 +2908,18 @@ function renderClue(cfg,theme,clue){
       const E=GLOBAL.CludokuEngine, N=cfg.N, r=Math.floor(p.cell/N), c=p.cell%N, box=E.boxOf(cfg,r,c), oc=CASE_OBJECTS[box];
       if(oc!=null){ const dr=r-Math.floor(oc/N), dc=c-(oc%N);
         if(Math.abs(dr)+Math.abs(dc)===1)
-          return `A witness places <b>${S(p.val)}</b> ${DIRWORD(dr,dc)} the ${objName(roomObjectSlug(theme,box))} in ${x.room}.`; }
-      return `A witness places <b>${S(p.val)}</b> in ${x.spot} of ${x.room}.`; }
+          return `The testimony sets <b>${S(p.val)}</b>'s marker ${DIRWORD(dr,dc)} the ${objName(roomObjectSlug(theme,box))} in ${x.room}.`; }
+      return `The evidence fixes <b>${S(p.val)}</b>'s marker in ${x.spot} of ${x.room}.`; }
     case "exclusion":{ const x=spotName(cfg,theme,p.cell);
-      return `Whoever stood in ${x.spot} of ${x.room}, it was <b>not</b> ${S(p.val)}.`; }
+      return `Whatever fills ${x.spot} of ${x.room}, it is <b>not</b> ${S(p.val)}.`; }
     case "position":{ const room=roomName(theme,p.box);
       const band=(p.axis==="row"?V.rowBands:V.colBands)[p.band]||"that side";
-      return `In ${room}, <b>${S(p.val)}</b> kept to ${band}.`; }
+      return `In ${room}, <b>${S(p.val)}</b>'s marker belongs to ${band}.`; }
     case "relative":{ const room=roomName(theme,p.box);
-      return `In ${room}, <b>${S(p.val)}</b> stood ${DIRWORD(p.dr,p.dc)} <b>${S(p.val2)}</b>.`; }
+      return `In ${room}, <b>${S(p.val)}</b> sits ${DIRWORD(p.dr,p.dc)} <b>${S(p.val2)}</b>.`; }
     case "adjacency":{ const room=roomName(theme,p.box);
-      return p.adjacent ? `In ${room}, <b>${S(p.val)}</b> and <b>${S(p.val2)}</b> stood side by side.`
-                        : `In ${room}, <b>${S(p.val)}</b> and <b>${S(p.val2)}</b> were never side by side.`; }
+      return p.adjacent ? `In ${room}, <b>${S(p.val)}</b> and <b>${S(p.val2)}</b> sit in adjacent cells.`
+                        : `In ${room}, <b>${S(p.val)}</b> and <b>${S(p.val2)}</b> are never in adjacent cells.`; }
     case "count":{ const wings=(p.region==="colband"?V.colWings:V.rowWings);
       const where=wings[p.band]||"that part of the house";
       return `Of ${list(p.vals.map(S))}, exactly <b>${p.k}</b> ${p.k===1?"was":"were"} seen in ${where}.`; }
@@ -2830,7 +2987,7 @@ const $=id=>document.getElementById(id);
 const boardEl=$("board"), trayEl=$("tray");
 const caseMQ=window.matchMedia("(max-width:700px)");   // "mobile" — game-first screen + case-file overlay + bolder footprints
 
-let C=null, cfg=null, board=null, given=null, sel=-1, selSuspect=-1;
+let C=null, cfg=null, board=null, given=null, sel=-1, focusSuspect=0;   // focusSuspect: the "deduction lens" suspect (0=none). Tapping a suspect with no cell selected spotlights all its markers and calms the rest of the grid.
 let undoStack=[], redoStack=[], hintsUsed=0, solved=false, story=null, cluesUsed=new Set(), mistakes=0;   // mistakes: incorrect placements this case (for the Clean Case trophy)
 let accuseCulprit=-1, accuseWeapon="", guessesLeft=3, clueStep=0, hintLevel=0, hintTarget=-1;
 const MAX_GUESSES=3;
@@ -2964,11 +3121,11 @@ function buildCaseIntro(s, N){
   const susp=pick([                                                // opportunity puzzle — N guests, no suspect specifics
     `All ${N} guests under this roof swear they never set foot in ${room} — yet the manor's floor plan says one of them must have.`,
     `Every one of the ${N} guests claims an alibi — but the layout of the house leaves exactly one of them without.`,
-    `${N} guests, ${N} neat alibis — and only by seating each room can you find whose story falls apart.`,
+    `${N} guests, ${N} neat alibis — and only by completing the grid can you find whose story falls apart.`,
   ]);
   const cta=pick([
     `Solve the grid to uncover who had the opportunity.`,
-    `Seat every guest by the evidence to reveal who had the opportunity.`,
+    `Place every marker by the evidence to reveal who had the opportunity.`,
   ]);
   return [disc, wq, susp, cta];
 }
@@ -2982,18 +3139,18 @@ function buildResolution(won){                                     // 2-3 senten
   const tw=Skin.weaponBySlug(THEME,story.trueWeapon).n, so=Skin.weaponBySlug(THEME,story.sceneObject).n, motive=k.motive;
   if(won){
     const s1=pick([
-      `With every guest finally in place, only one figure remained at the scene: ${k.name}.`,
-      `The grid told the truth the alibis could not — ${k.name} was the one who could not have been elsewhere.`,
-      `When the last suspect was seated, ${k.name} stood alone where ${victim} had fallen.`,
-    ]);
+      `Graves' grid ruled the others out one by one — the last name it left was ${k.name}, and you spoke it.`,
+      `The method came down to a single suspect no clue could clear: ${k.name}.`,
+      `Every other guest had an answer; ${k.name} did not — and your accusation made it stick.`,
+    ]);   // P8: the grid is the METHOD that narrowed the field; the ACCUSATION names the killer (not "the grid told the truth"/literal scene)
     const s2 = story.weaponPlanted
       ? `The killing was done with ${tw}; ${so} by the body was only a decoy to muddy the trail.`
       : `${cap(tw)} was the weapon after all, just where it lay.`;
     const s3=pick([
       `Driven by ${motive}, they had trusted ${room} to keep the secret. It did not.`,
-      `It was ${motive} in the end — undone by a single seat no one else could fill.`,
-      `${cap(motive)} was the reason; the floor plan was the proof.`,
-    ]);
+      `It was ${motive} in the end — undone by the one clue no story but theirs could survive.`,
+      `${cap(motive)} was the reason; the clue that broke their alibi was the proof.`,
+    ]);   // P8: proof lives in the clue/evidence layer — never "the floor plan" (the grid is not a literal map)
     return `${s1} ${s2} ${s3}`;
   }
   const f1=pick([
@@ -3150,7 +3307,7 @@ function startCase(opts){
   C=E.generateCase(opts); cfg=C.cfg;
   Skin.setCast(pickCaseCast(C.seed, cfg.N));                // shuffle the playable cast for this case
   board=C.givens.slice(); given=C.givens.map(v=>v!==0);
-  sel=-1; selSuspect=-1; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false; cluesUsed=new Set(); mistakes=0;
+  sel=-1; focusSuspect=0; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false; cluesUsed=new Set(); mistakes=0;
   _sceneMsgShown=false; _nudged=false;   // reset Feature A per-case state
   _discQueue=[]; _discPlaying=false; _discCount=0; endDiscovery();   // reset Feature B transient ceremony state (_unitCredited is loaded per-case by dressStory)
   _unitGlowed=new Set(); _glowSeeded=false;   // completion-glow tracker: reseed silently on the new board
@@ -3167,7 +3324,7 @@ function startCase(opts){
   dressStory();
   setVar("--cell-max", cfg.N<=6 ? "72px" : "62px"); setVar("--ncols", cfg.N);  // CSS derives --cell (mobile fits to width)
   boardEl.style.gridTemplateColumns=`repeat(${cfg.N}, var(--cell))`;
-  renderBoard(); renderTray(); renderCase();
+  renderBoard(); renderTray(); renderCase(); updateBtns();   // P7: undo/redo start DISABLED on a fresh board (nothing to undo/redo yet)
   if(typeof fitBoard==="function") fitBoard();   // appfit: size the board to the new case's grid
   const _tierLbl=(TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label);
   const _tierHTML=_tierLbl.replace(/\s+Case$/i,'<span class="pill-caseword"> Case</span>');   // " Case" hidden on phone -> just the adjective fits the one-line bar
@@ -3175,7 +3332,7 @@ function startCase(opts){
     `<b>${_tierHTML}</b>`;   // grid size (· N×N) intentionally omitted from the label
   // (Case No. lives in the case file's subtitle now — see caseSub in renderCase — not the top bar.)
   $("loadBearingNote").innerHTML=
-    `Sudoku logic alone leaves <b>${C.completionsWithout}</b> possible arrangements of this house — `+
+    `Sudoku logic alone leaves <b>${C.completionsWithout}</b> ways to complete Graves' grid — `+
     `only the evidence narrows it to one. The scene (dashed) hides the killer.`;
   setStatus(`Case No. ${story.caseNo} opened — ${board.filter(v=>!v).length} empty spots to fill.`,"");
   document.body.classList.remove("clock-critical");
@@ -3263,7 +3420,7 @@ function renderBoard(){
     const box=E.boxOf(cfg,r,c), room=THEME.rooms[box%THEME.rooms.length], objSlug=Skin.roomObjectSlug(THEME,box);
     const sr=r%cfg.bh, sc=c%cfg.bw;                                  // sub-position within the room
     const fx=cfg.bw>1?(sc/(cfg.bw-1))*100:0, fy=cfg.bh>1?(sr/(cfg.bh-1))*100:0;
-    cell.style.backgroundColor=`hsla(${room.hue},38%,50%,0.12)`;      // fallback tint if the floor image is missing
+    cell.style.backgroundColor=`hsla(${room.hue},30%,50%,0.08)`;      // P6: calmer fallback tint (lower sat+alpha) for the asset-missing first paint
     cell.style.backgroundImage=`linear-gradient(rgba(13,15,20,${dim}),rgba(13,15,20,${dim})),url("${tAsset('rooms','room-'+room.slug+'.jpg')}")`;   // rooms are JPG (smaller than PNG)
     cell.style.backgroundSize=`${cfg.bw*100}% ${cfg.bh*100}%`;        // one floor image tiled across the room
     cell.style.backgroundPosition=`${fx}% ${fy}%`;
@@ -3295,7 +3452,7 @@ function renderTray(){
   for(const v of board) if(v) counts[v]--;
   for(let v=1;v<=cfg.N;v++){
     const s=Skin.sName(THEME,v), el=document.createElement("div");
-    el.className="susp"+((sel>=0 && board[sel]===v)?" sel":"")+(counts[v]<=0?" done":"");  // marks who's in the selected cell
+    el.className="susp"+((sel>=0 && board[sel]===v)?" sel":"")+(v===focusSuspect?" foc":"")+(counts[v]<=0?" done":"");  // .sel = who's in the selected cell; .foc = the spotlighted (armed) suspect
     el.title=counts[v]>0?`${s.name}: ${counts[v]} left to place · press ${s.L}`:`${s.name}: all placed`;
     const name=document.createElement("div"); name.className="susp-name";
     name.textContent=s.name.replace(/^The\s+/i,"");        // "The Colonel" -> "Colonel"
@@ -3376,6 +3533,7 @@ function renderEvCurrent(){
   $("evStep").textContent=`${clueStep+1} / ${n}`;
   revealMotivesIfMotiveClue(e);   // stepper landing on a MOTIVE clue flips the motive cards
 }
+function activeClue(){ const vis=visibleEv(); const n=vis.length; if(!n) return null; return vis[((clueStep%n)+n)%n].e; }   // P4: the evidence object currently shown in the 1/N pager (indexes the FILTERED list, like renderEvCurrent)
 /* unit milestones: each newly-completed (correct) row/column/room surfaces the next hidden extra.
    A unit can ever grant ONE discovery per case — credited units live in a permanent, per-case
    persisted set (never removed), so undo / redo / erase+replace / clear / hint re-completing the
@@ -3572,12 +3730,46 @@ function revealMotivesIfMotiveClue(ev){   // flip the cards face-up the FIRST ti
   story.motiveRevealed=true; saveMotiveState(); _mflipNow=true; renderPossibleMotives();
 }
 
-/* ---- interactions (cell-first: tap a cell to select, then tap a suspect to place) ---- */
+/* ---- interactions — TWO coexisting models ----
+   • CELL-FIRST (default): tap a cell to select, then tap a suspect to place into it.
+   • SUSPECT-FIRST (P2 opt-in): tap a suspect with no cell selected to ARM it (the deduction lens lights its
+     markers + dims the board), then tap any OPEN, legal cell to place it there. It STAYS armed so you can place
+     several quickly. Tap the armed suspect again (or press Esc) to put it down.
+     Arming/spotlighting alone NEVER places — only a cell tap places, so scanning suspects is commitment-free. */
+const STAY_ARMED = true;   // P2: keep the suspect armed after placing (rapid multi-placement). Flip to false to disarm after each placement.
+function suspectConflictAt(i,v){   // would placing suspect v in cell i repeat it in that row, column, or room?
+  for(let j=0;j<cfg.N*cfg.N;j++){ if(j!==i && board[j]===v && isPeer(j,i)) return true; } return false; }
 function onCell(i){ if(solved)return;
   if(C && i===C.murderCell){ sceneTap(); return; }   // the dashed scene belongs to the victim — tapping it is a shortcut to the accusation
-  sel=i; refresh(); renderTray(); fxPulse(boardEl.children[i]); playFootsteps(); }   // select only — never auto-places
+  if(focusSuspect>0){   // SUSPECT-FIRST: a suspect is armed → this cell tap tries to place it (the missing half of the P5 lens)
+    const v=focusSuspect;
+    if(given[i]){ fxShake(boardEl.children[i]); sfx("buzz"); setStatus("That cell is fixed by the evidence — pick an open cell.",""); return; }   // never overwrite a given
+    if(notesMode){ sel=i; toggleNote(i,v); return; }   // notes mode + armed: pencil the suspect in instead of placing
+    if(board[i]!==0){ if(board[i]!==v){ fxShake(boardEl.children[i]); sfx("buzz"); setStatus("That square is taken — erase it first to change it.",""); } return; }   // occupied: don't silently overwrite during rapid stamping (same suspect = no-op)
+    if(suspectConflictAt(i,v)){ fxShake(boardEl.children[i]); sfx("buzz"); setStatus(`${suspectShort(v)} can't go there — it would repeat in that row, column, or room.`,"bad"); return; }   // illegal → conflict feedback, NO placement, stays armed
+    sel=i; place(i,v);                       // open + legal → place. place() re-renders with focusSuspect still set, so the lens stays on → STAY-ARMED
+    if(!STAY_ARMED) setFocus(0);
+    return;
+  }
+  sel=i; refresh(); renderTray(); updateBtns(); fxPulse(boardEl.children[i]); playFootsteps(); }   // CELL-FIRST: select only — never auto-places (updateBtns keeps Erase's state in sync)
+function suspectShort(v){ const s=Skin.sName(THEME,v); return s? s.name.replace(/^The\s+/i,"") : "that suspect"; }   // "The Colonel" -> "Colonel"
+function suspectsLeft(v){ let n=cfg.N; for(const x of board) if(x===v) n--; return n; }   // markers of suspect v still to place
+function setFocus(v){   // v>0 spotlights suspect v across the grid (the deduction lens); 0 clears it
+  focusSuspect = (v>0 ? v : 0);
+  renderTray(); refresh();
+}
 function selectSuspect(v){ if(solved)return;
-  if(sel<0){ setStatus("Tap a cell on the board first — then tap a suspect to place them there.",""); return; }
+  // ARM MODE — if a suspect is already armed OR no cell is selected, a suspect tap ARMS / switches / disarms the
+  // deduction lens; it never places here (placement happens on the next CELL tap, see onCell). This keeps
+  // spotlighting and scanning suspects completely commitment-free.
+  if(focusSuspect>0 || sel<0){
+    setFocus(focusSuspect===v ? 0 : v);   // tap the armed suspect again = put it down; tap a different one = switch the arm
+    if(focusSuspect){ const left=suspectsLeft(v);
+      setStatus(`${suspectShort(v)} ready — its markers are lit. Tap any open cell to place one (${left} left). Tap ${suspectShort(v)} again to put it down.`,""); }
+    else { sel=-1; refresh(); renderTray(); setStatus("Put it down. Tap a suspect to ready it, then tap open cells to place — or tap a cell first, then a suspect.",""); }   // disarmed -> back to a clean idle state so the next suspect tap re-arms (not a cell-first place)
+    return;
+  }
+  // CELL-FIRST — a cell is selected and nothing is armed: place the tapped suspect into that cell (original behavior)
   if(C && sel===C.murderCell){ sceneRejectPlace(); return; }   // the scene cell is only ever filled by the accusation
   if(given[sel]){ fxShake(boardEl.children[sel]); sfx("buzz"); setStatus("That cell is fixed by the evidence — pick an open cell.",""); return; }
   if(notesMode) toggleNote(sel,v); else place(sel,v);
@@ -3602,8 +3794,18 @@ function pulseAccuse(){ const b=$("accuseBtn"); if(b && motionOK()) restartAnim(
 function maybeNudge(){   // all OTHER cells correct -> nudge the player to accuse (never auto-opens)
   const done = !solved && !!C && gridComplete() && !$("accuseModal").classList.contains("show");
   const b=$("accuseBtn"); if(b) b.classList.toggle("nudge", done);
-  if(done && !_nudged){ _nudged=true; setStatus("Every guest is accounted for. Name the killer.","good"); pulseAccuse(); }
+  if(done && !_nudged){ _nudged=true; setStatus("The grid is complete — Graves' method points to one answer. Now name the killer.","good"); pulseAccuse(); }   // P8 beat 1->2: method done, not mystery solved
   if(!done) _nudged=false;
+  updatePhasePill();   // keep the in-play Deduction → Accusation chip in sync (display only — no gating)
+}
+function updatePhasePill(){   // light phase label reflecting EXISTING state (gridComplete) — never gates; accusing stays allowed anytime
+  const pp=$("phasePill"); if(!pp) return;
+  const accuse = !!C && (gridComplete() || solved || $("accuseModal").classList.contains("show"));   // "in or past the accusation phase" — sticky through the modal + payoff so it never blinks back mid-accusation
+  pp.classList.toggle("accuse", accuse);
+  pp.innerHTML = accuse ? '⚖ <span class="phase-pill-name">Accusation</span>' : '🔍 <span class="phase-pill-name">Deduction</span>';
+  pp.title = accuse
+    ? "Accusation phase — the grid is complete. Name the killer, the weapon, and the motive."
+    : "Deduction phase — fill Inspector Graves' grid. You can accuse anytime; a full board isn't required.";
 }
 function placeKillerInScene(won){   // the accusation places the final piece into the dashed cell
   if(!C || board[C.murderCell]===C.killer) return;
@@ -3633,8 +3835,15 @@ function place(i,v){ if(given[i]||board[i]===v||(C&&i===C.murderCell))return;   
     for(const j of cells) if(j!==i) candidates[j].delete(v); });   // tidy: clear this suspect's notes from peers
   clearHints(); refresh(); renderTray(); updateBtns();
   if(C && C.solution && board[i]!==C.solution[i]) mistakes++;   // committing a wrong suspect to a cell = a "mistake" (Clean Case trophy)
-  if(conflicts().has(i)){ fxShake(boardEl.children[i]); fxFlash(boardEl.children[i]); sfx("buzz"); }  // duplicate -> shake + red flash
-  else { sfx("place"); fxSetDown(boardEl.children[i]); fxPlaceRing(boardEl.children[i]); }   // clean placement: weighted set-down + candle-glow ripple, landing WITH the knock
+  const _nm=suspectShort(v), _r=Math.floor(i/cfg.N)+1, _c=(i%cfg.N)+1;   // P2: name what landed where, so a one-row-off mis-tap is catchable at a glance (esp. on the dense phone grid)
+  if(conflicts().has(i)){ fxShake(boardEl.children[i]); fxFlash(boardEl.children[i]); sfx("buzz");
+    setStatus(`${_nm} can't repeat in that row, column, or room — see the red ring.`,"bad"); }  // duplicate -> shake + red flash
+  else { sfx("place"); fxSetDown(boardEl.children[i]); fxPlaceRing(boardEl.children[i]);
+    if(!gridComplete()) setStatus(`Placed ${_nm} — row ${_r}, column ${_c}.`,"good");
+    if(!LS.get("seenRepeat",false) && (cfg.N - suspectsLeft(v)) >= 2){   // P12: the FIRST time a suspect's second marker lands, answer the headline confusion ("why the same person twice?") at the moment it bites — once ever, in Wembly's voice
+      LS.set("seenRepeat",true);
+      assist(`That's a second <b>${_nm}</b> marker on the grid — the same suspect recurs across Graves' grid like a number in Sudoku, not the same person standing in two places.`); }
+  }   // clean placement (P8: on the move that COMPLETES the grid, let maybeNudge's "grid is complete — name the killer" line stand instead)
   checkWin(); }
 function erase(){ if(solved||sel<0||given[sel])return;
   if(board[sel]===0 && (!candidates[sel]||!candidates[sel].size)) return;
@@ -3653,7 +3862,7 @@ function clearPuzzle(){ if(solved)return;
 function doClearPuzzle(){ if(solved||!C)return;
   const all=[]; for(let i=0;i<cfg.N*cfg.N;i++) all.push(i);
   applyAction(all, ()=>{ for(let i=0;i<all.length;i++){ if(!given[i]) board[i]=0; candidates[i]=new Set(); } });
-  sel=-1; clearHints(); refresh(); renderTray(); updateBtns();
+  sel=-1; focusSuspect=0; clearHints(); refresh(); renderTray(); updateBtns();
   setStatus("Board cleared back to the starting clues.","");
   sfx("place"); }
 function flashSnapDiff(e){ if(!motionOK()||!e)return;   // amber-flash exactly the cells the rewind touched
@@ -3691,26 +3900,19 @@ function clearHints(){ for(const cell of boardEl.children) cell.classList.remove
 /* ---- clue -> board linking: clicking a clue briefly pulses what it references ---- */
 let clueHlTimer=null;
 function clearClueHighlight(){ if(clueHlTimer){ clearTimeout(clueHlTimer); clueHlTimer=null; }
-  for(const cell of boardEl.children) cell.classList.remove("clue-hl","clue-cell","clue-object"); }
+  for(const cell of boardEl.children) cell.classList.remove("clue-hl","clue-cell","clue-object");
+  for(const el of trayEl.children) el.classList.remove("clue-ref"); }   // P4: also clear the tray marker cue
 function clueBoardTargets(clue){
-  const N=cfg.N, p=clue.p, T={cells:[],boxes:[],object:null,line:null};
+  const N=cfg.N, p=clue.p, T={cells:[],boxes:[],object:null,line:null,suspects:[]};
+  // P4: a clue lights only its GRID SECTION (room) + its referenced MARKER(s) in the tray — NEVER the exact
+  // answer cell (no .clue-cell), so it aids deduction inside Graves' grid without becoming an answer key.
   switch(clue.type){
-    case "sighting":{
-      const box=E.boxOf(cfg,Math.floor(p.cell/N),p.cell%N), oc=C.objectCells&&C.objectCells[box];
-      let anchored=false;
-      if(oc!=null){ const dr=Math.floor(p.cell/N)-Math.floor(oc/N), dc=(p.cell%N)-(oc%N);
-        if(Math.abs(dr)+Math.abs(dc)===1) anchored=true; }
-      // object-anchored sighting ("left of the table") -> ROOM ONLY (don't give away the exact cell or the object);
-      // a plain spot sighting names its cell, so highlight that cell
-      if(anchored) T.boxes.push(box); else T.cells.push(p.cell);
-      break; }
-    case "exclusion": T.cells.push(p.cell); break;
-    case "position": T.boxes.push(p.box); T.line={box:p.box,axis:p.axis,band:p.band}; break;   // room + the line band
-    case "relative": case "adjacency":{ T.boxes.push(p.box);   // room + both suspects' cells (when placed)
-      const {r0,c0}=E.rcOfBox(cfg,p.box);
-      for(const v of [p.val,p.val2]) for(let a=0;a<cfg.bh;a++)for(let b=0;b<cfg.bw;b++){
-        const ci=(r0+a)*N+(c0+b); if(board[ci]===v) T.cells.push(ci); }
-      break; }
+    case "sighting": case "exclusion":   // p.cell is the ANSWER cell -> highlight only the room section it sits in
+      T.boxes.push(E.boxOf(cfg,Math.floor(p.cell/N),p.cell%N)); if(p.val) T.suspects.push(p.val); break;
+    case "position":                     // room section only (the band/line would point straight at the slot)
+      T.boxes.push(p.box); if(p.val) T.suspects.push(p.val); break;
+    case "relative": case "adjacency":   // room section + BOTH referenced markers (the direction stays in the clue text)
+      T.boxes.push(p.box); if(p.val) T.suspects.push(p.val); if(p.val2) T.suspects.push(p.val2); break;
   }
   return T;
 }
@@ -3722,6 +3924,7 @@ function applyClueHighlight(T){ const N=cfg.N;
     else { const c=c0+T.line.band; for(let a=0;a<cfg.bh;a++) boardEl.children[(r0+a)*N+c].classList.add("clue-cell"); } }
   for(const ci of T.cells) if(ci>=0 && boardEl.children[ci]) boardEl.children[ci].classList.add("clue-cell");
   if(T.object!=null && boardEl.children[T.object]) boardEl.children[T.object].classList.add("clue-object");
+  for(const v of (T.suspects||[])){ const el=trayEl.children[v-1]; if(el) el.classList.add("clue-ref"); }   // P4: cue the referenced marker(s) in the tray — read-only, never arms (distinct class from .foc/.sel)
   clueHlTimer=setTimeout(clearClueHighlight,1800);   // pulse ~1.6s, then clear (static when motion off)
 }
 function highlightClue(ev){ if(!ev||!C) return;
@@ -3731,8 +3934,8 @@ function highlightClue(ev){ if(!ev||!C) return;
   clearClueHighlight();
   let T;
   if(ev.kind==="pos" && ev.clueIdx!=null && C.clues[ev.clueIdx]) T=clueBoardTargets(C.clues[ev.clueIdx]);
-  else { const box=E.boxOf(cfg,Math.floor(C.murderCell/cfg.N),C.murderCell%cfg.N);   // weapon/motive -> the crime scene
-    T={cells:[C.murderCell],boxes:[box],object:null,line:null}; }
+  else { const box=E.boxOf(cfg,Math.floor(C.murderCell/cfg.N),C.murderCell%cfg.N);   // weapon/motive -> the crime-scene ROOM section (P4: not the exact scene cell)
+    T={cells:[],boxes:[box],object:null,line:null,suspects:[]}; }
   applyClueHighlight(T);
 }
 function cellCandidates(i){
@@ -3759,7 +3962,7 @@ function hint(){ if(solved)return;
   const correct=Skin.sName(THEME,C.solution[i]);
   if(hintLevel===1){
     const cands=cellCandidates(i).map(v=>Skin.sName(THEME,v).name);
-    assist(`I check the ledger… in <b>${room}</b>, the guests already seated and the room itself leave `+
+    assist(`I check the ledger… in <b>${room}</b>, the markers already placed and the room's own rule leave `+
       (cands.length<=1?`only one possibility for this spot.`:`just ${cands.length}: ${cands.join(", ")}.`)+
       (i===C.murderCell?` And this — this is the scene.`:""));
   } else if(hintLevel===2){
@@ -3827,6 +4030,9 @@ function setShoeTrail(){ let g="neutral";
   boardEl.style.setProperty("--shoe-h", set[g].h); boardEl.style.setProperty("--shoe-v", set[g].v); }
 function refresh(){ const bad=conflicts(); const N=cfg.N;
   const selVal=sel>=0?board[sel]:0; setShoeTrail();
+  const focusOn = focusSuspect>0;                 // suspect-focus "lens" active (set by tapping a suspect with no cell selected)?
+  const lensVal = focusOn ? focusSuspect : selVal;   // whose markers light up: the lens suspect, else the selected cell's occupant
+  document.body.classList.toggle("suspect-focus", focusOn);   // CSS calms every cell that isn't lit/selected
   const sr=sel>=0?Math.floor(sel/N):-1, sc=sel>=0?sel%N:-1, sb=sel>=0?E.boxOf(cfg,sr,sc):-1;
   for(let i=0;i<N*N;i++){ const cell=boardEl.children[i];
     cell.classList.remove("sel","peer-row","peer-col","match","room-hl");
@@ -3836,7 +4042,7 @@ function refresh(){ const bad=conflicts(); const N=cfg.N;
       if(b===sb && r!==sr && c!==sc) cell.classList.add("room-hl");     // room cells off the cross
     }
     if(i===sel)cell.classList.add("sel");
-    if(selVal>0 && board[i]===selVal)cell.classList.add("match");       // same suspect elsewhere
+    if(lensVal>0 && board[i]===lensVal)cell.classList.add("match");       // the lens suspect's markers, lit across the grid
     const t=cell.querySelector(".token"); if(t)t.classList.toggle("bad",bad.has(i)); }
   maybeNudge();   // keep the Accuse glow in sync with completion (handles erase/undo too)
   checkUnitMilestones();   // surface a hidden extra when a row/column/room is newly completed
@@ -3924,8 +4130,11 @@ function submitAccusation(){
                 motiveRight: moPick>=0 && !!(story.motiveOptions[moPick]&&story.motiveOptions[moPick].correct),  // Q3: killer's motive
                 evidenceRight: evPick>=0 && !!(story.evidence[evPick]&&story.evidence[evPick].proof),            // Q4: a position proof clue
                 evPick, weaponPick:accuseWeapon, motivePick:moPick };
-  $("accuseModal").classList.remove("show");
-  payoff(grade, true);
+  // P8 beat 2 — "Accusation Confirmed": hold a moment on the named culprit before the concrete reveal cascade
+  $("accuseSubmit").disabled=true;
+  setAccuseFeedback(`Graves' method points to one answer — and you named it.`,"good");
+  const _go=()=>{ $("accuseModal").classList.remove("show"); $("accuseSubmit").disabled=false; payoff(grade, true); };
+  if(motionOK()){ sfx("confirm"); setTimeout(_go, 600); } else _go();
 }
 
 /* payoff accusation trio: culprit + weapon + motive pinned side by side (✓/✗ on a win; the truth on a fail) */
@@ -3997,10 +4206,13 @@ function payoff(grade, won){
     $("poTrophy").innerHTML=tr.fresh.length?`<b style="color:var(--amber-soft)">${tr.fresh.length}</b> new ${tr.fresh.length>1?"trophies":"trophy"} 🏆`:`<span class="muted">${tr.memorial?"memorial added":"none new"}</span>`;
     const sealsEarned=grantSeals(perfect);   // MANOR: +1 Case Seal per win, +1 for a flawless 4/4 — always grants progress
     const ws=$("winSeals"); if(ws){ ws.hidden=false;
-      ws.innerHTML=`<span class="ws-ico">🔏</span> <b>+${sealsEarned}</b> Case Seal${sealsEarned>1?"s":""} earned${perfect?` <span class="ws-bonus">flawless bonus!</span>`:""} — spend them restoring the manor.`; }
+      ws.innerHTML=`<span class="ws-ico">🔏</span> <b>+${sealsEarned}</b> Case Seal${sealsEarned>1?"s":""} earned${perfect?` <span class="ws-bonus">flawless bonus!</span>`:""} — take ${sealsEarned>1?"them":"it"} to the manor to restore a room and uncover a Graves clue.`; }   // P8 beats 8->9: case closed -> seal earned -> restoration available
     setStatus(`Case closed at last — ${k.name} named, the truth restored.`,"good");
+    const _rr=roomById(_manorRoom)||MANOR_DATA[0];   // P9: name the reward + room on the win CTA — the loop's last beat ("Restore the Study")
+    const _wn=$("winNew"); if(_wn) _wn.innerHTML=(manorSeals()>0 && _rr && !roomComplete(_rr)) ? `🔏 Restore the ${shortRoom(_rr)} →` : `🏠 Return to the Manor`;
   } else {
     _payoffStrip=null;
+    { const _wnl=$("winNew"); if(_wnl) _wnl.innerHTML="🏠 Return to the Manor"; }   // P9: no seal on a loss → generic return
     $("poTrophy").innerHTML=`<span class="muted">none — case unsolved</span>`;
     const sc=$("accuseScore"); sc.innerHTML=
       `<div class="acc-stars" style="color:var(--bad)">CASE UNSOLVED <span class="acc-num" style="color:var(--ink-dim)">⏱ ${totalTime}${penaltyStr} · ${MAX_GUESSES}/${MAX_GUESSES} guesses used</span></div>`;
@@ -4035,9 +4247,9 @@ function buildChain(){
   const k=Skin.sName(THEME,C.killer), chain=$("chain"); chain.innerHTML="";
   const scene=spotText(C.murderCell);
   const head=document.createElement("li");
-  head.innerHTML=`The body lay at <b>${scene.spot} of ${scene.room}</b>. Sudoku logic alone allowed `+
-    `<b>${C.sceneCandidates.length}</b> different guests to have stood there: `+
-    C.sceneCandidates.map(v=>Skin.sName(THEME,v).name).join(", ")+".";
+  head.innerHTML=`The body lay at <b>${scene.spot} of ${scene.room}</b>. Sudoku logic alone left `+
+    `<b>${C.sceneCandidates.length}</b> suspects still in the frame: `+
+    C.sceneCandidates.map(v=>Skin.sName(THEME,v).name).join(", ")+".";   // QA: grid narrows the suspect POOL (a deduction), not who physically "stood there"
   chain.appendChild(head);
   C.reasoning.forEach(step=>{ const li=document.createElement("li");
     const who=Skin.sName(THEME,step.ruledOut).name;
@@ -4195,8 +4407,8 @@ function trophyRegistry(){
       hint:"Name this motive correctly in a winning accusation to claim it.",
       test:c=>c.won&&c.motiveRight&&c.killerMotiveTag===tag }); });
   SCENE_OBJECTS.forEach((o,i)=>reg.push({ id:"scene-"+o.slug, cat:"scene", rarity:"uncommon", slug:o.slug, num:i+1, name:o.name,
-    desc:"A scene marker — an object a witness placed someone beside.",
-    hint:"Win a case where a clue places a suspect beside this object.",
+    desc:"A scene marker — an object the evidence ties a suspect to.",
+    hint:"Win a case where a clue ties a suspect to this object.",
     test:c=>c.won&&c.referencedObjects.indexOf(o.slug)>=0 }));
   (THEME.rooms||[]).forEach(rm=>reg.push({ id:"room-"+rm.slug, cat:"room", rarity:"uncommon", slug:rm.slug,
     name:rm.name.replace(/^the\s+/i,"The ") }));   // tiered Room Seals — state lives in roomSeals, not the unlock map
@@ -4390,7 +4602,8 @@ const MANOR_OPENING =
   "I was his clerk. Never did leave.”</i> He leads you to the one room with the dust swept back — the Study — "+
   "where a single desk waits, and on it Graves' last Deduction Grid, unfinished. <i>“He solved them all like this,”</i> "+
   "Wembly says, <i>“rows and columns, every soul in their place. This one he never closed.”</i> "+
-  "Outside, the rain keeps its own counsel. Inside, there is a house full of cold cases to wake.";
+  "Outside, the rain keeps its own counsel. Inside, there is a house full of cold cases to wake. "+
+  "<i>“Close his cases,”</i> Wembly adds, <i>“and the seals you earn will buy these rooms back from the dark, one at a time — until the house, and maybe the man, are whole again.”</i>";   // P9: name the reward loop (close cases -> seals -> restore the manor) for first-time players
 const MANOR_DATA=[
  { id:"study", name:"The Study", floor:"assets/themes/manor/rooms/room-study.jpg",
    clueTitle:"The Desk Note", clueShort:"A slip in Graves' hand, dated the night he vanished: “If you are reading this, I did not simply leave. — A.G.”",
@@ -5005,7 +5218,9 @@ function closeConfirm(which){
 
 /* ---- buttons / keys ---- */
 function setStatus(m,k){ const s=$("status"); s.textContent=m; s.className="status"+(k?" "+k:""); }
-function updateBtns(){ $("undoBtn").disabled=!undoStack.length; $("redoBtn").disabled=!redoStack.length; }
+function updateBtns(){ $("undoBtn").disabled=!undoStack.length; $("redoBtn").disabled=!redoStack.length;
+  const eb=$("eraseBtn"); if(eb) eb.disabled = (sel<0 || given[sel] || (board[sel]===0 && (!candidates[sel]||!candidates[sel].size)));   // P2: Erase reads disabled until a clearable cell is selected (on phone it's the only erase) — mirrors erase()'s own guard
+}
 $("undoBtn").onclick=undo; $("redoBtn").onclick=redo; $("eraseBtn").onclick=erase; $("hintBtn").onclick=hint; $("checkBtn").onclick=check;
 $("clearBtn").onclick=clearPuzzle;
 function showCaseCodeHint(){ const h=$("codeHint"); if(!h||!C) return;
@@ -5016,14 +5231,54 @@ $("newBtn").onclick=()=>showManor();                                   // header
 if($("newCaseBtn")) $("newCaseBtn").onclick=()=>openNewCaseModal();    // menu "New Case" -> difficulty picker directly (skips the Manor detour)
 $("newClose").onclick=$("newBack").onclick=()=>$("newModal").classList.remove("show");
 $("winClose").onclick=()=>$("winModal").classList.remove("show");
-$("winNew").onclick=()=>{ $("winModal").classList.remove("show"); showManor(); };   // finishing a case returns to the manor
+$("winNew").onclick=()=>{ $("winModal").classList.remove("show"); showManor();   // finishing a case returns to the manor
+  const _rr=roomById(_manorRoom)||MANOR_DATA[0]; if(_rr && manorSeals()>0 && !roomComplete(_rr)) setTimeout(()=>manorToast(`You earned a Case Seal — spend it to restore the ${shortRoom(_rr)}.`), 450); };   // P9: confirm the promised restoration the moment the manor loads
 $("accuseClose").onclick=()=>{ $("accuseModal").classList.remove("show"); setStatus("Ready to accuse — press Check when you're sure.",""); };
 $("accuseSubmit").onclick=submitAccusation;
 $("accuseBtn").onclick=()=>{ if(solved)return; openAccusation(); };   // accuse any time, full board not required
 $("archiveBtn").onclick=openArchive;
-$("howtoBtn").onclick=()=>$("howtoModal").classList.add("show");
-$("howtoClose").onclick=()=>$("howtoModal").classList.remove("show");
-$("howtoGo").onclick=()=>{ $("howtoModal").classList.remove("show"); LS.set("seenHowTo",true); openNewCaseModal(); };   // after the how-to, pick a case
+/* ---- First-run onboarding: the animated Graves' Deduction Grid demo inside How to Play ---- */
+(function initGridDemo(){
+  const grid=$("gdGrid"); if(!grid || grid.childElementCount) return;
+  const layout=[[0,1,2,3],[2,3,0,1],[1,0,3,2],[3,2,1,0]];     // valid 4×4: each marker once per row/col/2×2 room
+  const colors=["#D4A017","#2471A3","#7D3C98","#C0392B"], letters=["A","B","C","D"];
+  for(let r=0;r<4;r++) for(let c=0;c<4;c++){ const m=layout[r][c];
+    const cell=document.createElement("div"); cell.className="gd-cell";
+    cell.dataset.r=r; cell.dataset.c=c; cell.dataset.b=(r<2?0:2)+(c<2?0:1); cell.dataset.m=m;
+    const d=document.createElement("div"); d.className="gd-mark"; d.style.background=colors[m]; d.textContent=letters[m];
+    cell.appendChild(d); grid.appendChild(cell); }
+})();
+let _gridTutTimers=[];
+function clearGridTut(){ while(_gridTutTimers.length) clearTimeout(_gridTutTimers.pop()); }
+function runGridTutorial(){
+  const grid=$("gdGrid"), cap=$("gdCaption"); if(!grid||!cap) return;
+  clearGridTut();
+  const cells=[...grid.children];
+  const clearHi=()=>cells.forEach(c=>c.classList.remove("gd-row-on","gd-col-on","gd-box-on","gd-mark-on"));
+  const FULL={r:"gd-row-on",c:"gd-col-on",b:"gd-box-on"};
+  const unit=(attr,val)=>{ clearHi(); cells.forEach(c=>{ if(c.dataset[attr]===String(val)){ c.classList.add(FULL[attr]); if(c.dataset.m==="0") c.classList.add("gd-mark-on"); } }); };
+  clearHi();
+  if(!motionOK()){   // Motion off: hold a static, fully-explained state — no sequence
+    cells.forEach(c=>{ if(c.dataset.m==="0") c.classList.add("gd-mark-on"); });
+    cap.innerHTML="Each suspect marker appears <b>once per row, column, and room</b> — and repeats across the grid, like the 7s in Sudoku.";
+    return;
+  }
+  const T=(ms,fn)=>_gridTutTimers.push(setTimeout(fn,ms));
+  const beats=[
+    [0,    ()=>{ clearHi(); cap.innerHTML="Each suspect marker works like a Sudoku number."; }],
+    [1600, ()=>{ unit("r",1); cap.innerHTML="Once in every <b>row</b>…"; }],
+    [3100, ()=>{ unit("c",1); cap.innerHTML="…once in every <b>column</b>…"; }],
+    [4600, ()=>{ unit("b",2); cap.innerHTML="…and once in every <b>room</b>."; }],
+    [6100, ()=>{ clearHi(); cells.forEach(c=>{ if(c.dataset.m==="0") c.classList.add("gd-mark-on"); }); cap.innerHTML="The same marker repeats across the grid — a deduction, not a place."; }],
+    [7900, ()=>{ clearHi(); cap.innerHTML="Now follow the evidence."; }],
+  ];
+  beats.forEach(b=>T(b[0],b[1]));
+  T(9600, ()=>{ if($("howtoModal").classList.contains("show")) runGridTutorial(); else clearGridTut(); });   // loop only while How to Play is open
+}
+function openHowto(){ $("howtoModal").classList.add("show"); runGridTutorial(); }
+$("howtoBtn").onclick=openHowto;
+$("howtoClose").onclick=()=>{ $("howtoModal").classList.remove("show"); clearGridTut(); };
+$("howtoGo").onclick=()=>{ $("howtoModal").classList.remove("show"); clearGridTut(); LS.set("seenHowTo",true); openNewCaseModal(); };   // after the how-to, pick a case
 $("archiveClose").onclick=()=>$("archiveModal").classList.remove("show");
 /* ---- consistent modal dismissal: click the backdrop (outside the panel) or press Esc closes ---- */
 ["newModal","accuseModal","archiveModal","howtoModal","gravesModal","settingsModal"].forEach(id=>{ const m=$(id);
@@ -5042,7 +5297,7 @@ window.addEventListener("keydown",e=>{   // Esc closes the front-most open modal
 }, true);
 /* ---- manor hub wiring ---- */
 function openNewCaseModal(){ $("newModal").classList.add("show"); $("seedInput").value=""; showCaseCodeHint(); }
-$("manorNew").onclick=()=>{ if(!LS.get("seenHowTo",false)){ $("howtoModal").classList.add("show"); } else openNewCaseModal(); };   // first-timers see how-to first
+$("manorNew").onclick=()=>{ if(!LS.get("seenHowTo",false)){ openHowto(); } else openNewCaseModal(); };   // first-timers see the Graves' Deduction Grid tutorial first
 $("manorContinue").onclick=()=>{ if(C && !solved) hideManor(); else showManor(); };   // resume the in-progress case
 $("manorArchive").onclick=openArchive;
 if($("manorCaseBtn")) $("manorCaseBtn").onclick=openGravesCase;   // open the Graves mystery tracker
@@ -5056,11 +5311,11 @@ if($("confirmNo")) $("confirmNo").onclick=()=>closeConfirm("cancel");
 if($("confirmModal")) $("confirmModal").onclick=(e)=>{ if(e.target===$("confirmModal")) closeConfirm("cancel"); };   // tap backdrop = cancel
 document.querySelectorAll("#recTabs .rec-tab").forEach(t=>t.onclick=()=>renderRecords(t.dataset.tier));   // leaderboard difficulty filter
 $("winArchive").onclick=openArchive;
-$("evPrev").onclick=()=>{ clueStep--; renderEvCurrent(); };
-$("evNext").onclick=()=>{ clueStep++; renderEvCurrent(); };
-// tapping the current-evidence clue pulses what it references on the board
-if($("evClue")){ $("evClue").title="Click to show this clue on the board";
-  $("evClue").onclick=()=>highlightClue(story&&story.evidence&&story.evidence[clueStep]); }
+$("evPrev").onclick=()=>{ clueStep--; renderEvCurrent(); highlightClue(activeClue()); };   // P4: stepping the pager updates the clue-to-board highlight
+$("evNext").onclick=()=>{ clueStep++; renderEvCurrent(); highlightClue(activeClue()); };
+// tapping the current-evidence clue (or stepping the pager) pulses the grid SECTION + marker(s) it references
+if($("evClue")){ $("evClue").title="Show this clue's grid section on the board";
+  $("evClue").onclick=()=>highlightClue(activeClue()); }   // P4 fix: use the ACTIVE (filtered) clue, not story.evidence[clueStep] (which mis-indexed when extras are hidden)
 // current-evidence card and the full list are mutually exclusive (only one open)
 // current-evidence card and the full list are mutually exclusive ON DESKTOP only (on phones
 // they live in different places: the stepper by the board, the full list in the overlay tab).
@@ -5229,10 +5484,11 @@ function applyAtmosphere(){
   $("atmoBtn").textContent = focus ? "Atmosphere: Focus" : "Atmosphere: High";
 }
 function applyNotesMode(){ document.body.classList.toggle("notes", notesMode);
-  const b=$("notesBtn"); if(b) b.classList.toggle("on", notesMode); }
+  const b=$("notesBtn"); if(b){ b.classList.toggle("on", notesMode); b.setAttribute("aria-pressed", notesMode?"true":"false"); } }   /* P7: announce toggle state to assistive tech */
 $("notesBtn").onclick=()=>{ notesMode=!notesMode; applyNotesMode();
   setStatus(notesMode?"Notes ON — select a cell, then tap suspects to pencil in candidates.":"Notes off — tap a suspect to place them.",""); };
-$("atmoBtn").onclick=()=>{ settings.atmosphere = settings.atmosphere==="high"?"low":"high";
+$("atmoBtn").onclick=()=>{ if(typeof capturePresetActive==="function" && capturePresetActive()){ captureHint("Atmosphere is set by the capture preset — exit it (Ctrl+Shift+P) to change atmosphere"); return; }   // a manual toggle here would write LS while the preset restores in-memory -> divergence; the preset owns atmosphere while it's on
+  settings.atmosphere = settings.atmosphere==="high"?"low":"high";
   LS.set("settings",settings); applyAtmosphere(); applyAmbient(); if(C) renderBoard(); };
 // first-time sudoku rule callout (once per browser)
 if(!LS.get("seenRule",false)){ const ft=$("firstTip"); if(ft) ft.hidden=false; }
@@ -5282,6 +5538,7 @@ $("seedInput").addEventListener("keydown",e=>{ if(e.key==="Enter")$("loadCodeBtn
 
 document.addEventListener("keydown",e=>{
   if(solved||$("newModal").classList.contains("show"))return;
+  if(e.key==="Escape"||e.key==="Esc"){ if(focusSuspect>0 && !document.querySelector(".modal-bg.show")){ focusSuspect=0; sel=-1; renderTray(); refresh(); setStatus("Put it down.",""); e.preventDefault(); } return; }   // P2: Esc puts down an armed suspect (back to idle); always return so Escape never falls through to suspect-key selection
   const k=e.key.toUpperCase(), code=k.charCodeAt(0)-64;
   if(k==="N"&&cfg.N<14){ notesMode=!notesMode; applyNotesMode(); e.preventDefault(); return; }   // 'N' toggles notes
   if(k>="A"&&k<="Z"&&code>=1&&code<=cfg.N){ selectSuspect(code); e.preventDefault(); return; }
@@ -5488,17 +5745,17 @@ function playPayoff(grade, won, perfect, headlineText){
   const cell=cls=>cells.find(c=>c.classList.contains(cls)), show=cls=>{ const c=cell(cls); if(c)c.classList.add("in"); };
   const T=(ms,fn)=>_revealTimers.push(setTimeout(fn,ms));
   if(won && wrap) T(120,()=>wrap.classList.add("j-slam"));   // culprit behind bars (existing)
-  T(300,()=>{ show("tc-culprit"); slamStamp(".stamp-falsealibi",0); });  // FALSE ALIBI
-  T(680,()=> show("tc-weapon"));                                         // weapon slides in
-  T(980,()=> slamStamp(".stamp-weapon",1));                              // WEAPON CONFIRMED (if right)
-  T(1280,()=> show("tc-motive"));                                        // motive flips
-  T(1580,()=> slamStamp(".stamp-motive",2));                             // MOTIVE CONFIRMED (if right)
-  T(1820,()=> slamStamp(".stamp-proof",3));                              // EVIDENCE FOUND (if right)
-  T(2120,()=>{ const big = won ? stamp : cold;               // win: CASE CLOSED art; fail: the cold grey text stamp
+  T(300,()=>{ show("tc-culprit"); slamStamp(".stamp-falsealibi",0); });  // beat 3 · CULPRIT (FALSE ALIBI)
+  T(700,()=> show("tc-weapon"));                                         // beat 4 · weapon slides in
+  T(1000,()=> slamStamp(".stamp-weapon",1));                             // WEAPON CONFIRMED (if right)
+  T(1340,()=> show("tc-motive"));                                        // beat 5 · motive flips
+  T(1640,()=> slamStamp(".stamp-motive",2));                             // MOTIVE CONFIRMED (if right)
+  T(1980,()=> slamStamp(".stamp-proof",3));                              // beat 6 · PROOF (EVIDENCE FOUND, if right)
+  T(2480,()=>{ const big = won ? stamp : cold;               // beat 7 · CASE CLOSED — a clear breath after the proof lands
     if(big){ restartAnim(big,"j-thunk"); fxPuff(big); } sfx(won?"thunkBig":"buzz");
     fxShake($("winModal").querySelector(".modal")); if(perfect) fxConfetti(); });
-  T(2460,()=> setHeadline(_payoffHeadline));                             // typewriter headline (existing)
-  T(2680,()=> renderTrophyStrip(_payoffStrip));                          // trophies strip slides in after the stamps
+  T(2860,()=> setHeadline(_payoffHeadline));                             // typewriter headline (existing)
+  T(3120,()=> renderTrophyStrip(_payoffStrip));                          // trophies strip slides in after the close
 }
 function skipPayoff(){ clearRevealTimers();
   const trio=document.querySelector("#accuseScore .accuse-trio"); if(trio) trio.classList.remove("seq");
@@ -5521,7 +5778,7 @@ if($("soundBtn")) $("soundBtn").onclick=()=>{ settings.sound=!settings.sound; LS
 /* ---- PLAY MODE: Relaxed (cozy, default) vs Detective (timer + limited guesses). Persisted; changeable in the toolbar. ---- */
 /* ---- PLAY MODES: Relaxed (cozy), Detective (timer + 3 guesses), On the Clock (countdown race) ---- */
 const MODE_LABEL={relaxed:"Relaxed", detective:"Detective", clock:"On the Clock"};
-const MODE_ICON ={relaxed:"🌿", detective:"🕵", clock:"⏱"};
+const MODE_ICON ={relaxed:"🍵", detective:"🔎", clock:"⏱"};   // P10: one icon set across the chip, Settings, the confirm dialog, and the first-run cards
 function isDetective(){ return settings.playMode==="detective"; }
 function isClock(){ return settings.playMode==="clock"; }
 function isRelaxed(){ return !isDetective() && !isClock(); }   // default = Relaxed (the cozy front door)
@@ -5532,8 +5789,11 @@ function applyPlayMode(){
   document.body.classList.toggle("detective", isDetective());
   if(!clk){ document.body.classList.remove("clock-critical"); const p=$("timerPill"); if(p) p.classList.remove("clk-warn","clk-crit"); }
   updateModeButtons();
+  const mode = settings.playMode || "relaxed";   // P10: keep the always-visible mode chip in sync (mode switch restarts the case, so this just reflects state on render)
+  const mp=$("modePill"); if(mp){ mp.innerHTML=`${MODE_ICON[mode]} <span class="mode-pill-name">${MODE_LABEL[mode]}</span>`; mp.title=`Play mode: ${MODE_LABEL[mode]} — tap to change in Settings`; }
   const ab=$("accuseBtn"); if(ab) ab.title = clk?"Name the culprit before the clock runs out":(r?"Name the culprit — accuse freely, no timer or guess limit":"Name the killer — you have 3 guesses (full board not required)");
   if(typeof applyMusic==="function") applyMusic();        // swap to/from countdown.mp3 for clock mode
+  if(typeof updatePhasePill==="function") updatePhasePill();   // reset/refresh the Deduction→Accusation chip for this case
 }
 function updateModeButtons(){ const cur=settings.playMode||"relaxed";
   document.querySelectorAll("#modePick .mode-opt").forEach(b=>b.classList.toggle("on", b.dataset.mode===cur)); }
@@ -5570,6 +5830,7 @@ document.addEventListener("click",()=>document.querySelectorAll(".popover").forE
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") document.querySelectorAll(".popover").forEach(p=>{ if(p._closePopover) p._closePopover(); }); });
 /* Settings is now a modal popup (not a dropdown) */
 if($("settingsBtn")) $("settingsBtn").onclick=()=>$("settingsModal").classList.add("show");
+if($("modePill")) $("modePill").onclick=()=>$("settingsModal").classList.add("show");   // P10: the mode chip taps through to Settings -> Play mode
 if($("settingsClose")) $("settingsClose").onclick=()=>$("settingsModal").classList.remove("show");
 /* ---- looping background music: own toggle, default ON, separate from the SFX "Sound" toggle ---- */
 let bgMusic=null;
@@ -5742,7 +6003,7 @@ const DEV_GROUPS=[
  ["Trophies / memorial",[["Unlock all trophies",devUnlockTrophies],["Unlock all memorials",devUnlockMemorials],["Reset trophies & memorials",devResetTrophies,"warn"]]],
  ["Story / flow",[["Replay opening intro",()=>showManorStory(MANOR_OPENING,null,"intro")],["Reset 'seen' flags",devResetSeen],["Go to Manor",()=>showManor()],["Reset EVERYTHING",devResetAll,"warn"]]],
  ["Quick launch",[["Routine (Easy)",()=>devStart("easy")],["Troubling (Medium)",()=>devStart("medium")],["Grim (Hard)",()=>devStart("hard")],["Cold (Extreme)",()=>devStart("extreme")]]],
- ["Toggles / diagnostics",[["Fill solution",devFillSolution],["Jump to accusation",()=>{ if(C&&!solved) openAccusation(); else devLog("No active case."); }],["Planted-weapon case",devPlanted],["Motion: toggle",devToggleMotion],["App-fit: toggle",devToggleAppfit],["Dump state → console",devDump]]],
+ ["Toggles / diagnostics",[["Fill solution",devFillSolution],["Jump to accusation",()=>{ if(C&&!solved) openAccusation(); else devLog("No active case."); }],["Planted-weapon case",devPlanted],["Motion: toggle",devToggleMotion],["App-fit: toggle",devToggleAppfit],["Capture view: toggle",toggleCapture],["Framing guide: cycle",cycleFraming],["Capture preset: toggle",toggleCapturePreset],["Dump state → console",devDump]]],
 ];
 function buildDevPanel(){ if($("devPanel")) return $("devPanel");
   const p=document.createElement("div"); p.id="devPanel"; p.className="dev-panel";
@@ -5770,6 +6031,58 @@ function buildDevPanel(){ if($("devPanel")) return $("devPanel");
   document.body.appendChild(p); refreshDevReadout(); devLog("Dev panel ready."); return p; }
 window.addEventListener("keydown",e=>{ if(e.ctrlKey&&e.shiftKey&&(e.key==="D"||e.key==="d"||e.code==="KeyD")){ e.preventDefault();
   let p=$("devPanel"); if(!p){ LS.set("devPanel",true); buildDevPanel(); } else p.classList.toggle("dev-off"); } });
+/* P13: capture aids for screenshots / trailer footage — clean capture view (Ctrl+Shift+C) + aspect-ratio framing
+   guides (Ctrl+Shift+F). Pure presentation, pointer-events:none, no layout or gameplay change. */
+function captureHint(msg){ let h=$("captureHint"); if(!h){ h=document.createElement("div"); h.id="captureHint"; h.className="capture-hint"; document.body.appendChild(h); }
+  h.textContent = msg; h.classList.add("show"); clearTimeout(h._t); h._t=setTimeout(()=>h.classList.remove("show"),1800); }
+function toggleCapture(){ const on=!document.body.classList.contains("capture"); document.body.classList.toggle("capture",on); captureHint(on ? "Capture view — Ctrl+Shift+C to exit" : "Capture view off"); }
+window.addEventListener("keydown",e=>{ if(e.ctrlKey&&e.shiftKey&&(e.key==="C"||e.key==="c"||e.code==="KeyC")){ e.preventDefault(); toggleCapture(); } });
+/* Framing guides: OFF -> 9:16 (vertical/social) -> 16:9 (landscape/trailer) -> OFF. A centered safe-frame box,
+   dimmed outside + a crisp amber outline, sized by aspect ratio to CONTAIN within the viewport; non-interactive. */
+let _framing=0;   // 0 | "9:16" | "16:9"
+function applyFramingGuide(){
+  let ov=$("framingGuide");
+  if(!_framing){ if(ov) ov.hidden=true; return; }
+  if(!ov){ ov=document.createElement("div"); ov.id="framingGuide"; ov.className="framing-guide";
+    ov.innerHTML='<div class="frame-box"><span class="frame-label"></span><span class="frame-thirds"><i class="v v1"></i><i class="v v2"></i><i class="h h1"></i><i class="h h2"></i></span></div>'; document.body.appendChild(ov); }
+  ov.hidden=false;
+  const ar=(_framing==="9:16")?9/16:16/9, mw=window.innerWidth*0.96, mh=window.innerHeight*0.96;
+  let w=mh*ar, h=mh; if(w>mw){ w=mw; h=mw/ar; }   // contain: fit to height, then clamp to width
+  const box=ov.querySelector(".frame-box");
+  box.style.width=Math.round(w)+"px"; box.style.height=Math.round(h)+"px";
+  ov.querySelector(".frame-label").textContent=_framing;
+}
+function cycleFraming(){ _framing = (_framing===0) ? "9:16" : (_framing==="9:16" ? "16:9" : 0); applyFramingGuide();
+  captureHint(_framing ? `Framing ${_framing} — Ctrl+Shift+F to cycle` : "Framing guide off"); }
+window.addEventListener("keydown",e=>{ if(e.ctrlKey&&e.shiftKey&&(e.key==="F"||e.key==="f"||e.code==="KeyF")){ e.preventDefault(); cycleFraming(); } });
+window.addEventListener("resize",()=>{ if(_framing) applyFramingGuide(); });
+/* P13 add-on #4: one-key CAPTURE PRESET — bundles the capture affordances into a single toggle and restores the
+   operator's EXACT prior state on exit. Dev/capture tool only (hotkey + dev button; NOT in normal Settings).
+   Bundles: clean capture view (body.capture) + Atmosphere:Focus. Leaves framing (Ctrl+Shift+F) and Motion alone so
+   the operator still controls those. Transient by design: the atmosphere change is in-memory only (no LS write), so a
+   mid-preset reload reverts to the player's real saved atmosphere; exit restores the snapshot exactly. */
+let _capPreset=null;   // null = off; else {capture:bool, atmo:string} snapshot of the pre-preset state
+function capturePresetActive(){ return _capPreset!==null; }
+function setAtmoFocus(focus){
+  const want = focus ? "low" : "high";
+  if(settings.atmosphere===want) return;            // already at the desired atmosphere — no re-render needed
+  settings.atmosphere = want;                       // in-memory ONLY (transient); atmoBtn is guarded while the preset is on
+  applyAtmosphere(); if(typeof applyAmbient==="function") applyAmbient(); if(C) renderBoard();
+}
+function toggleCapturePreset(){
+  if(_capPreset){                                   // ON -> restore the EXACT prior state
+    const prev=_capPreset; _capPreset=null;
+    document.body.classList.toggle("capture", prev.capture);
+    setAtmoFocus(prev.atmo!=="high");
+    captureHint("Capture preset off — prior settings restored");
+  } else {                                          // OFF -> snapshot, then apply the capture-optimal look
+    _capPreset = { capture: document.body.classList.contains("capture"), atmo: settings.atmosphere };
+    document.body.classList.add("capture");
+    setAtmoFocus(true);                             // Atmosphere: Focus (cleaner board) — framing & Motion untouched
+    captureHint("Capture preset on — Ctrl+Shift+P to exit");
+  }
+}
+window.addEventListener("keydown",e=>{ if(e.ctrlKey&&e.shiftKey&&(e.key==="P"||e.key==="p"||e.code==="KeyP")){ e.preventDefault(); toggleCapturePreset(); } });   // NB: Firefox binds Ctrl+Shift+P (private window) at the browser level — operators on Firefox use the dev-panel button
 if(DEV_ON) buildDevPanel();
 })();
 </script>
