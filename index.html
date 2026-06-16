@@ -185,6 +185,7 @@
     width:42%;height:42%;max-width:15px;max-height:15px;border-radius:50%;
     background:#1a1a22 center/64% no-repeat url("assets/ui/icon-lock.png");
     box-shadow:0 0 0 1px rgba(0,0,0,.55);opacity:1;pointer-events:none;}
+  body.phone .cell.given .token::after{display:none;}   /* PHONE ONLY: hide the lock badge (givens stay locked + muted; desktop/appfit keep the badge) */
   .token.big{width:84px;height:84px;font-size:40px;}
   .token.tray{width:100%;height:100%;font-size:22px;}
   /* selected cell's occupant: the CELL already carries the amber border+glow (.cell.sel, above); the token
