@@ -7,6 +7,27 @@ Kickstarter call-to-action moments on every solve and a finale once all four are
 It is a single file, `demo/index.html`. It **shares the main game's art** — no assets are
 duplicated. Serve it from the repo root and open `/demo/` (on GitHub Pages: `/casedoku/demo/`).
 
+## Rebuilding (one command)
+
+`demo/index.html` is **generated** from the main game's `index.html` — do **not** hand-edit it.
+After any change to `index.html`, re-sync the demo with:
+
+```
+npm run build:demo        # = node scripts/build-demo.mjs
+```
+
+`scripts/build-demo.mjs` keeps the full game (single source of truth = `index.html`) and applies the
+demo layer as an **additive overlay**: a `<base href="../">`, a `body.demo` class that **gates the
+Manor home** (hidden, not removed — so there's no coupling to maintain), the Case Select front-end +
+the Steam/Kickstarter/socials CTAs + the Demo Complete finale, and a `#winCta` container in the win
+payoff. Entry/return buttons are re-bound to Case Select, and a `#winModal` observer marks the fixed
+case solved + shows the CTA on each win. The per-build config (the four seeds + the CTA links) lives
+at the top of `scripts/build-demo.mjs` (`DEMO_CASES`, `DEMO_LINKS`).
+
+Two deliberate simplifications vs. the old hand-trimmed demo: persistence is **not** namespaced under
+`casedoku.demo.` (a standalone Steam build has no main-game saves to collide with), and the elaborate
+"phone-mode disable" is dropped (the desktop/Steam window is desktop-sized, so phone-mode never triggers).
+
 ## The four fixed cases
 
 The demo locks to these hand-picked seeds (chosen for solvability, a good clue mix, and a

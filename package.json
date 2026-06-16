@@ -5,6 +5,7 @@
   "description": "Casedoku Manor — cozy detective sudoku (Android wrapper via Capacitor)",
   "scripts": {
     "build:www": "node scripts/build-www.mjs",
+    "build:demo": "node scripts/build-demo.mjs",
     "android:sync": "npm run build:www && cap sync android",
     "android:apk": "npm run android:sync && cd android && gradlew.bat assembleDebug",
     "test:engine": "node tests/engine.test.mjs 20"
