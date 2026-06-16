@@ -224,7 +224,7 @@ apply('demo-js', 'if(DEV_ON) buildDevPanel();\n})();', 'if(DEV_ON) buildDevPanel
 
 /* ---- sanity: the demo MUST carry the current fixes + its own demo bits ---- */
 const must = ['<base href="../">', 'class="demo"', 'id="caseSelect"', 'DEMO_CASES', 'id="winCta"',
-  'translateY(-90px)' /* folder slides down */];
+  'translateY(96px)' /* folder slide-in animation present (introSlide start) */];
 const mustNot = ['id="phasePill"', 'id="modePill"' /* chips removed */];
 for (const m of must)    if (!html.includes(m)) fail('output missing required marker: ' + m);
 for (const m of mustNot) if (html.includes(m))  fail('output still contains removed marker: ' + m);

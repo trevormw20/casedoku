@@ -16,6 +16,10 @@
     --wall:8px;             /* thickness of the region-dividing "house walls" (cell borders) */
     --cell-max:62px; --ncols:9;     /* set per-case by JS; mobile shrinks --cell to fit the viewport */
     --cell:var(--cell-max);
+    --cf-col:410px; --cf-gap:16px;  /* desktop Case File side-column width + its gap (gap tightened 24->16 so the panel sits nearer the board) — SHARED by .layout and the header reservation so the top bar always centers on the board column (no magic numbers to drift) */
+    /* exact rendered board width = ncols cells + inter-cell gaps(1px) + .board padding(3px*2) + .board border(3px*2).
+       Used to cap the toolbar/control rows to the board's footprint so they sit DIRECTLY under the board (not the wider board-wrap column). Tracks --cell, so it's correct on desktop AND appfit (where JS sets --cell). */
+    --board-w:calc(var(--ncols) * var(--cell) + (var(--ncols) - 1) * 1px + 12px);
     --disc-cream:#efe6d0;   /* token disc fill behind transparent cutouts (theme can override) */
     --disc-given:#473f2c;   /* darker disc for given/locked suspects (vs player-placed cream) */
     --ring-w:2.4px;         /* token ring thickness */
@@ -54,8 +58,13 @@
   /* P10: current play-mode chip — looks like a pill, taps through to Settings; icon-only on the tight phone bar */
   select,button,input{font-family:inherit;}
 
-  .layout{display:grid;grid-template-columns:auto 410px;gap:24px;
-    max-width:1240px;margin:0 auto;align-items:start;}
+  /* justify-content:center makes the `auto` board column size to its CONTENT (the board + the suspect tray's
+     natural one-row width) instead of greedily filling a wide half-empty column — so the Case File panel sits
+     right beside the board. The board's centre is (W - (gap + --cf-col))/2 regardless of the column width, and
+     that equals the header's padding reservation, so the top bar stays centred over the board. (Content-sized,
+     not forced to var(--board-w), so the tray keeps its single row and doesn't push the toolbar down.) */
+  .layout{display:grid;grid-template-columns:auto var(--cf-col);gap:var(--cf-gap);
+    max-width:1240px;margin:0 auto;align-items:start;justify-content:center;}
   .layout>*{min-width:0;}   /* allow columns to shrink below content width (no overflow) */
   @media (max-width:1040px){
     .layout{grid-template-columns:1fr;}
@@ -66,15 +75,18 @@
     :root{--cell:calc((100vw - 40px) / var(--ncols));}
   }
 
-  /* Desktop ≥1240: the Case File occupies a fixed 410px RIGHT grid column, so the board lives in the LEFT column.
-     Reserve that column's width (410px + 24px gap) as header right-padding so the centered top bar sits OVER THE
-     BOARD — lining up with the board and the (already board-centered) toolbar. (Trevor's "over the board" choice.)
+  /* Whenever the Case File side panel is in-flow (desktop wider than the 1040px stacked breakpoint, not appfit/phone)
+     the board lives in the LEFT grid column, so its centre is LEFT of the window centre. Reserve the side column's
+     width (--cf-col + --cf-gap) as header right-padding so the centered top bar sits OVER THE BOARD — lining up with
+     the board and the (already board-centered) toolbar at EVERY desktop width, not just ≥1240. Because the header is
+     width:100% with the same max-width:1240/margin:auto as .layout, its rect matches the layout rect, so reserving the
+     exact side column makes the top-bar content area equal to the board column — centres coincide.
      padding (not transform) on purpose: a transformed ancestor would re-anchor the position:fixed menu popover. */
-  @media (min-width:1240px){
-    body:not(.appfit):not(.phone) header.app{ width:100%; box-sizing:border-box; padding-right:434px; }
+  @media (min-width:1041px){
+    body:not(.appfit):not(.phone) header.app{ width:100%; box-sizing:border-box; padding-right:calc(var(--cf-col) + var(--cf-gap)); }
   }
 
-  .board-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;}
+  .board-wrap{display:flex;flex-direction:column;align-items:center;gap:9px;}   /* tightened from 14px so the tray + toolbar sit nearer the board */
   /* the board is Inspector Graves' abstract deduction grid, not a crime-scene map */
   .board-title{font-family:Georgia,serif;font-size:13px;letter-spacing:1.5px;color:var(--ink-dim);
     text-transform:uppercase;text-align:center;margin:0;line-height:1.2;
@@ -228,7 +240,7 @@
     display:flex;align-items:center;justify-content:center;font-family:"Courier New",monospace;padding:0 4px;
     box-shadow:0 1px 3px rgba(0,0,0,.75);}
 
-  .toolbar{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;}
+  .toolbar{display:flex;gap:9px;flex-wrap:nowrap;justify-content:safe center;max-width:100%;overflow-x:auto;}   /* SINGLE ROW — never wrap a 7th button to a clipped 2nd row. Centred when it fits; if it's wider than the area it SCROLLS horizontally ('safe center' falls back to start so the scroll reaches the first button) instead of wrapping. A slight overhang past the board edges is fine. */
   .btn{display:inline-flex;align-items:center;gap:6px;cursor:pointer;
     background:linear-gradient(180deg,#262b38,#1b1f2a);color:var(--ink);
     border:1px solid var(--line);border-radius:8px;padding:8px 13px;font-size:13.5px;transition:.12s;}
@@ -481,6 +493,14 @@
   .co-tab.on{color:var(--amber-soft);border-bottom-color:var(--amber);}
   .co-close{flex:none;width:46px;height:46px;border-radius:11px;border:1px solid var(--line);background:#1b1f2a;color:var(--ink);font-size:22px;line-height:1;cursor:pointer;margin-bottom:6px;}
   .co-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 16px calc(28px + env(safe-area-inset-bottom));}
+  /* Cozy-noir scrollbar for the scrollable Case File areas: the appfit side panel (.casefile, overflow-y:auto)
+     and the mobile/overlay Case File popup (.co-scroll). Slim dark track that blends into the panel + a soft
+     brass thumb (the --amber accent #e7b94d at low opacity), gentle hover lift. Cross-browser (WebKit + Firefox). */
+  .casefile, .co-scroll{ scrollbar-width:thin; scrollbar-color:rgba(231,185,77,.40) rgba(13,15,20,.5); }   /* Firefox: thumb (soft brass) + track (near-black, blends into panel) */
+  .casefile::-webkit-scrollbar, .co-scroll::-webkit-scrollbar{ width:9px; height:9px; }
+  .casefile::-webkit-scrollbar-track, .co-scroll::-webkit-scrollbar-track{ background:rgba(13,15,20,.5); border-radius:8px; }
+  .casefile::-webkit-scrollbar-thumb, .co-scroll::-webkit-scrollbar-thumb{ background:rgba(231,185,77,.30); border-radius:8px; border:2px solid transparent; background-clip:padding-box; }   /* inset 2px so the brass thumb floats slim in the track */
+  .casefile::-webkit-scrollbar-thumb:hover, .co-scroll::-webkit-scrollbar-thumb:hover{ background:rgba(231,185,77,.52); background-clip:padding-box; }
   body.co-open{overflow:hidden;}
   /* tray label + first-time tip + stronger selection (P6) */
   .tray-label{font-family:"Courier New",monospace;font-size:11px;letter-spacing:1px;color:var(--amber);
@@ -488,7 +508,7 @@
   .tray-hint{color:var(--ink-dim);text-transform:none;letter-spacing:0;font-family:inherit;font-size:12px;font-style:italic;}
   .first-tip{display:flex;align-items:center;gap:12px;justify-content:center;flex-wrap:wrap;
     background:#1c1f29;border:1px solid var(--amber);border-radius:9px;padding:9px 14px;
-    color:var(--ink);font-size:13.5px;max-width:9*var(--cell);box-shadow:0 4px 14px rgba(0,0,0,.5);}
+    color:var(--ink);font-size:13.5px;max-width:var(--board-w);box-shadow:0 4px 14px rgba(0,0,0,.5);}   /* was an invalid `9*var(--cell)` (no calc) -> ignored, so the long first-run tip stretched the board column wide. Cap to the board width so it wraps and the Case File panel still sits near the board on first run. */
   .first-tip[hidden]{display:none;}   /* let the hidden attribute actually hide it (beats display:flex) */
   .first-tip:not([hidden]){animation:popIn .2s ease-out;}   /* the first thing a new player sees shouldn't snap in */
   .first-tip b{color:var(--amber-soft);}
@@ -585,13 +605,23 @@
   @keyframes cluePulseCell{0%,100%{box-shadow:inset 0 0 0 3px var(--amber),0 0 10px rgba(231,185,77,.55);}50%{box-shadow:inset 0 0 0 3px var(--amber),0 0 22px rgba(231,185,77,.95);}}
   @keyframes cluePulseObj{0%,100%{transform:scale(1);}50%{transform:scale(1.3);}}
   .ev-clue{cursor:pointer;}
-  /* pencil-mark candidates (P3-notes): fixed 3x3 sub-grid of colored dots */
-  .cand-grid{position:absolute;inset:5px;display:grid;grid-template-columns:repeat(3,1fr);
-    grid-template-rows:repeat(3,1fr);gap:1px;pointer-events:none;}
-  .cand{display:flex;align-items:center;justify-content:center;}
-  .cand i{width:84%;height:84%;max-width:14px;max-height:14px;border-radius:50%;font-style:normal;
+  /* pencil-mark candidates (P3-notes): fixed 3x3 sub-grid of colored circles, each
+     carrying the suspect's letter in the suspect's signature color (matches portrait art).
+     Ink color + shadow are set inline per-mark (candInk) so pale suspects stay legible. */
+  /* CONSTANT square area sized off the FULL cell (not the variable padding box) + abs-centered,
+     so .bt/.bl room-boundary & board-edge cells get the SAME square 3x3 area as interior cells.
+     (A position:absolute box is sized against the cell's PADDING box; box-sizing:border-box +
+     the 8px .bt/.bl wall shrinks that box asymmetrically -> non-square tracks -> oval circles.)
+     max(10px,--wall+2) keeps the square clear of the thick wall on every cell type & viewport. */
+  .cand-grid{position:absolute;inset:0;margin:auto;
+    width:calc(var(--cell) - max(10px, var(--wall) + 2px));
+    height:calc(var(--cell) - max(10px, var(--wall) + 2px));
+    display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:1px;pointer-events:none;}
+  .cand{display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;}  /* let the 1fr tracks stay equal/square even when the letter's min-content would otherwise stretch a track */
+  .cand i{width:84%;height:84%;max-width:14px;max-height:14px;border-radius:50%;font-style:normal;line-height:1; /* round at EVERY size: .cand-grid is forced square (above), so equal 84% w/h of a square track is a circle by construction — NB do NOT use height:auto+aspect-ratio, the 7px letter's line-box becomes the min-height and re-ovals tiny phone cells */
     font-size:7px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;
-    text-shadow:0 1px 1px rgba(0,0,0,.8);box-shadow:0 0 0 1px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.3);}
+    min-width:0;min-height:0;overflow:hidden;  /* letter is a flex item -> its min-content size could deform the circle on tiny cells; pin it so the explicit square w/h always wins */
+    text-shadow:0 1px 1px rgba(0,0,0,.8);box-shadow:0 0 0 1px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.28);}
   /* notes-mode active: toolbar button lit + selected cell turns teal so the mode is obvious */
   .btn.on{border-color:var(--amber);background:linear-gradient(180deg,#7a5e1f,#5a4314);color:#fff;}
   #notesBtn.on{box-shadow:0 0 0 2px var(--amber),0 0 10px rgba(231,185,77,.45);}   /* P7: Notes ON = an unmistakable amber ring (static, motion-safe) beyond the shared brown fill */
@@ -1089,19 +1119,19 @@
     text-transform:uppercase;color:#5b4a22;}
   .iflap-stamp{transform:rotate(-8deg);border:2px solid rgba(150,32,32,.55);color:rgba(150,32,32,.62);
     font-family:"Courier New",monospace;font-weight:700;font-size:16px;letter-spacing:3px;padding:5px 14px;border-radius:4px;text-transform:uppercase;}
-  /* the case folder slides DOWN into place — starts above its resting spot and drops in with a soft settle,
-     like a file dropped into a tray. The intro card must NEVER use the generic .modal jModalIn (an upward pop),
-     so (1) we null jModalIn out for the card, and (2) the .seq variant gets introSlide. CRUCIAL: the fade-in
-     finishes EARLY (20%) while the card is still high up, so the DOWNWARD travel is what the player actually
-     sees. (Before, opacity hit 1 only at 55% and the ease-out front-loaded the whole drop into the invisible
-     fade — leaving just the tail overshoot settling UPWARD visible, which read as "slides up".) */
-  .modal-bg.show .intro-card{animation:none;}   /* kill the generic upward jModalIn pop on the case folder (introSlide below wins when .seq is present) */
-  .modal-bg.show .intro-card.seq{animation:introSlide .55s cubic-bezier(.33,0,.25,1) both;}
+  /* EXPERIMENT (Trevor): the case folder now slides UP into place — starts BELOW its resting spot and rises
+     straight to rest (the reverse of the previous downward drop). Still a clean MONOTONIC slide:
+       (1) the generic .modal jModalIn pop is nulled out on the card (introSlide owns the motion); and
+       (2) introSlide translateY goes +96 -> +80 -> 0, strictly DECREASING (always moving up) and NEVER
+           negative, so there is no overshoot-above-rest + downward settle — one clean upward travel.
+       The fade-in finishes EARLY (20%) while the card is still low, so the ENTIRE upward travel is on-screen,
+       and the ease-out (no-overshoot bezier, y<=1) decelerates INTO rest without overshooting. */
+  .modal-bg.show .intro-card{animation:none;}   /* kill the generic jModalIn pop on the case folder (introSlide below wins when .seq is present) */
+  .modal-bg.show .intro-card.seq{animation:introSlide .5s cubic-bezier(.2,.8,.25,1) both;}
   @keyframes introSlide{
-    0%{transform:translateY(-90px);opacity:0;}    /* above the resting spot, hidden */
-    20%{transform:translateY(-72px);opacity:1;}   /* fade in fast WHILE still high up, so the drop is visible */
-    78%{transform:translateY(6px);opacity:1;}     /* drop down PAST rest — visible downward travel */
-    100%{transform:translateY(0);opacity:1;}      /* gentle settle into place */
+    0%  {transform:translateY(96px);opacity:0;}    /* below the resting spot, hidden */
+    20% {transform:translateY(80px);opacity:1;}    /* fade-in completes WHILE still low, so the whole UPWARD travel is visible */
+    100%{transform:translateY(0);opacity:1;}        /* slides straight UP to rest — monotonic, NO overshoot, NO downward settle */
   }
   /* flap shown closed during the sequence, then swings open */
   .intro-card.seq .intro-flap{display:flex;transform:rotateX(0deg);transition:transform .55s ease,opacity .35s ease .2s;}
@@ -1200,13 +1230,18 @@
      touch the normal desktop browser layout or the phone layout. */
   body.appfit{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;}
   body.appfit footer{display:none;}
-  body.appfit header.app{width:auto;max-width:none;margin:0;flex:0 0 auto;flex-wrap:nowrap;
-    justify-content:space-between;align-items:center;gap:5px 10px;padding:5px 12px;border-bottom:1px solid var(--line);}
+  /* appfit header: a 2-col grid MIRRORING .layout (same minmax(0,1fr) board column + clamp() side column,
+     same 12px column-gap + 12px side padding) so the header's column 1 == the board column. .top-controls
+     lives in column 1 and centres its content, putting the top bar over the board's centre axis — matching
+     the desktop centering. (flex:0 0 auto still applies as a child of the body column-flex.) */
+  body.appfit header.app{width:auto;max-width:none;margin:0;flex:0 0 auto;
+    display:grid;grid-template-columns:minmax(0,1fr) clamp(220px,30%,360px);gap:5px 12px;
+    align-items:center;padding:5px 12px;border-bottom:1px solid var(--line);}
   body.appfit header.app .brand{min-height:0;flex:0 0 auto;}
   body.appfit header.app img.logo{height:30px;}
   body.appfit .brand-text{font-size:18px;}
   /* controls stay on ONE row; scroll horizontally if the window is too narrow (keeps header height fixed) */
-  body.appfit .top-controls{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;min-width:0;justify-content:flex-end;gap:5px;align-items:center;scrollbar-width:thin;}
+  body.appfit .top-controls{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;min-width:0;justify-content:center;gap:5px;align-items:center;scrollbar-width:thin;}   /* centred over the board column (header is a grid mirroring .layout, above) */
   body.appfit .top-controls>*{flex:0 0 auto;}
   body.appfit .pill{padding:4px 8px;font-size:13px;min-height:0;}   /* P11: top-bar info (timer/guesses/difficulty) a touch larger at handheld distance */
   body.appfit .pill-badge{width:16px;height:16px;}
@@ -1214,21 +1249,25 @@
   body.appfit .demo-badge{font-size:10px;padding:2px 6px;}
   /* the two-pane row fills the remaining height; only the right pane scrolls */
   body.appfit{margin:0;}
-  body.appfit .layout{flex:1 1 0;display:grid;grid-template-columns:minmax(0,1fr) clamp(220px,30%,360px);
-    gap:12px;max-width:none;margin:0;padding:8px 12px 10px;min-height:0;overflow:hidden;align-items:stretch;}
-  body.appfit .board-wrap{min-height:0;overflow:hidden;justify-content:flex-start;gap:8px;padding-top:2px;}
+  /* board column sized to the BOARD (var(--board-w)) + justify-content:center so the Case File panel sits beside
+     the board instead of across a wide half-empty 1fr column. Board centre = (W - (gap + side-col))/2, which the
+     full-width header's 1fr col1 centre also resolves to (same clamp basis), so the top bar stays centred. */
+  body.appfit .layout{flex:1 1 0;display:grid;grid-template-columns:auto clamp(220px,30%,360px);
+    gap:12px;max-width:none;margin:0;padding:8px 12px 10px;min-height:0;overflow:hidden;align-items:stretch;justify-content:center;}   /* board column sizes to its CONTENT (incl. the single-row toolbar) so the toolbar stays one fully-visible row; justify-content:center keeps the board+panel group centred and the casefile near the board */
+  body.appfit .board-wrap{min-height:0;overflow:hidden;justify-content:flex-start;gap:6px;padding-top:2px;}   /* gap tightened 8->6 so tray + toolbar sit nearer the board */
   body.appfit .casefile{height:100%;min-height:0;overflow-y:auto;overflow-x:hidden;margin:0;}
   body.appfit .top-controls .btn-tx{display:none;}   /* icon-only header buttons -> header stays one row */
   /* toolbar: ONE row that scrolls horizontally (never wraps to many rows / never steals board height) */
-  body.appfit .toolbar{gap:5px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;justify-content:flex-start;
-    width:100%;padding-bottom:2px;scrollbar-width:thin;flex:0 0 auto;}   /* P11: never let the column crush the toolbar (fitBoard measures it to size the board) */
+  body.appfit .toolbar{gap:5px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;justify-content:safe center;
+    width:auto;max-width:100%;padding-bottom:2px;scrollbar-width:thin;flex:0 0 auto;}   /* SINGLE ROW that scrolls horizontally if it can't fit — never wraps to a clipped 2nd row; fitBoard measures its 1-row height and sizes the board to fit */
   body.appfit .toolbar .btn{padding:8px 9px;font-size:11.5px;min-height:36px;white-space:nowrap;flex:0 0 auto;}   /* P7: keep a ~36px tap floor in the narrow scrolling toolbar (esp. for destructive Clear) */
   /* tray: ONE compact row (smaller tokens) that scrolls horizontally if it can't fit */
-  body.appfit .tray{gap:6px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;justify-content:flex-start;padding-top:2px;scrollbar-width:thin;flex:0 0 auto;}   /* P11 FIX: the tray must NOT be vertically crushed by the column (was collapsing to ~2px, hiding the suspect markers); fitBoard then sizes the board to leave room */
+  body.appfit .tray{gap:6px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;justify-content:flex-start;padding-top:2px;scrollbar-width:thin;flex:0 0 auto;max-width:var(--board-w);}   /* cap to the board width so it scrolls WITHIN the board column (board column is now board-width) instead of overflowing */   /* P11 FIX: the tray must NOT be vertically crushed by the column (was collapsing to ~2px, hiding the suspect markers); fitBoard then sizes the board to leave room */
   body.appfit .tray .susp{width:46px;flex:0 0 auto;}
   body.appfit .tray .susp .disc{width:40px;height:40px;}
   body.appfit .tray .susp-name{font-size:12px;max-width:46px;}
   body.appfit .tray-label{font-size:11px;margin:0;}
+  body.appfit .tray-hint{display:none;}   /* hide the verbose "— tap to select…" hint at handheld distance: keeps the "Suspects" label to ONE line in the board-width column, so the toolbar sits nearer the board */
   /* P11 (Steam Deck / appfit): bump the smallest playing text to comfortable handheld sizes.
      Scoped to body.appfit so normal desktop + phone layouts are untouched. */
   body.appfit .room-tag{font-size:11px;}
@@ -2667,22 +2706,22 @@ const MANOR = {
   // motives for the accusation's 3 options. Tags: money, inheritance, revenge, secret, reputation,
   // jealousy, debt, blackmail, betrayal, forbidden, coverup, grudge.
   suspects:[
-    {role:"colonel",     L:"A", name:"The Colonel",     color:"#D4A017", gender:"male",   mtag:"secret",      motive:"a buried war secret"},
-    {role:"widow",       L:"B", name:"The Widow",       color:"#7D3C98", gender:"female", mtag:"inheritance", motive:"a contested inheritance"},
-    {role:"butler",      L:"C", name:"The Butler",      color:"#5D6D7E", gender:"male",   mtag:"grudge",      motive:"years of unpaid loyalty soured to spite"},
-    {role:"chef",        L:"D", name:"The Chef",        color:"#C0392B", gender:"male",   mtag:"reputation",  motive:"a stolen recipe"},
-    {role:"professor",   L:"E", name:"The Professor",   color:"#1E8449", gender:"male",   mtag:"coverup",     motive:"a discredited theory he had to bury"},
-    {role:"heiress",     L:"F", name:"The Heiress",     color:"#C2407A", gender:"female", mtag:"inheritance", motive:"a cut from the will"},
-    {role:"gardener",    L:"G", name:"The Gardener",    color:"#D86A1E", gender:"female", mtag:"revenge",     motive:"a dismissed grievance, repaid"},
-    {role:"captain",     L:"H", name:"The Captain",     color:"#2471A3", gender:"male",   mtag:"betrayal",    motive:"a mutinous betrayal"},
-    {role:"doctor",      L:"I", name:"The Doctor",      color:"#17A2A2", gender:"female", mtag:"coverup",     motive:"a malpractice cover-up"},
-    {role:"actress",     L:"J", name:"The Actress",     color:"#94283C", gender:"female", mtag:"jealousy",    motive:"a jealous rivalry"},
-    {role:"inspector",   L:"K", name:"The Inspector",   color:"#5A4632", gender:"male",   mtag:"blackmail",   motive:"a blackmailer's hold over him"},
-    {role:"maid",        L:"L", name:"The Maid",        color:"#4FA3D1", gender:"female", mtag:"money",       motive:"a withheld wage"},
-    {role:"heir",        L:"M", name:"The Heir",        color:"#7A8B3C", gender:"male",   mtag:"debt",        motive:"gambling debts and an impatient fortune"},
-    {role:"magician",    L:"N", name:"The Magician",    color:"#3D348B", gender:"male",   mtag:"reputation",  motive:"an exposed trick"},
-    {role:"antiquarian", L:"O", name:"The Antiquarian", color:"#9C6B30", gender:"male",   mtag:"money",       motive:"a priceless forgery"},
-    {role:"nurse",       L:"P", name:"The Nurse",       color:"#D98C9A", gender:"female", mtag:"forbidden",   motive:"a forbidden love affair"},
+    {role:"colonel",     L:"A", name:"The Colonel",     color:"#c99424", gender:"male",   mtag:"secret",      motive:"a buried war secret"},
+    {role:"widow",       L:"B", name:"The Widow",       color:"#7b3163", gender:"female", mtag:"inheritance", motive:"a contested inheritance"},
+    {role:"butler",      L:"C", name:"The Butler",      color:"#596a79", gender:"male",   mtag:"grudge",      motive:"years of unpaid loyalty soured to spite"},
+    {role:"chef",        L:"D", name:"The Chef",        color:"#b33920", gender:"male",   mtag:"reputation",  motive:"a stolen recipe"},
+    {role:"professor",   L:"E", name:"The Professor",   color:"#396b4a", gender:"male",   mtag:"coverup",     motive:"a discredited theory he had to bury"},
+    {role:"heiress",     L:"F", name:"The Heiress",     color:"#bd4763", gender:"female", mtag:"inheritance", motive:"a cut from the will"},
+    {role:"gardener",    L:"G", name:"The Gardener",    color:"#cd6319", gender:"female", mtag:"revenge",     motive:"a dismissed grievance, repaid"},
+    {role:"captain",     L:"H", name:"The Captain",     color:"#296b94", gender:"male",   mtag:"betrayal",    motive:"a mutinous betrayal"},
+    {role:"doctor",      L:"I", name:"The Doctor",      color:"#e8eff7", gender:"female", mtag:"coverup",     motive:"a malpractice cover-up"},
+    {role:"actress",     L:"J", name:"The Actress",     color:"#9e74b5", gender:"female", mtag:"jealousy",    motive:"a jealous rivalry"},
+    {role:"inspector",   L:"K", name:"The Inspector",   color:"#8f8c83", gender:"male",   mtag:"blackmail",   motive:"a blackmailer's hold over him"},
+    {role:"maid",        L:"L", name:"The Maid",        color:"#5ba5c6", gender:"female", mtag:"money",       motive:"a withheld wage"},
+    {role:"heir",        L:"M", name:"The Heir",        color:"#7b7331", gender:"male",   mtag:"debt",        motive:"gambling debts and an impatient fortune"},
+    {role:"magician",    L:"N", name:"The Magician",    color:"#403d80", gender:"male",   mtag:"reputation",  motive:"an exposed trick"},
+    {role:"antiquarian", L:"O", name:"The Antiquarian", color:"#764917", gender:"male",   mtag:"money",       motive:"a priceless forgery"},
+    {role:"nurse",       L:"P", name:"The Nurse",       color:"#f0b2b3", gender:"female", mtag:"forbidden",   motive:"a forbidden love affair"},
   ],
   victims:["Lord Blackwood","the Dowager Countess","Sir Hugh Pennington","the family solicitor","old Mr. Ashford"],
   // each weapon: `slug` -> assets/themes/manor/weapons/weapon-<slug>.png; `traits` drive the
@@ -3870,12 +3909,24 @@ function undo(){ if(!undoStack.length)return; const e=undoStack.pop(); restoreSn
 function redo(){ if(!redoStack.length)return; const e=redoStack.pop(); restoreSnap(e.after); undoStack.push(e);
   flashSnapDiff(e); sfx("paper");
   clearHints(); refresh(); renderTray(); updateBtns(); }
+// pencil-mark ink: pale suspect circles (doctor #e8eff7, inspector #828b92, maid, nurse...)
+// need a dark letter + light shadow so the glyph reads; dark circles keep the white letter.
+function candInk(hex){
+  const m=/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex||"");
+  if(!m) return {ink:"#fff", sh:"0 1px 1px rgba(0,0,0,.85)"};
+  const r=parseInt(m[1],16), gC=parseInt(m[2],16), b=parseInt(m[3],16);
+  const L=0.2126*r+0.7152*gC+0.0722*b;          // perceived luminance 0..255
+  return L>128
+    ? {ink:"#1a140a", sh:"0 1px 0 rgba(255,255,255,.5)"}   // pale circle -> dark ink
+    : {ink:"#ffffff", sh:"0 1px 1px rgba(0,0,0,.85)"};     // dark circle -> white ink
+}
 function candGrid(i){
   const g=document.createElement("div"); g.className="cand-grid";
   candidates[i].forEach(v=>{ const s=Skin.sName(THEME,v), idx=v-1;
     const slot=document.createElement("div"); slot.className="cand"; slot.dataset.v=v;
     slot.style.gridRow=Math.floor(idx/3)+1; slot.style.gridColumn=(idx%3)+1;   // fixed, learnable sub-position
-    const dot=document.createElement("i"); dot.style.background=RING[v-1]||s.color; dot.textContent=s.L;
+    const dot=document.createElement("i"); const col=s.color, ink=candInk(col);  // canonical suspect color -> matches the portrait art
+    dot.style.background=col; dot.style.color=ink.ink; dot.style.textShadow=ink.sh; dot.textContent=s.L;
     slot.appendChild(dot); g.appendChild(slot); });
   return g;
 }
