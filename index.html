@@ -52,14 +52,6 @@
   .pill b{color:var(--amber-soft);}
   .pill-badge{width:20px;height:20px;flex:none;}   /* difficulty emblem; hidden by global handler if missing */
   /* P10: current play-mode chip — looks like a pill, taps through to Settings; icon-only on the tight phone bar */
-  .mode-pill{cursor:pointer;font-family:inherit;line-height:1;margin:0;}
-  .mode-pill:hover{border-color:var(--amber);color:var(--amber-soft);}
-  body.phone .mode-pill .mode-pill-name{display:none;}
-  /* P10 #2 (light): display-only "Deduction → Accusation" phase indicator. Reflects EXISTING state (gridComplete) — never gates; accusing stays allowed anytime. */
-  .phase-pill{cursor:default;user-select:none;font-family:inherit;line-height:1;margin:0;transition:border-color .3s,color .3s,background .3s,box-shadow .3s;}
-  .phase-pill.accuse{border-color:var(--amber);color:var(--amber-soft);background:rgba(231,185,77,.1);box-shadow:0 0 0 1px rgba(231,185,77,.25);}   /* soft amber once the grid completes — echoes, doesn't compete with, the Accuse glow */
-  body.manor-open #phasePill{display:none;}   /* in-play chrome only — hidden on the manor home screen */
-  body.phone #phasePill{display:none;}         /* dense phone header + would duplicate the Accuse ⚖ glyph; the accuse glow + status carry the phase there */
   select,button,input{font-family:inherit;}
 
   .layout{display:grid;grid-template-columns:auto 410px;gap:24px;
@@ -1640,8 +1632,6 @@
       <span class="pill clockpill" id="timerPill" title="Time on this case">🕰 00:00</span>
       <span class="pill" id="guessPill" title="Accusation attempts left (a wrong one costs +1:00)">Guesses: 3</span>
       <span class="pill" id="diffPill">—</span>
-      <button class="pill mode-pill" id="modePill" title="Play mode">—</button>
-      <span class="pill phase-pill" id="phasePill" title="Deduction phase — fill Inspector Graves' grid. You can accuse anytime; a full board isn't required.">🔍 <span class="phase-pill-name">Deduction</span></span>
       <button class="btn casefile-open" id="caseFileTopBtn" title="Open the full case file">📁<span class="btn-tx"> Case File</span></button>
       <button class="btn primary" id="accuseBtn" title="Name the killer — you have 3 guesses (full board not required)">⚖ <span class="btn-tx">Accuse</span></button>
       <div class="pop-wrap">
@@ -3811,16 +3801,6 @@ function maybeNudge(){   // all OTHER cells correct -> nudge the player to accus
   const b=$("accuseBtn"); if(b) b.classList.toggle("nudge", done);
   if(done && !_nudged){ _nudged=true; setStatus("The grid is complete — Graves' method points to one answer. Now name the killer.","good"); pulseAccuse(); }   // P8 beat 1->2: method done, not mystery solved
   if(!done) _nudged=false;
-  updatePhasePill();   // keep the in-play Deduction → Accusation chip in sync (display only — no gating)
-}
-function updatePhasePill(){   // light phase label reflecting EXISTING state (gridComplete) — never gates; accusing stays allowed anytime
-  const pp=$("phasePill"); if(!pp) return;
-  const accuse = !!C && (gridComplete() || solved || $("accuseModal").classList.contains("show"));   // "in or past the accusation phase" — sticky through the modal + payoff so it never blinks back mid-accusation
-  pp.classList.toggle("accuse", accuse);
-  pp.innerHTML = accuse ? '⚖ <span class="phase-pill-name">Accusation</span>' : '🔍 <span class="phase-pill-name">Deduction</span>';
-  pp.title = accuse
-    ? "Accusation phase — the grid is complete. Name the killer, the weapon, and the motive."
-    : "Deduction phase — fill Inspector Graves' grid. You can accuse anytime; a full board isn't required.";
 }
 function placeKillerInScene(won){   // the accusation places the final piece into the dashed cell
   if(!C || board[C.murderCell]===C.killer) return;
@@ -5804,11 +5784,8 @@ function applyPlayMode(){
   document.body.classList.toggle("detective", isDetective());
   if(!clk){ document.body.classList.remove("clock-critical"); const p=$("timerPill"); if(p) p.classList.remove("clk-warn","clk-crit"); }
   updateModeButtons();
-  const mode = settings.playMode || "relaxed";   // P10: keep the always-visible mode chip in sync (mode switch restarts the case, so this just reflects state on render)
-  const mp=$("modePill"); if(mp){ mp.innerHTML=`${MODE_ICON[mode]} <span class="mode-pill-name">${MODE_LABEL[mode]}</span>`; mp.title=`Play mode: ${MODE_LABEL[mode]} — tap to change in Settings`; }
   const ab=$("accuseBtn"); if(ab) ab.title = clk?"Name the culprit before the clock runs out":(r?"Name the culprit — accuse freely, no timer or guess limit":"Name the killer — you have 3 guesses (full board not required)");
   if(typeof applyMusic==="function") applyMusic();        // swap to/from countdown.mp3 for clock mode
-  if(typeof updatePhasePill==="function") updatePhasePill();   // reset/refresh the Deduction→Accusation chip for this case
 }
 function updateModeButtons(){ const cur=settings.playMode||"relaxed";
   document.querySelectorAll("#modePick .mode-opt").forEach(b=>b.classList.toggle("on", b.dataset.mode===cur)); }
@@ -5852,7 +5829,6 @@ document.addEventListener("click",()=>document.querySelectorAll(".popover").forE
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") document.querySelectorAll(".popover").forEach(p=>{ if(p._closePopover) p._closePopover(); }); });
 /* Settings is now a modal popup (not a dropdown) */
 if($("settingsBtn")) $("settingsBtn").onclick=()=>$("settingsModal").classList.add("show");
-if($("modePill")) $("modePill").onclick=()=>$("settingsModal").classList.add("show");   // P10: the mode chip taps through to Settings -> Play mode
 if($("settingsClose")) $("settingsClose").onclick=()=>$("settingsModal").classList.remove("show");
 /* ---- looping background music: own toggle, default ON, separate from the SFX "Sound" toggle ---- */
 let bgMusic=null;
