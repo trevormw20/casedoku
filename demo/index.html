@@ -1747,12 +1747,12 @@
       <span class="pill" id="guessPill" title="Accusation attempts left (a wrong one costs +1:00)">Guesses: 3</span>
       <span class="pill" id="diffPill">—</span>
       <button class="btn casefile-open" id="caseFileTopBtn" title="Open the full case file">📁<span class="btn-tx"> Case File</span></button>
+      <button class="btn" id="newCaseBtn" title="Start a new case (pick a difficulty)">🔍<span class="btn-tx"> New Case</span></button>
       <button class="btn primary" id="accuseBtn" title="Name the killer — you have 3 guesses (full board not required)">⚖ <span class="btn-tx">Accuse</span></button>
       <div class="pop-wrap">
         <button class="btn" id="menuBtn" title="Menu" aria-haspopup="true" aria-expanded="false">☰<span class="btn-tx"> Menu</span></button>
         <div class="popover" id="menuPop" hidden role="menu">
-          <button class="btn pop-item pop-nav" id="newCaseBtn" title="Start a new case (pick a difficulty)">🔍 <span>New Case</span></button>
-          <div class="pop-sep"></div>
+          <button class="btn pop-item pop-nav" id="settingsBtn" title="Settings — play mode, sound, atmosphere…" aria-haspopup="dialog">⚙ <span>Settings</span></button>
           <button class="btn pop-item pop-nav" id="howtoBtn" title="How to play">? <span>How to Play</span></button>
           <button class="btn pop-item pop-nav" id="archiveBtn"><img src="assets/ui/icon-notebook.png" alt=""/><span>Evidence Archive</span></button>
           <button class="btn pop-item pop-nav" id="newBtn">🏠 <span>Manor</span></button>
@@ -1784,10 +1784,8 @@
         <button class="btn" id="checkBtn" title="Check your work — circles any suspect in the wrong place"><img src="assets/ui/icon-check.png" alt=""/>Check</button>
       </div>
 
-      <!-- play mode + all toggles now live in the Settings popup -->
-      <div class="control-row control-row-solo">
-        <button class="btn" id="settingsBtn" title="Settings — play mode, sound, atmosphere…" aria-haspopup="dialog">⚙ <span class="btn-tx">Settings</span></button>
-      </div>
+      <!-- play mode + all toggles live in the Settings popup, opened from the ☰ menu (Settings item).
+           (The old lone Settings row here was clipped by board-wrap's overflow:hidden in appfit -> "no Settings button"; moved into the menu so it's reliably reachable in every mode.) -->
       <!-- mobile-only: opens the tabbed case-file overlay (the side panel is hidden on phones) -->
       <button class="case-file-btn" id="caseFileBtn">📁 Case File <span class="cf-sub">Evidence · Weapons · People · Case</span></button>
       <div class="status-mount" id="statusMount"></div>
