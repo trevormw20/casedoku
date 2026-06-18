@@ -51,6 +51,17 @@
   .brand-text[hidden]{display:none;}   /* the hidden attr must win over display:flex — show the text ONLY as a fallback when the logo image is missing (setupBrand toggles it) */
   .brand-text small{font-size:11px;letter-spacing:6px;color:var(--ink-dim);font-weight:normal;margin-top:4px;}
   .top-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  /* New Case button: in icon-only top-bar modes (phone/appfit, where the "New Case" word is hidden) stack a tiny
+     "New" caption ABOVE the 🔍 so it reads as New Case, not the brand magnifier. Hidden on desktop (full label shows). */
+  #newCaseBtn .nc-cap{display:none;}
+  body.phone #newCaseBtn, body.appfit #newCaseBtn{flex-direction:column;gap:0;line-height:1;justify-content:center;}
+  body.phone #newCaseBtn .nc-cap, body.appfit #newCaseBtn .nc-cap{display:block;font-size:8px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;line-height:1;color:var(--amber-soft);}
+  /* Case File button: same treatment as #newCaseBtn — in the icon-only PHONE top bar, stack a tiny "Case"
+     caption ABOVE the 📁 so it reads as Case File. Hidden on desktop (full "Case File" label shows); appfit
+     left as-is per request (note: appfit is also icon-only, so it could match for full consistency). */
+  #caseFileTopBtn .cf-cap{display:none;}
+  body.phone #caseFileTopBtn{flex-direction:column;gap:0;line-height:1;justify-content:center;}
+  body.phone #caseFileTopBtn .cf-cap{display:block;font-size:8px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;line-height:1;color:var(--amber-soft);}
   .pill{padding:8px 11px;border-radius:8px;border:1px solid var(--line);background:#1b1f2a;
     color:var(--ink);font-size:13px;display:inline-flex;align-items:center;gap:6px;}
   .pill b{color:var(--amber-soft);}
@@ -92,7 +103,7 @@
     text-transform:uppercase;text-align:center;margin:0;line-height:1.2;
     padding-bottom:5px;border-bottom:1px solid rgba(231,185,77,.22);}   /* P6: frame it as a deliberate caption */
   .board-title b{color:var(--amber-soft);font-weight:600;}
-  body.phone .board-title{font-size:calc(12px * var(--ps,1));}
+  body.phone .board-title{display:none;}   /* hide the "🔍 Inspector Graves' Deduction Grid" caption on phone */
   /* persistent reminder that clues describe the deduction grid, not a manor map */
   .clue-grid-note{font-size:11px;font-style:italic;color:var(--ink-dim);text-align:center;margin:6px 0 0;opacity:.85;}
   body.phone .clue-grid-note{font-size:calc(11px * var(--ps,1));}
@@ -488,6 +499,7 @@
   @keyframes coFolderOpen{0%{transform:perspective(1400px) rotateX(-80deg);opacity:0}55%{opacity:1}100%{transform:perspective(1400px) rotateX(0);opacity:1}}
   .co-bar{display:flex;align-items:flex-end;gap:8px;padding:max(8px,env(safe-area-inset-top)) 8px 0;border-bottom:1px solid var(--line);}
   .co-tabs{display:flex;gap:2px;flex:1;}
+  .co-title{display:none;}   /* popup header label — shown only on phone (stacked layout, tabs hidden) */
   .co-tab{flex:1;min-width:0;background:none;border:none;border-bottom:3px solid transparent;color:var(--ink-dim);
     font-family:inherit;font-size:15px;font-weight:700;padding:14px 4px;cursor:pointer;white-space:nowrap;min-height:48px;}
   .co-tab.on{color:var(--amber-soft);border-bottom-color:var(--amber);}
@@ -886,10 +898,13 @@
   /* (the Current Objective stays visible near the board on mobile / stacked layouts) */
   body.phone .pill{padding:calc(5px * var(--ps,1)) calc(7px * var(--ps,1));font-size:calc(13px * var(--ps,1));gap:3px;min-height:0;white-space:nowrap;flex:0 0 auto;}
   body.phone .pill-badge{width:calc(16px * var(--ps,1));height:calc(16px * var(--ps,1));}
-  body.phone #diffPill{font-size:calc(12.5px * var(--ps,1));min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;}
-  body.phone #diffPill .pill-size{display:none;}               /* drop the "· 9×9" suffix on the narrow line */
-  body.phone #diffPill .pill-caseword{display:none;}           /* show just the tier adjective (Grim / Troubling / Cold / Routine) */
-  body.phone #diffPill .pill-badge{display:none;}              /* drop the emblem — the tier word carries it */
+  /* PHONE: difficulty shows the tier BADGE image inside the SAME pill chrome as #guessPill — i.e. it keeps the
+     base .pill + body.phone .pill styling (border:1px solid var(--line); border-radius:8px; background:#1b1f2a;
+     padding 5px 7px), with the tier word hidden. So the difficulty pill's frame matches the "3 left" guesses pill.
+     The full name stays in the title tooltip (set in JS). Desktop/appfit keep badge + text. */
+  body.phone #diffPill{font-size:0;flex:0 0 auto;padding:calc(5px * var(--ps,1));}   /* same pill frame (border/radius/bg) as #guessPill; symmetric 5px padding keeps the bordered badge compact in the bar */
+  body.phone #diffPill b{display:none;}                            /* hide the tier word — the badge carries it */
+  body.phone #diffPill .pill-badge{display:inline-block;width:calc(18px * var(--ps,1));height:calc(18px * var(--ps,1));margin:0;}   /* badge sized so the framed pill matches the guesses pill's height */
   body.phone #guessPill .g-lbl{display:none;}                  /* compact "Guesses: 3" -> "3 left" */
   body.phone #guessPill b::after{content:" left";font-weight:400;}
   body.phone .top-controls .btn{padding:calc(7px * var(--ps,1)) calc(9px * var(--ps,1));font-size:calc(14px * var(--ps,1));min-height:calc(38px * var(--ps,1));flex:0 0 auto;}
@@ -909,22 +924,40 @@
   body.phone .board-wrap > .tray{order:2;}
   body.phone .board-wrap > .toolbar{order:3;}
   body.phone .board-wrap > .control-row-solo{order:4;}
-  body.phone .board-wrap > #evMount{order:5;}        /* Current Objective (relocated into #evMount on phone) */
-  body.phone .board-wrap > .board-title{order:6;}     /* "🔍 Inspector Graves' Deduction Grid" caption */
-  body.phone .board-wrap > .tray-label{order:7;}      /* "Suspects — tap to select…" label */
-  body.phone .board-wrap > #caseFileBtn{order:8;}
-  body.phone .board-wrap > #statusMount{order:9;}
-  body.phone .board-wrap > #assistant{order:10;}
-  body.phone .tray-label{font-size:calc(16px * var(--ps,1));}
+  body.phone .board-wrap > #bottomTabs{order:5;}      /* two-tab switcher directly beneath the toolbar */
+  body.phone .board-wrap > #evMount{order:6;}         /* Tab 1 panel: Current Objective (synced mirror) */
+  body.phone .board-wrap > #assistant{order:7;}       /* Tab 2 panel: Wembly (clerk hints) — moved up under the tabs */
+  body.phone .board-wrap > .board-title{order:8;}     /* "🔍 Inspector Graves' Deduction Grid" caption */
+  body.phone .board-wrap > .tray-label{order:9;}      /* "Suspects — tap to select…" label (hidden) */
+  body.phone .board-wrap > #caseFileBtn{order:10;}
+  body.phone .board-wrap > #statusMount{order:11;}
+  /* PHONE two-tab bottom section: two big tabs, then ONE panel (objective mirror OR Wembly), toggled by body.btab-* */
+  .bottom-tabs{display:none;}
+  body.phone .bottom-tabs{display:flex;gap:6px;width:100%;max-width:calc(9 * var(--cell));margin:-4px auto -5px;}   /* ~5px above (toolbar) / ~4px below (panel); finer tightening is done via the panels' INNER padding */
+  body.phone .bottom-tabs .btab{flex:1;min-width:0;min-height:calc(33px * var(--ps,1));border:1px solid var(--line);
+    background:#171a22;color:var(--ink-dim);border-radius:10px 10px 0 0;cursor:pointer;padding:0 6px;
+    font-family:"Courier New",monospace;font-size:calc(12.5px * var(--ps,1));font-weight:700;letter-spacing:.5px;
+    text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  body.phone .bottom-tabs .btab.on{color:var(--amber-soft);border-color:var(--amber);background:#20232e;}
+  body.phone #evMount,body.phone #assistant{max-width:calc(9 * var(--cell));margin-left:auto;margin-right:auto;width:100%;}
+  body.phone #assistant{padding:6px 10px;gap:8px;}   /* tighter Wembly panel inner padding (was 9px 12px) */
+  body.phone.btab-obj #assistant{display:none;}                 /* Objective tab active -> hide Wembly */
+  body.phone.btab-wembly #evMount{display:none;}                /* Wembly tab active -> hide Objective */
+  body.phone.btab-wembly #assistant{display:flex;}             /* show Wembly even when [hidden] (placeholder or fired hint) */
+  body.phone .tray-label{display:none;}   /* phone: hide the "Suspects — tap to select…" instruction label (removed from the flow → no gap; tray itself unaffected) */
   body.phone .tray-hint{font-size:calc(14px * var(--ps,1));}
   /* tray sized so all 9 suspects fall into exactly 2 rows (5 + 4): 5 must fit one row at ~360px */
   body.phone .tray{gap:calc(6px * var(--ps,1));}
-  body.phone .susp{width:calc(62px * var(--ps,1));}
-  body.phone .susp .disc{width:calc(56px * var(--ps,1));height:calc(56px * var(--ps,1));}
-  body.phone .susp-name{font-size:calc(14px * var(--ps,1));max-width:calc(64px * var(--ps,1));}
-  body.phone .susp .count{min-width:calc(23px * var(--ps,1));height:calc(23px * var(--ps,1));font-size:calc(13.5px * var(--ps,1));}
-  body.phone .toolbar{gap:calc(10px * var(--ps,1));}
-  body.phone .toolbar .btn{padding:calc(13px * var(--ps,1)) calc(15px * var(--ps,1));font-size:calc(16px * var(--ps,1));min-height:calc(50px * var(--ps,1));}
+  body.phone .susp{width:calc(53px * var(--ps,1));}                                                   /* column sized for the disc + count badge */
+  body.phone .susp .disc{width:calc(46px * var(--ps,1));height:calc(46px * var(--ps,1));}             /* tray portrait (disc 46; token scales with it ~41) */
+  body.phone .susp-name{display:none;}   /* phone: tray shows portrait + count badge only — name hidden to save space (the .susp title tooltip keeps the full name) */
+  body.phone .susp .count{min-width:calc(20px * var(--ps,1));height:calc(20px * var(--ps,1));font-size:calc(12px * var(--ps,1));}   /* badge scaled to match the disc, still legible */
+  /* PHONE: shrink the 7 toolbar buttons to ICON-ONLY so they all fit one row with NO horizontal scroll.
+     Labels (.tb-tx) are hidden here only; desktop/appfit show full labels. ~40px tall keeps a good tap target. */
+  body.phone .toolbar{gap:calc(4px * var(--ps,1));}
+  body.phone .toolbar .btn{padding:calc(8px * var(--ps,1));font-size:calc(18px * var(--ps,1));min-height:calc(40px * var(--ps,1));gap:0;}
+  body.phone .toolbar .btn img{width:calc(18px * var(--ps,1));height:calc(18px * var(--ps,1));}
+  body.phone .toolbar .tb-tx{display:none;}   /* icon-only on phone (titles still carry the full label for long-press) */
   body.phone .btn{font-size:calc(16px * var(--ps,1));}
   /* slim Current Evidence card: small label band, tight padding, ~2 lines of clue text, inline arrows */
   body.phone .ev-block{margin:2px 0 0;}
@@ -961,6 +994,15 @@
   /* overlay tab labels (section headers) */
   body.phone .co-tab{font-size:calc(17px * var(--ps,1));min-height:calc(50px * var(--ps,1));}
   body.phone .co-close{width:calc(46px * var(--ps,1));height:calc(46px * var(--ps,1));font-size:calc(22px * var(--ps,1));}
+  /* PHONE Case File: one continuous, NON-TABBED scroll (every section stacked in .co-scroll, in desktop
+     order, by placeCaseFile). Hide the tab bar + empty tab panels; show a "Case File" header beside the X;
+     give the content comfortable gutters so it isn't edge-to-edge. */
+  body.phone .co-tabs{display:none;}
+  body.phone .co-panel{display:none;}
+  body.phone .co-title{display:block;flex:1;min-width:0;align-self:center;font-family:"Courier New",monospace;
+    font-size:calc(13px * var(--ps,1));letter-spacing:1.5px;text-transform:uppercase;color:var(--amber-soft);}
+  body.phone .co-bar{align-items:center;padding:max(8px,env(safe-area-inset-top)) 14px 8px;}
+  body.phone .co-scroll{padding:16px 18px calc(32px + env(safe-area-inset-bottom));}
 
   /* overlay content — readable type scale, decluttered (sections show open, no nested boxes) */
   body.phone .co-panel .case-title{font-size:calc(24px * var(--ps,1));line-height:1.2;}
@@ -1165,6 +1207,11 @@
   #amb.amb-paused .amb-layer,#amb.amb-paused .mote,#amb.amb-paused .streak{animation-play-state:paused !important;}
   /* the opaque manor hub (z-60) fully covers #amb — pause the layers while it's up (battery) */
   body.manor-open #amb .amb-layer,body.manor-open #amb .mote,body.manor-open #amb .streak{animation-play-state:paused !important;}
+  /* PHONE: lift the ambient layer ABOVE the board so motes/rain fall OVER the grid, not just
+     around it. z15 sits over the board's content (z≤8) but UNDER the case-file overlay / modals /
+     win-FX (z≥60), so it never clutters a reading view. pointer-events:none is inherited from #amb,
+     so taps pass straight through to place suspects, and motionOK() still gates the whole layer. */
+  body.phone #amb{z-index:15;}
   /* vignette breathing — constant base layer; transparent centre so the board stays clear */
   #amb.fx-vignette .amb-vignette{display:block;
     background:radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,.5) 100%);
@@ -1180,7 +1227,8 @@
     opacity:0;animation:ambRainFall linear infinite;}
   @keyframes ambRainFall{0%{opacity:0;transform:translateY(0) rotate(12deg);}
     12%{opacity:.45;}88%{opacity:.45;}100%{opacity:0;transform:translateY(116vh) rotate(12deg);}}
-  body.phone #amb .amb-rain .streak:nth-child(n+14){display:none;}   /* phone: fewer streaks */
+  body.phone #amb .amb-rain .streak:nth-child(n+21){display:none;}   /* phone: a fuller curtain now that it falls over the board (was 13) */
+  body.phone #amb .amb-rain .streak{width:1.6px;background:linear-gradient(to bottom,transparent,rgba(190,206,232,.8),transparent);}   /* wider + brighter so the rain reads at phone size */
   /* rare distant lightning through a window — rides the rain selection (storm stories). Peak
      opacity capped at .14 and the whole double-flash lives inside ~600ms of a 47s loop (odd
      period so it never syncs with the 13s vignette breath) — atmosphere, never a strobe. */
@@ -1219,7 +1267,9 @@
     50%{transform:translate(calc(var(--dx)/2),calc(var(--dy)/2)) scale(1.15);}85%{opacity:.55;}
     100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.8);}}
   /* phone: lighter — keep at most 7 motes */
-  body.phone #amb .amb-dust .mote:nth-child(n+8){display:none;}
+  body.phone #amb .amb-dust .mote:nth-child(n+13){display:none;}   /* phone: a denser drift now that motes land on the board (was 7) */
+  body.phone #amb .amb-dust .mote{width:5px;height:5px;}           /* slightly larger so each mote reads at phone size */
+  body.phone #amb.fx-grain .amb-grain{opacity:.13;}                /* phone: a touch more paper-grain (still a whisper over the board) */
 
   /* ============================ APP-FIT LANDSCAPE ============================
      Steam Deck / desktop-app / short-landscape windows: fit the WHOLE app inside
@@ -1508,6 +1558,25 @@
   body.phone .manor-tab{font-size:calc(12px * var(--ps,1));}
   body.phone .manor-hub .btn{font-size:calc(14px * var(--ps,1));min-height:calc(42px * var(--ps,1));}
   body.phone .manor-toast{font-size:calc(13px * var(--ps,1));}
+  /* PHONE FIT: the manor home is a fixed full-height column with overflow:hidden — trim the chrome rows so
+     the room picture AND the restore task card (+ hub) all fit on a short phone without clipping. The room
+     picture (.manor-floor-wrap, flex:1) reclaims whatever vertical space these trims free, so it grows.
+     Desktop/appfit are untouched. */
+  body.phone .manor-brand{padding:3px 0 0;}
+  body.phone .manor-brand img.logo{height:30px;}
+  body.phone .manor-head{padding:5px 0 3px;}
+  body.phone .manor-wembly-portrait,body.phone .manor-wembly-ico{width:36px;height:36px;}
+  body.phone .manor-overall{padding:0 0 3px;}
+  body.phone .manor-nav{padding:0 0 4px;gap:5px;}
+  body.phone .manor-status{padding:3px 0;gap:4px;}
+  body.phone .manor-taskcard{padding:6px 10px;}
+  body.phone .manor-hub{padding:5px 0 7px;gap:7px;}
+  body.phone .manor-hub .btn{min-height:calc(36px * var(--ps,1));}
+  /* PHONE: top-align the room square within its (JS-pinned) wrap so it anchors to the top — no vertical
+     auto-centering (the base .manor-floor uses margin:auto). layoutManor() pins the wrap to the picture's
+     height, so this leaves ~zero gap; the safeguard keeps it top-aligned against any sub-pixel rounding. */
+  body.phone .manor-floor-wrap{align-items:flex-start;}
+  body.phone .manor-floor{margin:0 auto;}
 
   /* ===================== DEV / TEST PANEL (left dock; gated) ===================== */
   .dev-panel{position:fixed;left:0;top:0;height:100vh;height:100dvh;width:210px;z-index:9999;
@@ -1583,6 +1652,14 @@
   .ev-block.objective-hero .ev-card{background:#11141b;border-color:rgba(231,185,77,.35);
     min-height:92px;padding:20px 16px;justify-content:center;}
   .ev-block.objective-hero .ev-clue{font-size:18.5px;line-height:1.5;font-weight:500;}
+  .ev-mirror{display:none;}                          /* board-side mirror of the Current Objective — shown only on phone (synced copy in #evMount, beneath the toolbar) */
+  body.phone #evMount .ev-mirror{display:block;margin:0;padding:4px 9px 5px;}   /* connects under the tabs; tighter inner padding than the popup objective (was 7px 10px 9px) */
+  body.phone #evMount .ev-mirror .ev-card{padding:2px 0 0;}                     /* trim the dead top padding left by the hidden summary (was 7px 0 0) */
+  /* keep the board-side mirror COMPACT (a slim take on the popup objective) so it tucks under the toolbar */
+  body.phone #evMount .ev-mirror>summary{display:none;}   /* the "◎ Current Objective" tab BUTTON already labels this — drop the redundant internal label (clue + pager stay) */
+  body.phone #evMount .ev-mirror .ev-clue{font-size:14.5px;line-height:1.35;}
+  body.phone #evMount .ev-mirror .ev-pager{margin-top:2px;gap:16px;}
+  body.phone #evMount .ev-mirror .ev-pager .ev-nav{width:32px;height:32px;font-size:18px;}
   /* pager footer: arrows flank a clear progress count, separate from the clue itself */
   .ev-pager{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:11px;}
   .ev-pager .ev-count{font-family:"Courier New",monospace;font-size:13.5px;letter-spacing:1.5px;
@@ -1672,8 +1749,8 @@
       <span class="pill clockpill" id="timerPill" title="Time on this case">🕰 00:00</span>
       <span class="pill" id="guessPill" title="Accusation attempts left (a wrong one costs +1:00)">Guesses: 3</span>
       <span class="pill" id="diffPill">—</span>
-      <button class="btn casefile-open" id="caseFileTopBtn" title="Open the full case file">📁<span class="btn-tx"> Case File</span></button>
-      <button class="btn" id="newCaseBtn" title="Start a new case (pick a difficulty)">🔍<span class="btn-tx"> New Case</span></button>
+      <button class="btn casefile-open" id="caseFileTopBtn" title="Open the full case file"><span class="cf-cap">Case</span>📁<span class="btn-tx"> Case File</span></button>
+      <button class="btn" id="newCaseBtn" title="Start a new case (pick a difficulty)"><span class="nc-cap">New</span>🔍<span class="btn-tx"> New Case</span></button>
       <button class="btn primary" id="accuseBtn" title="Name the killer — you have 3 guesses (full board not required)">⚖ <span class="btn-tx">Accuse</span></button>
       <div class="pop-wrap">
         <button class="btn" id="menuBtn" title="Menu" aria-haspopup="true" aria-expanded="false">☰<span class="btn-tx"> Menu</span></button>
@@ -1694,6 +1771,11 @@
         <button class="btn" id="firstTipOk">Got it</button>
       </div>
       <!-- on mobile, the Current Evidence stepper (#evBlock) is relocated here once the tip is dismissed -->
+      <!-- PHONE: two big tabs beneath the toolbar — Current Objective (the synced #evMirror) vs Wembly (clerk hints). Hidden on desktop/appfit. -->
+      <div class="bottom-tabs" id="bottomTabs">
+        <button class="btab on" data-btab="obj">◎ Current Objective</button>
+        <button class="btab" data-btab="wembly">🕯️ Wembly</button>
+      </div>
       <div class="ev-mount" id="evMount" hidden></div>
       <div class="board-title">🔍 Inspector Graves' <b>Deduction Grid</b></div>
       <div class="board" id="board"></div>
@@ -1701,13 +1783,13 @@
       <div class="tray" id="tray"></div>
       <!-- PRIMARY TOOLBAR: core gameplay actions only -->
       <div class="toolbar">
-        <button class="btn" id="undoBtn" title="Undo your last move"><img src="assets/ui/icon-undo.png" alt=""/>Undo</button>
-        <button class="btn" id="redoBtn" title="Redo the move you undid"><img src="assets/ui/icon-redo.png" alt=""/>Redo</button>
-        <button class="btn" id="eraseBtn" title="Erase the selected square (Backspace or Delete)"><img src="assets/ui/icon-erase.png" alt=""/>Erase</button>
-        <button class="btn danger" id="clearBtn" title="Reset the WHOLE puzzle to its starting clues — asks first, and you can undo it">🧹 Clear</button>
-        <button class="btn" id="notesBtn" title="Pencil-mark candidates (press N)" aria-pressed="false">✎ Notes</button>
-        <button class="btn" id="hintBtn" title="Ask the Clerk for a nudge — tap again for a stronger hint"><img src="assets/ui/icon-hint.png" alt=""/>Ask the Clerk</button>
-        <button class="btn" id="checkBtn" title="Check your work — circles any suspect in the wrong place"><img src="assets/ui/icon-check.png" alt=""/>Check</button>
+        <button class="btn" id="undoBtn" title="Undo your last move"><img src="assets/ui/icon-undo.png" alt=""/><span class="tb-tx">Undo</span></button>
+        <button class="btn" id="redoBtn" title="Redo the move you undid"><img src="assets/ui/icon-redo.png" alt=""/><span class="tb-tx">Redo</span></button>
+        <button class="btn" id="eraseBtn" title="Erase the selected square (Backspace or Delete)"><img src="assets/ui/icon-erase.png" alt=""/><span class="tb-tx">Erase</span></button>
+        <button class="btn danger" id="clearBtn" title="Reset the WHOLE puzzle to its starting clues — asks first, and you can undo it">🧹<span class="tb-tx"> Clear</span></button>
+        <button class="btn" id="notesBtn" title="Pencil-mark candidates (press N)" aria-pressed="false">✎<span class="tb-tx"> Notes</span></button>
+        <button class="btn" id="hintBtn" title="Ask the Clerk for a nudge — tap again for a stronger hint"><img src="assets/ui/icon-hint.png" alt=""/><span class="tb-tx">Ask the Clerk</span></button>
+        <button class="btn" id="checkBtn" title="Check your work — circles any suspect in the wrong place"><img src="assets/ui/icon-check.png" alt=""/><span class="tb-tx">Check</span></button>
       </div>
 
       <!-- play mode + all toggles live in the Settings popup, opened from the ☰ menu (Settings item).
@@ -1803,6 +1885,7 @@
   <div class="case-overlay" id="caseOverlay" hidden>
     <div class="co-folder">
       <div class="co-bar">
+        <span class="co-title">Case File</span>
         <div class="co-tabs" id="coTabs">
           <button class="co-tab on" data-tab="evidence">Evidence</button>
           <button class="co-tab" data-tab="weapons">Leads</button>
@@ -1819,8 +1902,6 @@
       </div>
     </div>
   </div>
-
-  <footer>Casedoku · a cozy detective sudoku · solve the grid, read the clues, name the killer</footer>
 
   <!-- Settings popup (replaces the old dropdown). Toggle rows keep the modal open so several can be flipped. -->
   <div class="modal-bg" id="settingsModal">
@@ -3373,6 +3454,8 @@ function startCase(opts){
   const _tierHTML=_tierLbl.replace(/\s+Case$/i,'<span class="pill-caseword"> Case</span>');   // " Case" hidden on phone -> just the adjective fits the one-line bar
   $("diffPill").innerHTML=`<img class="pill-badge" src="assets/ui/badge-${C.tier}.png" alt=""/>`+
     `<b>${_tierHTML}</b>`;   // grid size (· N×N) intentionally omitted from the label
+  $("diffPill").dataset.tier=C.tier;        // phone shows ONLY the tier colour (CSS swatch keyed off this)
+  $("diffPill").title=_tierLbl;             // tooltip carries the full difficulty name (esp. for the colour-only phone view)
   // (Case No. lives in the case file's subtitle now — see caseSub in renderCase — not the top bar.)
   $("loadBearingNote").innerHTML=
     `Sudoku logic alone leaves <b>${C.completionsWithout}</b> ways to complete Graves' grid — `+
@@ -3565,7 +3648,11 @@ function renderClueList(){
 function renderEvidenceUI(){ renderClueList(); renderEvCurrent(); }
 let _evClueHTML="";
 function renderEvCurrent(){
-  const vis=visibleEv(); const n=vis.length; if(!n){ $("evClue").textContent="—"; $("evStep").textContent=""; _evClueHTML=""; return; }
+  ensureEvMirror();   // build the phone board-side mirror once so the sync below always has a target
+  const vis=visibleEv(); const n=vis.length;
+  if(!n){ $("evClue").textContent="—"; $("evStep").textContent=""; _evClueHTML="";
+    if($("evMirrorClue")) $("evMirrorClue").textContent="—"; if($("evMirrorStep")) $("evMirrorStep").textContent="";
+    return; }
   clueStep=((clueStep%n)+n)%n;
   const e=vis[clueStep].e;
   const star=e.key?`<span class="keymark" title="key evidence">★</span>`:`<span class="disc-mark">✦</span>`;
@@ -3574,7 +3661,28 @@ function renderEvCurrent(){
   _evClueHTML=html;
   $("evClue").innerHTML=html;
   $("evStep").textContent=`${clueStep+1} / ${n}`;
+  // board-side mirror (phone): glanceable objective beneath the toolbar — same clue + step, kept in sync here
+  if($("evMirrorClue")) $("evMirrorClue").innerHTML=html;
+  if($("evMirrorStep")) $("evMirrorStep").textContent=`${clueStep+1} / ${n}`;
   revealMotivesIfMotiveClue(e);   // stepper landing on a MOTIVE clue flips the motive cards
+}
+/* PHONE board-side mirror of the Current Objective: a synced COPY of #evBlock rendered into #evMount (which
+   sits beneath the toolbar). Built once; its clue text + 1/N step are refreshed by renderEvCurrent, and its
+   pager drives the SAME clueStep, so the popup objective and this board-side one are always identical.
+   Hidden off-phone (its host #evMount is hidden on desktop/appfit, plus a phone-only display rule). */
+function ensureEvMirror(){
+  const mount=$("evMount"); if(!mount || $("evMirror")) return;
+  const m=document.createElement("details");
+  m.className="ev-block objective-hero ev-mirror"; m.id="evMirror"; m.open=true;
+  m.innerHTML=`<summary>◎ Current Objective</summary>`+
+    `<div class="ev-card"><p class="ev-clue" id="evMirrorClue" title="Show this clue's grid section on the board">—</p></div>`+
+    `<div class="ev-pager"><button class="ev-nav" id="evMirrorPrev" aria-label="Previous clue">‹</button>`+
+    `<span class="ev-count" id="evMirrorStep">— / —</span>`+
+    `<button class="ev-nav" id="evMirrorNext" aria-label="Next clue">›</button></div>`;
+  mount.appendChild(m);
+  $("evMirrorPrev").onclick=()=>{ clueStep--; renderEvCurrent(); highlightClue(activeClue()); };
+  $("evMirrorNext").onclick=()=>{ clueStep++; renderEvCurrent(); highlightClue(activeClue()); };
+  $("evMirrorClue").onclick=()=>highlightClue(activeClue());
 }
 function activeClue(){ const vis=visibleEv(); const n=vis.length; if(!n) return null; return vis[((clueStep%n)+n)%n].e; }   // P4: the evidence object currently shown in the 1/N pager (indexes the FILTERED list, like renderEvCurrent)
 /* unit milestones: each newly-completed (correct) row/column/room surfaces the next hidden extra.
@@ -3861,6 +3969,11 @@ function toggleNote(i,v){ if(board[i]!==0 || (C&&i===C.murderCell)) return;     
   refresh();
   if(adding && motionOK()){ const slot=boardEl.children[i].querySelector(`.cand[data-v="${v}"]`); if(slot) slot.classList.add("j-in"); } }   // the new mark ticks in (fresh node from paint -> replays per tap only)
 function place(i,v){ if(given[i]||board[i]===v||(C&&i===C.murderCell))return;   // the scene cell is accusation-only
+  // Placement sound fires FIRST — synchronously, before the heavy applyAction/refresh/renderTray/conflicts
+  // work below — so the knock lands the instant the marker is set down (no perceptible delay). suspectConflictAt
+  // is the same row/col/room legality test the post-placement conflicts().has(i) branch uses, so the chosen
+  // sound (clean knock vs. buzz) always matches the visual feedback that follows.
+  sfx(suspectConflictAt(i,v) ? "buzz" : "place");
   // every cell this action changes: the target + peers holding this suspect as a pencil mark
   const cells=[i];
   for(let j=0;j<cfg.N*cfg.N;j++) if(j!==i && candidates[j] && candidates[j].has(v) && isPeer(j,i)) cells.push(j);
@@ -3869,9 +3982,9 @@ function place(i,v){ if(given[i]||board[i]===v||(C&&i===C.murderCell))return;   
   clearHints(); refresh(); renderTray(); updateBtns();
   if(C && C.solution && board[i]!==C.solution[i]) mistakes++;   // committing a wrong suspect to a cell = a "mistake" (Clean Case trophy)
   const _nm=suspectShort(v), _r=Math.floor(i/cfg.N)+1, _c=(i%cfg.N)+1;   // P2: name what landed where, so a one-row-off mis-tap is catchable at a glance (esp. on the dense phone grid)
-  if(conflicts().has(i)){ fxShake(boardEl.children[i]); fxFlash(boardEl.children[i]); sfx("buzz");
+  if(conflicts().has(i)){ fxShake(boardEl.children[i]); fxFlash(boardEl.children[i]);   // sound already fired up top
     setStatus(`${_nm} can't repeat in that row, column, or room — see the red ring.`,"bad"); }  // duplicate -> shake + red flash
-  else { sfx("place"); fxSetDown(boardEl.children[i]); fxPlaceRing(boardEl.children[i]);
+  else { fxSetDown(boardEl.children[i]); fxPlaceRing(boardEl.children[i]);   // sound already fired up top
     if(!gridComplete()) setStatus(`Placed ${_nm} — row ${_r}, column ${_c}.`,"good");
     if(!LS.get("seenRepeat",false) && (cfg.N - suspectsLeft(v)) >= 2){   // P12: the FIRST time a suspect's second marker lands, answer the headline confusion ("why the same person twice?") at the moment it bites — once ever, in Wembly's voice
       LS.set("seenRepeat",true);
@@ -3939,7 +4052,8 @@ function paint(i){ const cell=boardEl.children[i];
   else if(candidates[i] && candidates[i].size) cell.appendChild(candGrid(i)); }
 
 /* ---- Case Assistant: escalating investigation help (P7) ---- */
-function assist(html){ const a=$("assistant"); if(!a) return; a.hidden=false; $("assistantText").innerHTML=html; }
+function assist(html){ const a=$("assistant"); if(!a) return; a.hidden=false; $("assistantText").innerHTML=html;
+  if(document.body.classList.contains("phone") && typeof setBottomTab==="function") setBottomTab("wembly"); }   // phone: surface the fired hint by switching to the Wembly tab
 function clearHints(){ for(const cell of boardEl.children) cell.classList.remove("hint-room","hint-cell"); }
 
 /* ---- clue -> board linking: clicking a clue briefly pulses what it references ---- */
@@ -4067,7 +4181,7 @@ function _shoeURI(orient, hw, op){
       "%3Crect x='22' y='"+(15-hw)+"' width='15' height='"+(2*hw)+"' rx='"+hw+"'/%3E%3C/svg%3E";
 }
 function _mkShoe(hwmap, op){ const o={}; for(const g in hwmap) o[g]={ h:'url("'+_shoeURI('h',hwmap[g],op)+'")', v:'url("'+_shoeURI('v',hwmap[g],op)+'")' }; return o; }
-const SHOE     =_mkShoe({male:4, female:4, neutral:4}, ".74");   // uniform sole width for ALL suspects + open space (Trevor: men / woman / empty all the same size)
+const SHOE     =_mkShoe({male:3, female:3, neutral:3}, ".74");   // desktop: uniform sole width = the old women's small size (hw:3) for ALL suspects + open space (Trevor)
 const SHOE_BOLD=_mkShoe({male:4, female:4, neutral:4}, ".85");   // mobile: same uniform width; modest opacity boost
 function setShoeTrail(){ let g="neutral";
   if(sel>=0 && board[sel]>0){ const su=Skin.sName(THEME,board[sel]); if(su&&su.gender) g=(su.gender==="female"?"female":"male"); }
@@ -5000,6 +5114,10 @@ function prewarmSnaps(){ if(_snapWarmed) return; _snapWarmed=true; let pending=0
 function layoutManor(){
   const scr=$("manorScreen"); if(!scr || scr.hidden) return;
   const wrap=document.querySelector(".manor-floor-wrap"), floor=$("manorFloor"); if(!wrap||!floor) return;
+  const phone=document.body.classList.contains("phone");
+  // PHONE: clear any prior pinned size FIRST so clientHeight reads the true flex:1 leftover (the room
+  // budget) before we re-measure — keeps the sizing stable across re-renders and resizes.
+  if(phone){ wrap.style.flex=""; wrap.style.height=""; }
   const availW=Math.floor(wrap.clientWidth), availH=Math.floor(wrap.clientHeight);
   if(availW<40 || availH<40) return;
   let ar=16/10; const m=(getComputedStyle(floor).aspectRatio||"").match(/([\d.]+)\s*\/\s*([\d.]+)/);   // 16/10 layered, e.g. 600/448 snapshot
@@ -5010,6 +5128,13 @@ function layoutManor(){
   w=Math.round(w); h=Math.round(h);
   floor.style.width=w+"px"; floor.style.height=h+"px";           // explicit, true-ratio picture
   scr.style.setProperty("--manor-w", w+"px");                    // chrome rows match the picture width
+  // PHONE: shrink the floor-wrap to the picture's ACTUAL height so the room square sits at the TOP of the
+  // room area and the task card pulls straight up beneath it — no centered dead space above/below (on a tall
+  // phone the picture is width-constrained and far shorter than the flex:1 wrap, which left ~100px gaps top
+  // AND bottom). Any leftover column space falls to the very bottom. Desktop/appfit keep flex:1 (the picture
+  // centers in the larger area) — untouched.
+  if(phone){ wrap.style.flex="0 0 auto"; wrap.style.height=h+"px"; }
+  else { wrap.style.flex=""; wrap.style.height=""; }
 }
 window.addEventListener("resize", ()=>{ if(typeof manorOpen==="function" && manorOpen()) layoutManor(); });
 function renderManor(){
@@ -5017,7 +5142,13 @@ function renderManor(){
   $("manorRoomName").textContent=room.name;
   $("manorSealCount").textContent=manorSeals();
   const nav=$("manorNav"); nav.innerHTML="";
-  MANOR_DATA.forEach(r=>{ const unlocked=roomUnlocked(r.id);
+  // PHONE: declutter the room nav to just the RESTORED + currently-worked-on rooms — i.e. every unlocked,
+  // non-perma-locked room (locked / not-yet-started rooms are hidden to save vertical space on the small
+  // screen). _manorRoom is always an unlocked, non-locked room (forced to MANOR_DATA[0] at init if not, and
+  // only ever set to unlocked rooms), so the room being viewed is ALWAYS in this list — it can never hide it.
+  // Desktop/appfit keep the full list (locked rooms shown with 🔒).
+  const _navRooms = document.body.classList.contains("phone") ? MANOR_DATA.filter(r=>!r.locked && roomUnlocked(r.id)) : MANOR_DATA;
+  _navRooms.forEach(r=>{ const unlocked=roomUnlocked(r.id);
     const b=document.createElement("button"); b.className="manor-tab"+(r.id===_manorRoom?" on":"")+(unlocked?"":" locked");
     const frac=unlocked?roomFrac(r):0;   // per-room restoration bar (lock for locked rooms)
     b.innerHTML=`<span class="manor-tab-label">${unlocked?"":"🔒 "}${shortRoom(r)}</span>`+
@@ -5268,6 +5399,16 @@ function updateBtns(){ $("undoBtn").disabled=!undoStack.length; $("redoBtn").dis
 }
 $("undoBtn").onclick=undo; $("redoBtn").onclick=redo; $("eraseBtn").onclick=erase; $("hintBtn").onclick=hint; $("checkBtn").onclick=check;
 $("clearBtn").onclick=clearPuzzle;
+/* PHONE bottom 2-tab section: 'obj' (the synced #evMirror objective) | 'wembly' (the #assistant clerk panel).
+   body.btab-* drives the one-or-the-other CSS. No assist() fires at case start, so the default stays 'obj'. */
+function setBottomTab(name){
+  document.body.classList.toggle("btab-obj", name==="obj");
+  document.body.classList.toggle("btab-wembly", name==="wembly");
+  document.querySelectorAll("#bottomTabs .btab").forEach(b=>b.classList.toggle("on", b.dataset.btab===name));
+  if(name==="wembly"){ const t=$("assistantText"); if(t && !t.innerHTML.trim()) t.innerHTML="Tap <b>🔍 Ask the Clerk</b> for a nudge — or I'll chime in as you work."; }
+}
+document.querySelectorAll("#bottomTabs .btab").forEach(b=>b.onclick=()=>setBottomTab(b.dataset.btab));
+setBottomTab("obj");   // default: Current Objective
 function showCaseCodeHint(){ const h=$("codeHint"); if(!h||!C) return;
   h.className="code-hint";
   h.innerHTML=`This case's code: <b id="copyCode" title="Tap to copy">${C.code}</b> — share it or paste it to replay this exact case.`;
@@ -5380,13 +5521,29 @@ function isStacked(){ return window.matchMedia("(max-width:1040px)").matches && 
 let _coForced=false;            // the popup is open (overlay holds the blocks regardless of device)
 let _coRestore=null;            // desktop accordion states to restore after closing the popup
 function placeCaseFile(){
-  const overlay = _coForced || isPhone();
+  // PHONE: one continuous, NON-TABBED scroll. Stack every section into .co-scroll in the SAME order as the
+  // desktop side panel — Case briefing → Current Objective → All evidence → Weapons/Motives → People →
+  // status. Reuses the SAME section nodes (moved, never duplicated); the tab bar + empty tab panels are
+  // hidden via CSS. The objective hero (#evBlock) joins the stack only while the popup is OPEN; when closed
+  // it returns to #evMount near the board (placeEvidence owns it then) so the active clue stays visible while
+  // solving. The status sits at the stacked bottom (its desktop position) and is out of the board screen.
+  if(isPhone()){
+    const sc=document.querySelector(".co-scroll");
+    if(sc){
+      // stack every section in desktop order -> one continuous file. The objective hero lives HERE on phone
+      // (its near-board #evMount slot is left empty; placeEvidence yields it on phone), matching the reference.
+      for(const id of ["grpCase","evBlock","grpEvidence","grpWeapons","grpPeople","status"]){ const el=$(id); if(el) sc.appendChild(el); }
+      if($("evBlock")) $("evBlock").open=true; if($("allEv")) $("allEv").open=true; if($("poiDetails")) $("poiDetails").open=true;   // expand for a full continuous read
+    }
+    return;
+  }
+  const overlay = _coForced;   // desktop/appfit: overlay only when explicitly opened (popup); else the side panel
   const groups=[["grpCase","coPanel-case","homeCase"],["grpEvidence","coPanel-evidence","homeEvidence"],
                 ["grpWeapons","coPanel-weapons","homeWeapons"],["grpPeople","coPanel-people","homePeople"]];
   for(const [g,p,h] of groups){ const grp=$(g),panel=$(p),home=$(h); if(!grp||!panel||!home) continue;
     if(overlay){ if(grp.parentNode!==panel) panel.appendChild(grp); }
     else { if(grp.previousElementSibling!==home || grp.parentNode!==home.parentNode) home.after(grp); } }
-  // status: near the board whenever the side panel is hidden (stacked layout) so feedback stays visible; in the case file on wide desktop (never into the popup)
+  // status: near the board on a narrow stacked desktop window; the side panel on wide desktop / appfit.
   const st=$("status"), sh=$("statusHome"), sm=$("statusMount");
   if(st&&sh&&sm){ if(isStacked()){ if(st.parentNode!==sm) sm.appendChild(st); }
                   else if(st.previousElementSibling!==sh||st.parentNode!==sh.parentNode){ sh.after(st); } }
@@ -5517,7 +5674,7 @@ function applyAmbient(){
   if(!motionOK()){ amb.className=""; return; }        // Motion off / reduced-motion -> nothing
   const phone=document.body.classList.contains("phone"), focus=settings.atmosphere!=="high";
   let fx = (story&&story.ambient) || ["dust"];         // the case's ACTUAL effects (story cue OR full no-cue set) — shown on Focus too, not just High
-  if(phone) fx=fx.slice(0,2);                          // phone -> vignette + at most two light effects (battery)
+  if(phone) fx=fx.slice(0,3);                          // phone -> vignette + up to three light effects (denser atmosphere, still battery-light)
   const cls=["amb-on","fx-vignette"].concat(fx.map(f=>"fx-"+f));
   if(focus) cls.push("amb-focus");                     // Focus is a touch lighter than High (global dim) but still shows the effects
   amb.className=cls.join(" ");
@@ -5546,6 +5703,7 @@ $("firstTipOk").onclick=()=>{ $("firstTip").hidden=true; LS.set("seenRule",true)
 const evStackMQ = window.matchMedia("(max-width:1040px)");
 function placeEvidence(){
   const ev=$("evBlock"), mount=$("evMount"), home=$("evHome"); if(!ev||!mount||!home) return;
+  if(isPhone()){ ensureEvMirror(); mount.hidden=false; return; }   // phone: the objective hero lives in the popup (placeCaseFile owns it); #evMount shows the synced board-side mirror beneath the toolbar
   if(evStackMQ.matches && !document.body.classList.contains("appfit") && $("firstTip").hidden){   // mobile + tip dismissed -> by the board (appfit keeps it in the right pane)
     if(ev.parentNode!==mount) mount.appendChild(ev);
     mount.hidden=false; ev.open=true; if($("allEv").open) $("allEv").open=false;
@@ -5693,21 +5851,75 @@ function _noise(dur,gain){ const a=audioCtx(); if(!a)return; const len=Math.max(
   for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*(1-i/len);
   const s=a.createBufferSource(); s.buffer=buf; const g=a.createGain(); g.gain.value=gain||0.12;
   s.connect(g).connect(a.destination); s.start(); }
-/* a chess piece set down on a wooden board: an instant-attack contact click (band-passed noise
-   burst) layered over a short woody thump (low sine dropping in pitch), quick decay ~110ms, with
-   slight level/pitch variation between placements. Scheduled at currentTime with no ramp-in on the
-   click, so the attack is immediate. Quiet/tasteful; Sound-gated by sfx(). */
-function _knock(){ const a=audioCtx(); if(!a) return; const t0=a.currentTime; const v=0.85+Math.random()*0.3;
-  const len=Math.max(1,(a.sampleRate*0.05)|0), buf=a.createBuffer(1,len,a.sampleRate), d=buf.getChannelData(0);
-  for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.2);              // sharp decaying noise = the contact tap
-  const s=a.createBufferSource(); s.buffer=buf;
-  const bp=a.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=1750+Math.random()*520; bp.Q.value=0.7;
-  const ng=a.createGain(); ng.gain.setValueAtTime(0.13*v,t0); ng.gain.exponentialRampToValueAtTime(0.0001,t0+0.055);   // instant attack
-  s.connect(bp).connect(ng).connect(a.destination); s.start(t0); s.stop(t0+0.07);
-  const o=a.createOscillator(), og=a.createGain(); o.type="sine";                     // woody body resonance
-  const f=150+Math.random()*28; o.frequency.setValueAtTime(f,t0); o.frequency.exponentialRampToValueAtTime(f*0.6,t0+0.07);
-  og.gain.setValueAtTime(0.0001,t0); og.gain.exponentialRampToValueAtTime(0.17*v,t0+0.003); og.gain.exponentialRampToValueAtTime(0.0001,t0+0.11);
-  o.connect(og).connect(a.destination); o.start(t0); o.stop(t0+0.13); }
+/* A chess piece set down on a wooden board. Three stacked events, like the real thing:
+   (1) a sharp HIGH-PASSED contact click (~6ms noise burst, +3dB presence at ~3kHz) for the crisp
+       "tok" of two hard surfaces meeting — its level peaks instantly (setValueAtTime), so the onset
+       is immediate, then it's hard-cut by 10ms so it never smears into the body;
+   (2) a woody BODY of 4 damped modes at deliberately INHARMONIC (non-integer) ratios
+       1 : 2.76 : 4.93 : 8.90 around a ~250Hz fundamental — non-integer spacing is what makes it
+       read as struck wood instead of a tuned "boop". Higher modes are quieter and decay faster
+       (110/60/34/20ms), mirroring real material damping (the knock "darkens" as it dies);
+   (3) a fast die-off — silent by ~130ms: a tactile thunk, not a tone.
+   A 5.6kHz master low-pass keeps anything from piercing; the body modes use a ~1.2ms attack so the
+   click owns the very first millisecond (no thuddy double-attack); per-call level/pitch/filter jitter
+   keeps rapid placements from sounding identical. Quiet/tasteful; Sound-gated by sfx().
+   (Designed via a 4-approach acoustic panel; worst-case in-phase peak ~0.33 — same ballpark as before.) */
+function _knock(){
+  const a=audioCtx(); if(!a) return;
+  const t0=a.currentTime;
+  const sr=a.sampleRate;
+  const v=0.85+Math.random()*0.3;                 // per-call level variation
+  const f0=250*(0.96+Math.random()*0.08);         // wooden-piece fundamental ~240-270Hz
+
+  // ---- Master bus: gentle low-pass so nothing pierces above ~6kHz ----
+  const bus=a.createGain(); bus.gain.value=1;
+  const tame=a.createBiquadFilter();
+  tame.type="lowpass";
+  tame.frequency.value=5600+Math.random()*500;
+  tame.Q.value=0.5;
+  bus.connect(tame).connect(a.destination);
+
+  // ---- Inharmonic modal body: 4 damped modes at non-integer ratios (= wood, not a boop) ----
+  const modes=[
+    {r:1.00, g:0.130, dec:0.110, type:"triangle", droop:0.93},
+    {r:2.76, g:0.060, dec:0.060, type:"sine",     droop:1},
+    {r:4.93, g:0.034, dec:0.034, type:"triangle", droop:1},
+    {r:8.90, g:0.015, dec:0.020, type:"sine",     droop:1}
+  ];
+  for(let i=0;i<modes.length;i++){
+    const m=modes[i];
+    const o=a.createOscillator();
+    o.type=m.type;
+    const f=f0*m.r*(0.99+Math.random()*0.02);     // per-mode pitch jitter
+    o.frequency.setValueAtTime(f,t0);
+    if(m.droop<1) o.frequency.exponentialRampToValueAtTime(f*m.droop,t0+m.dec); // settle droop on fundamental
+    const g=a.createGain();
+    g.gain.setValueAtTime(0.0001,t0);
+    g.gain.exponentialRampToValueAtTime(m.g*v,t0+0.0012);   // ~1.2ms attack: lets the click own the onset
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+m.dec);   // fast exponential decay (high modes die first)
+    o.connect(g).connect(bus);
+    o.start(t0);
+    o.stop(t0+m.dec+0.02);
+  }
+
+  // ---- Sharp contact transient: very short, high-passed noise burst (the crisp wooden "tok") ----
+  const tlen=Math.max(1,(sr*0.006)|0);
+  const tbuf=a.createBuffer(1,tlen,sr);
+  const td=tbuf.getChannelData(0);
+  for(let i=0;i<tlen;i++) td[i]=(Math.random()*2-1)*Math.pow(1-i/tlen,3.0);
+  const ts=a.createBufferSource(); ts.buffer=tbuf;
+  const thp=a.createBiquadFilter();
+  thp.type="highpass"; thp.frequency.value=1500; thp.Q.value=0.5;     // strip low rumble -> crisp tick
+  const tpk=a.createBiquadFilter();
+  tpk.type="peaking"; tpk.frequency.value=3000+Math.random()*500;     // hard-surface presence, below piercing range
+  tpk.Q.value=0.8; tpk.gain.value=3;
+  const tg=a.createGain();
+  tg.gain.setValueAtTime(0.12*v,t0);                                   // INSTANT onset
+  tg.gain.exponentialRampToValueAtTime(0.0001,t0+0.010);               // hard, fast click only
+  ts.connect(thp).connect(tpk).connect(tg).connect(bus);
+  ts.start(t0);
+  ts.stop(t0+0.02);
+}
 function sfx(name,opt){ if(!settings.sound) return; if(!audioCtx()) return;
   if(name==="place") _knock();
   else if(name==="thunk"){ _tone((opt&&opt.f)||120,0.2,"sine",0.22); _noise(0.08,0.1); }   // opt.f lets stamp runs escalate in weight
