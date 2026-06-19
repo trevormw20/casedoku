@@ -449,7 +449,7 @@
   .clues li.discovered{background:rgba(76,175,125,.05);}
   .ev-card{position:relative;}
   /* the unmissable discovery moment: a brief centered FOREGROUND card naming the new evidence */
-  .disc-overlay{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:rgba(4,5,9,.66);padding:20px;}
+  .disc-overlay{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:rgba(4,5,9,.66);padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));}
   .disc-overlay.show{display:flex;}
   .disc-card{position:relative;max-width:360px;width:100%;text-align:center;background:linear-gradient(180deg,#1e222e,#14161f);
     border:1px solid var(--amber);border-radius:14px;padding:24px 22px 18px;box-shadow:0 22px 64px rgba(0,0,0,.72);}
@@ -644,7 +644,8 @@
     font:700 9px "Courier New",monospace;letter-spacing:1px;padding:3px 8px;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.5);}
 
   .modal-bg{position:fixed;inset:0;background:rgba(4,5,8,.82);display:none;align-items:center;
-    justify-content:center;z-index:75;padding:18px;overflow:auto;}  /* above manor-screen(60)/case-overlay(60)/disc-overlay(70), below win FX(80+) */
+    justify-content:center;z-index:75;overflow:auto;
+    padding:max(18px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));}  /* above manor-screen(60)/case-overlay(60)/disc-overlay(70), below win FX(80+); safe-area padded so modal content/actions clear the system bars */
   .modal-bg.show{display:flex;}
   .modal{background:linear-gradient(180deg,#1d212c,#13151d);border:1px solid var(--amber);
     border-radius:12px;max-width:560px;width:100%;padding:26px;position:relative;
@@ -869,9 +870,9 @@
      factor: 1 normally, ~layoutWidth/screenWidth in force-phone so text stays readable after the
      device visually downscales the wide layout. The board fills width via body.phone --cell. */
   body.phone{font-size:calc(17px * var(--ps,1));
-       padding:8px max(4px,env(safe-area-inset-left))
+       padding:max(8px,env(safe-area-inset-top)) max(4px,env(safe-area-inset-right))
               calc(28px + env(safe-area-inset-bottom))
-              max(4px,env(safe-area-inset-right));
+              max(4px,env(safe-area-inset-left));   /* top now clears the status bar; L/R insets corrected for landscape/gesture devices */
        --cell:calc((100vw - calc(30px * var(--ps,1))) / var(--ncols));   /* board fills the layout width (no 62px cap) */
        --wall:4px;}   /* room walls 50% thinner on mobile (desktop stays 8px) — more floor per cell */
   /* P6: phone portraits shrink to ~32px and get muddy — keep the bold per-suspect INITIAL always
@@ -1026,8 +1027,8 @@
   body.phone .co-panel .roster{grid-template-columns:1fr;gap:10px;}
 
   /* modals: fit, scroll internally, reachable */
-  body.phone .modal-bg{padding:8px;align-items:flex-start;}
-  body.phone .modal{padding:18px;max-height:calc(100dvh - 16px);overflow-y:auto;}
+  body.phone .modal-bg{padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));align-items:flex-start;}
+  body.phone .modal{padding:18px;max-height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto;}   /* fit within the safe area so the modal's bottom actions clear the nav bar */
   body.phone .modal h2{font-size:calc(22px * var(--ps,1));}
   body.phone .howto-lead,body.phone .howto-steps li,body.phone .howto-foot{font-size:calc(16px * var(--ps,1));}
   body.phone .reveal-wrap{width:calc(128px * var(--ps,1));height:calc(128px * var(--ps,1));}
@@ -1337,7 +1338,7 @@
 
   /* ===================== MANOR RESTORATION — the home hub ===================== */
   .manor-screen{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;
-    --manor-w:920px;padding:0 14px;
+    --manor-w:920px;padding:env(safe-area-inset-top) max(14px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(14px,env(safe-area-inset-left));   /* brand clears the status bar, hub buttons clear the nav bar */
     background:radial-gradient(120% 90% at 50% 0,#1a1d27,#0d0f14 72%);overflow:hidden;}
   .manor-screen[hidden]{display:none;}
   /* ONE centered column the width of the room picture: every chrome row shares the picture's width + left/right
