@@ -906,14 +906,15 @@
   body.phone #diffPill{font-size:0;flex:0 0 auto;padding:calc(5px * var(--ps,1));}   /* same pill frame (border/radius/bg) as #guessPill; symmetric 5px padding keeps the bordered badge compact in the bar */
   body.phone #diffPill b{display:none;}                            /* hide the tier word — the badge carries it */
   body.phone #diffPill .pill-badge{display:inline-block;width:calc(18px * var(--ps,1));height:calc(18px * var(--ps,1));margin:0;}   /* badge sized so the framed pill matches the guesses pill's height */
-  body.phone #guessPill .g-lbl{display:none;}                  /* compact "Guesses: 3" -> "3 left" */
+  body.phone #guessPill{flex-direction:column;gap:0;line-height:1;}   /* stack: "Guesses:" label on top, the "N left" value below (DOM order is label-then-value, so plain column) */
+  body.phone #guessPill .g-lbl{display:block;font-size:calc(8.5px * var(--ps,1));font-weight:700;letter-spacing:.3px;text-transform:uppercase;line-height:1;color:var(--ink-dim);}
   body.phone #guessPill b::after{content:" left";font-weight:400;}
   body.phone .top-controls .btn{padding:calc(7px * var(--ps,1)) calc(9px * var(--ps,1));font-size:calc(14px * var(--ps,1));min-height:calc(38px * var(--ps,1));flex:0 0 auto;}
   body.phone .top-controls .btn img{width:calc(17px * var(--ps,1));height:calc(17px * var(--ps,1));}
   body.phone .top-controls .btn-tx{display:none;}
   body.phone .clockpill{font-size:calc(12.5px * var(--ps,1));letter-spacing:0;}
-  body.phone #accuseBtn{padding:calc(7px * var(--ps,1)) calc(9px * var(--ps,1));font-size:calc(14px * var(--ps,1));}
-  body.phone #accuseBtn .btn-tx{display:inline;}
+  body.phone #accuseBtn{display:flex;flex-direction:column-reverse;align-items:center;justify-content:center;gap:0;line-height:1;padding:calc(4px * var(--ps,1)) calc(9px * var(--ps,1));font-size:calc(16px * var(--ps,1));}   /* column-reverse: source is icon-then-text, so reversing puts "Accuse" ON TOP and the ⚖ BELOW it */
+  body.phone #accuseBtn .btn-tx{display:block;font-size:calc(8.5px * var(--ps,1));font-weight:700;letter-spacing:.5px;text-transform:uppercase;line-height:1;}   /* "Accuse" caption sits on top of the ⚖ icon (column-reverse) */
 
   /* tray + toolbar + near-board evidence */
   body.phone .board-wrap{gap:calc(9px * var(--ps,1));}   /* tighter vertical rhythm so the board starts higher */
@@ -934,14 +935,18 @@
   body.phone .board-wrap > #statusMount{order:11;}
   /* PHONE two-tab bottom section: two big tabs, then ONE panel (objective mirror OR Wembly), toggled by body.btab-* */
   .bottom-tabs{display:none;}
-  body.phone .bottom-tabs{display:flex;gap:6px;width:100%;max-width:calc(9 * var(--cell));margin:-4px auto -5px;}   /* ~5px above (toolbar) / ~4px below (panel); finer tightening is done via the panels' INNER padding */
-  body.phone .bottom-tabs .btab{flex:1;min-width:0;min-height:calc(33px * var(--ps,1));border:1px solid var(--line);
-    background:#171a22;color:var(--ink-dim);border-radius:10px 10px 0 0;cursor:pointer;padding:0 6px;
+  body.phone .bottom-tabs{display:flex;align-items:flex-end;gap:3px;width:100%;max-width:calc(9 * var(--cell));margin:-4px auto -9px;}   /* ~5px above the toolbar; FLUSH with the panel below (claws back the full 9px board-wrap gap) so the active tab merges into it (folder) */
+  body.phone .bottom-tabs .btab{flex:1;min-width:0;min-height:calc(33px * var(--ps,1));position:relative;cursor:pointer;padding:0 6px;
+    border:1px solid var(--line);border-bottom:none;border-radius:11px 11px 0 0;
+    background:#13151b;color:var(--ink-dim);   /* default = recessed back tab (dimmer; the panel's top edge shows beneath it) */
     font-family:"Courier New",monospace;font-size:calc(12.5px * var(--ps,1));font-weight:700;letter-spacing:.5px;
     text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  body.phone .bottom-tabs .btab.on{color:var(--amber-soft);border-color:var(--amber);background:#20232e;}
+  body.phone .bottom-tabs .btab.on{background:#20232e;color:var(--amber-soft);border-color:var(--amber);
+    margin-bottom:-1px;z-index:2;}   /* front/active tab: amber outline, overlaps the panel's top border so it MERGES into the content below (no dividing line) */
   body.phone #evMount,body.phone #assistant{max-width:calc(9 * var(--cell));margin-left:auto;margin-right:auto;width:100%;}
   body.phone #assistant{padding:6px 10px;gap:8px;}   /* tighter Wembly panel inner padding (was 9px 12px) */
+  /* folder BODY: both panels share one amber outline with a SQUARE top (the tabs sit on it) + rounded bottom, so the active tab + panel read as a single manila folder */
+  body.phone #evMount .ev-mirror,body.phone #assistant{border:1px solid var(--amber);border-radius:0 0 11px 11px;}
   body.phone.btab-obj #assistant{display:none;}                 /* Objective tab active -> hide Wembly */
   body.phone.btab-wembly #evMount{display:none;}                /* Wembly tab active -> hide Objective */
   body.phone.btab-wembly #assistant{display:flex;}             /* show Wembly even when [hidden] (placeholder or fired hint) */
@@ -3429,8 +3434,8 @@ function pickCaseCast(seed, N){
 function startCase(opts){
   if(typeof hideManor==="function") hideManor();            // leaving the home hub into a case
   if($("manorStory")) $("manorStory").classList.remove("show");
-  C=E.generateCase(opts); cfg=C.cfg;
-  Skin.setCast(pickCaseCast(C.seed, cfg.N));                // shuffle the playable cast for this case
+  C=(opts&&(opts.ashwick||opts.seed==="ASHWICK"))?buildAshwickCase():E.generateCase(opts); cfg=C.cfg;   // ASHWICK: handcrafted test case bypasses the generator
+  Skin.setCast(C.ashwick?ASHWICK_CAST.slice():pickCaseCast(C.seed, cfg.N));                // ASHWICK pins a fixed cast (Widow=2, Chef=4); else shuffle the playable cast
   board=C.givens.slice(); given=C.givens.map(v=>v!==0);
   sel=-1; focusSuspect=0; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false; cluesUsed=new Set(); mistakes=0;
   _sceneMsgShown=false; _nudged=false;   // reset Feature A per-case state
@@ -3447,9 +3452,11 @@ function startCase(opts){
     C.objectSlugs=THEME.rooms.map(rm=>{ const pool=(rm.icons&&rm.icons.length)?rm.icons:[rm.icon]; return pool[Math.floor(orng()*pool.length)]; });
     Skin.setCaseObjectSlugs(C.objectSlugs); }
   dressStory();
+  if(C.ashwick) ashwickDressStory();   // ASHWICK: override the fiction layer with the handcrafted case
   setVar("--cell-max", cfg.N<=6 ? "72px" : "62px"); setVar("--ncols", cfg.N);  // CSS derives --cell (mobile fits to width)
   boardEl.style.gridTemplateColumns=`repeat(${cfg.N}, var(--cell))`;
   renderBoard(); renderTray(); renderCase(); updateBtns();   // P7: undo/redo start DISABLED on a fresh board (nothing to undo/redo yet)
+  ashwickSyncUI();   // ASHWICK: create/tear-down the Discovered Facts panel for this case
   if(typeof fitBoard==="function") fitBoard();   // appfit: size the board to the new case's grid
   const _tierLbl=(TIER_FLAVOR[C.tier]||E.TIERS[C.tier].label);
   const _tierHTML=_tierLbl.replace(/\s+Case$/i,'<span class="pill-caseword"> Case</span>');   // " Case" hidden on phone -> just the adjective fits the one-line bar
@@ -3629,6 +3636,7 @@ function saveEvidenceState(){ if(!C||!story) return; const all=LS.get("evidenceS
   const ks=Object.keys(all); while(ks.length>40){ delete all[ks.shift()]; } LS.set("evidenceState",all); }
 function effectiveDiscovered(){ if(!story) return 0; return (settings.evidence==="all") ? story.extraOrder.length : (story.discoveredExtras|0); }
 function evidenceVisible(idx){ if(!story) return true; const e=story.evidence[idx]; if(!e) return false;
+  if(C&&C.ashwick) return !!(ASHWICK.revealed&&ASHWICK.revealed.has(idx));   // ASHWICK: a fact is visible only once its grid proof has unlocked it
   if(e.key) return true;                                  // ★ required clue — always visible
   const pos=story.extraOrder.indexOf(idx); return pos>=0 && pos<effectiveDiscovered(); }   // extra — visible once discovered
 function visibleEv(){ return (story&&story.evidence||[]).map((e,i)=>({e,i})).filter(x=>evidenceVisible(x.i)); }
@@ -3991,6 +3999,7 @@ function place(i,v){ if(given[i]||board[i]===v||(C&&i===C.murderCell))return;   
       LS.set("seenRepeat",true);
       assist(`That's a second <b>${_nm}</b> marker on the grid — the same suspect recurs across Graves' grid like a number in Sudoku, not the same person standing in two places.`); }
   }   // clean placement (P8: on the move that COMPLETES the grid, let maybeNudge's "grid is complete — name the killer" line stand instead)
+  if(C && C.ashwick) ashwickCheckDiscoveries();   // ASHWICK: fire scripted discoveries the instant their grid proof is met
   checkWin(); }
 function erase(){ if(solved||sel<0||given[sel])return;
   if(board[sel]===0 && (!candidates[sel]||!candidates[sel].size)) return;
@@ -4106,6 +4115,7 @@ function cellCandidates(i){
   const out=[]; for(let v=1;v<=N;v++) if(!used.has(v)) out.push(v); return out;
 }
 function hint(){ if(solved)return;
+  if(C&&C.ashwick){ ashwickHint(); return; }   // ASHWICK: Wembly points at facts, never the answer
   if(hintLevel===0 || hintTarget<0 || board[hintTarget]!==0){
     let t=(sel>=0 && !given[sel] && board[sel]===0)?sel:-1;
     if(t<0){
@@ -4404,6 +4414,7 @@ function makeHeadline(killerName){
           .replace(/\{PLACE\}/g,(THEME.place||"the manor").toUpperCase());
 }
 function buildChain(){
+  if(C&&C.ashwick){ ashwickBuildChain(); return; }   // ASHWICK: the handcrafted case's own logic chain
   const k=Skin.sName(THEME,C.killer), chain=$("chain"); chain.innerHTML="";
   const scene=spotText(C.murderCell);
   const head=document.createElement("li");
@@ -6258,6 +6269,191 @@ function devToggleAppfit(){ const on=document.body.classList.toggle("appfit");
   devLog("App-fit layout "+(on?"ON":"OFF")); }
 function devDump(){ const o={}; try{ Object.keys(localStorage).filter(k=>k.indexOf("casedoku.")===0).forEach(k=>{ try{ o[k]=JSON.parse(localStorage.getItem(k)); }catch(e){ o[k]=localStorage.getItem(k); } }); }catch(e){}
   console.log("%c[Casedoku state]","color:#5fffd0",o); devLog("Dumped state → console ("+Object.keys(o).length+" keys)."); }
+/* =====================================================================
+   DETECTIVE CASE V1 — "The Ashwick Study"  (HANDCRAFTED, ISOLATED TEST CASE)
+   ---------------------------------------------------------------------
+   Everything here is DORMANT unless the case is launched (dev panel →
+   "🔪 The Ashwick Study", or startCase({ashwick:true})). Normal generated
+   play is untouched: every hook in the main code is guarded by `C.ashwick`
+   (search "// ASHWICK"). To remove entirely: delete this block + those
+   guarded one-liners.
+
+   Design law — FACTS BELONG TO THE GAME, CONCLUSIONS TO THE PLAYER.
+   The three discoveries fire ONLY when their grid proof is met (in place()):
+     D1  Study box solved except the scene  → the Widow is forced into the Study
+     D2  the Chef proven in the Kitchen     → the flour/weapon contradiction
+     D3  whole grid solved except the scene → desk access proven → the will
+   The game states each fact; it never states the conclusion.
+   ===================================================================== */
+const ASHWICK_CAST=[0,1,2,3,4,5,6,7,8];   // grid value v → THEME.suspects idx: 1 Colonel · 2 WIDOW · 3 Butler · 4 CHEF · 5 Professor · 6 Heiress · 7 Gardener · 8 Captain · 9 Doctor
+const ASHWICK={ on:false, fired:{d1:false,d2:false,d3:false}, facts:[], revealed:new Set(), cells:null };
+
+function ashwickSolution(){ const g=new Array(81); for(let r=0;r<9;r++)for(let c=0;c<9;c++) g[r*9+c]=((3*(r%3)+Math.floor(r/3)+c)%9)+1; return g; }   // a canonical valid 9×9 Latin/sudoku solution
+
+function buildAshwickCase(){
+  ashwickInjectCSS();
+  const E=window.CludokuEngine, cfg={N:9,bh:3,bw:3};
+  const solution=ashwickSolution();
+  const widowVal=2, chefVal=4, studyBox=0, kitchenBox=6;
+  const sc=E.cellOfValInBox(cfg,solution,studyBox,widowVal);   // the Widow's only Study cell = the crime scene (accusation-only)
+  const murderCell=sc.r*9+sc.c;
+  const ck=E.cellOfValInBox(cfg,solution,kitchenBox,chefVal);  // the Chef's Kitchen cell (D2)
+  const chefCell=ck.r*9+ck.c;
+  const studyCells=[]; { const {r0,c0}=E.rcOfBox(cfg,studyBox); for(let a=0;a<3;a++)for(let b=0;b<3;b++) studyCells.push((r0+a)*9+(c0+b)); }
+  const studyBlanks=studyCells.filter(i=>i!==murderCell).slice(0,2);   // the player fills these → completes the Study box → D1
+  const scattered=[30,41,52];   // (3,3)(4,5)(5,7): each the only blank in its row & column → uniquely forced; the "finish the night" step → D3
+  const blanks=new Set([murderCell, ...studyBlanks, chefCell, ...scattered]);
+  const givens=solution.map((v,i)=>blanks.has(i)?0:v);
+  const objectCells=[]; for(let b=0;b<9;b++){ const {r0,c0}=E.rcOfBox(cfg,b); let cell=r0*9+c0; if(cell===murderCell) cell=r0*9+c0+1; objectCells[b]=cell; }
+  ASHWICK.on=true; ASHWICK.fired={d1:false,d2:false,d3:false}; ASHWICK.facts=[]; ASHWICK.revealed=new Set([0]);   // reset per launch; the standing OBJECTIVE (idx 0) is visible from the start
+  ASHWICK.cells={ studyBox, kitchenBox, murderCell, chefCell, studyCells };
+  return { tier:"medium", seed:20260708, code:"ASHWICK", cfg, solution, givens,
+    clues:[], cluePreds:[], requiredCount:0, completionsWithout:12, ambiguousCells:[],
+    murderCell, killer:widowVal, sceneCandidates:[widowVal], reasoning:[], proofClues:[], objectCells,
+    ashwick:true };
+}
+
+function ashwickDressStory(){
+  const k=Skin.sName(THEME,C.killer);   // the Widow
+  story.victim="Lord Ashwick"; story.victimDisplay="Lord Ashwick"; story.victimSlug=""; story.victimTags={};
+  story.title="The Ashwick Study"; story.caseNo=1;
+  story.trueWeapon="rollingpin"; story.sceneObject="poker"; story.weaponPlanted=true;
+  story.weaponCandidates=["poker","rollingpin","candlestick"]; story.weaponClues=[];
+  story.killerTag="inheritance"; story.killer=k; story.motiveClues=[];
+  story.sceneRoom="the Study"; story.alibiRoom="the Lounge";
+  story.motiveOptions=[
+    {motive:"a contested inheritance", correct:true,  tag:"inheritance"},
+    {motive:"a stolen recipe",         correct:false, tag:"reputation"},
+    {motive:"a soured grudge",         correct:false, tag:"grudge"},
+  ];
+  // Evidence list — GATED by ASHWICK.revealed (see evidenceVisible). idx0 shows from the start;
+  // idx1/2/3 unlock with D1/D2/D3; idx4 (the KEY PROOF, proof:true) unlocks with D3.
+  story.evidence=[
+    {tag:"OBJECTIVE",  key:false, proof:false, kind:"fact", clueIdx:-1, text:"Reconstruct the night on Graves' grid. Each position you prove lets Wembly confirm a new fact."},
+    {tag:"OPPORTUNITY",key:false, proof:false, kind:"fact", clueIdx:-1, text:"The grid places the Widow in the Study after midnight — she had sworn she never entered the room."},
+    {tag:"WEAPON",     key:false, proof:false, kind:"fact", clueIdx:-1, text:"The poker by the body was clean; the flour on the victim's sleeve matched the rolling pin, not the poker."},
+    {tag:"MOTIVE",     key:false, proof:false, kind:"fact", clueIdx:-1, text:"A torn will in the Study desk removes the Widow from the inheritance."},
+    {tag:"KEY PROOF",  key:false, proof:true,  kind:"fact", clueIdx:-1, text:"The grid proved the Widow entered the Study after midnight and had access to the torn will."},
+  ];
+  story.extraOrder=[]; story.discoveredExtras=0;   // disable the native drip-discovery — Ashwick uses its own scripted reveals
+  story.intro=[
+    "Lord Ashwick was found in the Study after midnight, a fireplace poker beside him — but the scene feels staged.",
+    "The Widow swears she never set foot in the Study.",
+    "Work Graves' grid to prove who lied, whether the poker was planted, and what the desk was hiding.",
+    "Begin the investigation."
+  ];
+  story.narrative="A cold night at Ashwick Manor. Lord Ashwick lies in the Study, a poker at his side. Inspector Graves has laid the night out as a grid — prove the positions, and the truth follows.";
+}
+
+/* fire the scripted discoveries the moment their grid proof is satisfied (called from place()) */
+function ashwickCheckDiscoveries(){
+  if(!C||!C.ashwick||!ASHWICK.cells) return;
+  const A=ASHWICK.cells, correct=(i)=> board[i]===C.solution[i];
+  if(!ASHWICK.fired.d1 && A.studyCells.every(i=> i===A.murderCell || correct(i))) ashwickFire("d1");   // Study box solved except the scene
+  if(!ASHWICK.fired.d2 && correct(A.chefCell)) ashwickFire("d2");                                        // Chef in the Kitchen
+  if(!ASHWICK.fired.d3 && gridComplete()) ashwickFire("d3");                                             // whole night reconstructed
+}
+function ashwickFire(which){
+  ASHWICK.fired[which]=true;
+  const D={
+    d1:{ ev:1, fact:"The Widow was in the Study after midnight, despite her statement.",
+         card:"The grid proves the Widow entered the Study after midnight. She had claimed she never entered the room.",
+         wem:"Because the grid puts the Widow in the Study after midnight, her statement no longer holds." },
+    d2:{ ev:2, fact:"The fireplace poker may have been planted. The rolling pin is suspicious.",
+         card:"Flour was found on the victim's sleeve. The fireplace poker was clean — but the rolling pin was dusted with flour.",
+         wem:"Because the grid ties the Chef to the Kitchen, the flour on the victim's sleeve becomes relevant." },
+    d3:{ ev:3, fact:"A torn will in the Study desk gives the Widow a possible inheritance motive.",
+         card:"Wembly checks the locked Study desk. Inside, he finds a torn will removing the Widow from the inheritance.",
+         wem:"Because the grid confirms the Widow reached the desk, the locked drawer is worth opening." }
+  }[which];
+  if(!D) return;
+  ASHWICK.revealed.add(D.ev);
+  if(which==="d3") ASHWICK.revealed.add(4);          // the KEY PROOF becomes selectable once desk access is proven
+  ASHWICK.facts.push(D.fact);
+  ashwickRenderFacts();
+  if(typeof renderEvidenceUI==="function") renderEvidenceUI();   // surface the newly-unlocked evidence in the clue list + objective
+  ashwickCard(D.card);
+  const at=document.getElementById("assistantText");   // short Wembly line (no forced tab-switch — keep the player solving)
+  if(at){ at.innerHTML=`${D.wem} <span class="ash-added">Added to Discovered Facts.</span>`; const ap=document.getElementById("assistant"); if(ap) ap.hidden=false; }
+}
+
+/* small slide-in discovery card (auto-dismiss / tap to dismiss) */
+let _ashCardT=null;
+function ashwickCard(html){
+  let el=document.getElementById("ashCard");
+  if(!el){ el=document.createElement("div"); el.id="ashCard"; el.className="ash-card"; el.addEventListener("click",()=>el.classList.remove("show")); document.body.appendChild(el); }
+  el.innerHTML=`<div class="ash-card-tag">New Discovery</div><div class="ash-card-body">${html}</div><div class="ash-card-foot">Added to Discovered Facts · tap to dismiss</div>`;
+  el.classList.add("show");
+  clearTimeout(_ashCardT); _ashCardT=setTimeout(()=>el.classList.remove("show"), 5200);
+  if(typeof sfx==="function"){ try{ sfx("confirm"); }catch(e){} }
+}
+
+/* the small Discovered Facts panel (created on launch, torn down otherwise) */
+function ashwickSyncUI(){
+  let panel=document.getElementById("ashFacts");
+  if(C&&C.ashwick){
+    if(!panel){ panel=document.createElement("div"); panel.id="ashFacts"; panel.className="ash-facts"; panel.style.order="9";
+      (document.querySelector(".board-wrap")||document.body).appendChild(panel); }
+    panel.hidden=false; ashwickRenderFacts();
+  } else if(panel){ panel.hidden=true; }
+}
+function ashwickRenderFacts(){
+  const panel=document.getElementById("ashFacts"); if(!panel) return;
+  const items=ASHWICK.facts.length ? ASHWICK.facts.map(f=>`<li>${f}</li>`).join("")
+    : `<li class="ash-empty">No facts yet — prove positions on Graves' grid to uncover them.</li>`;
+  panel.innerHTML=`<div class="ash-facts-h">🔎 Discovered Facts <span class="ash-facts-n">${ASHWICK.facts.length}/3</span></div><ul class="ash-facts-list">${items}</ul>`;
+}
+
+/* Wembly hints — point at facts, never the answer */
+let _ashHintI=0;
+function ashwickHint(){
+  const lines=[
+    "The Widow's statement and the grid may not agree — look at where she has to be.",
+    "The poker is obvious… perhaps too obvious. What else was in that room?",
+    "The Study desk matters — but only to someone the grid puts inside the room."
+  ];
+  const msg=lines[(_ashHintI++)%lines.length];
+  const at=document.getElementById("assistantText"); if(at){ at.innerHTML=msg; const ap=document.getElementById("assistant"); if(ap) ap.hidden=false; }
+  if(typeof setBottomTab==="function" && document.body.classList.contains("phone")) setBottomTab("wembly");
+}
+
+/* the case-closed logic chain (the "I solved it" payoff) */
+function ashwickBuildChain(){
+  const chain=$("chain");
+  if(chain){ chain.innerHTML="";
+    ["The poker was planted — its handle was clean though the hearth was full of ash.",
+     "The flour on the victim's sleeve pointed to the rolling pin, not the poker.",
+     "The grid proved the Widow entered the Study after midnight, despite her statement.",
+     "Inside the locked desk, Wembly found a torn will removing her from the inheritance.",
+     "She had opportunity, motive, and the true weapon."
+    ].forEach(s=>{ const li=document.createElement("li"); li.innerHTML=s; chain.appendChild(li); });
+    const end=document.createElement("li"); end.innerHTML="<b>Case closed.</b>"; chain.appendChild(end);
+  }
+  if($("winStory")) $("winStory").innerHTML=`The staged scene undid her: a clean poker beside an ashy hearth, flour that belonged to the rolling pin, and a grid that placed the Widow in the Study she swore she never entered — beside a torn will that gave her every reason.`;
+}
+
+function ashwickInjectCSS(){ if(document.getElementById("ashwickCSS")) return;
+  const s=document.createElement("style"); s.id="ashwickCSS"; s.textContent=`
+  .ash-facts{background:rgba(20,22,30,.55);border:1px solid rgba(231,185,77,.28);border-radius:10px;padding:8px 10px;margin:6px 0;}
+  .ash-facts-h{font-family:"Courier New",monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--amber-soft,#e7b94d);display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+  .ash-facts-n{opacity:.7;font-size:10px;}
+  .ash-facts-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;}
+  .ash-facts-list li{font-family:Georgia,serif;font-size:13px;line-height:1.35;color:var(--ink,#eee);padding-left:14px;position:relative;}
+  .ash-facts-list li::before{content:"•";position:absolute;left:2px;color:var(--amber-soft,#e7b94d);}
+  .ash-facts-list li.ash-empty{color:var(--ink-dim,#9aa);font-style:italic;}
+  .ash-facts-list li.ash-empty::before{content:"";}
+  .ash-card{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(8px);
+    z-index:1200;max-width:min(520px,calc(100% - 28px));width:max-content;background:#161922;border:1px solid rgba(231,185,77,.5);
+    border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.5);padding:10px 14px;opacity:0;pointer-events:none;transition:opacity .28s ease,transform .28s ease;}
+  .ash-card.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto;}
+  .ash-card-tag{font-family:"Courier New",monospace;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber-soft,#e7b94d);margin-bottom:3px;}
+  .ash-card-body{font-family:Georgia,serif;font-size:14px;line-height:1.4;color:#f4efe4;}
+  .ash-card-foot{font-size:10.5px;color:#9aa;margin-top:5px;}
+  .ash-added{opacity:.7;font-size:11px;}
+  `;
+  document.head.appendChild(s);
+}
+
 const DEV_GROUPS=[
  ["Manor progression",[["Unlock next room",devUnlockNext],["Lock previous room",devLockPrev],["Restore +1 step",devRestoreStep],["Restore room FULLY",devRestoreFull],["Reset room → ruined",devResetRoom],["Reset ALL manor",devResetManor,"warn"]]],
  ["Seals",[["+1 Seal",()=>devEcon((setManorSeals(manorSeals()+1),"+1 seal"))],["+10 Seals",()=>devEcon((setManorSeals(manorSeals()+10),"+10 seals"))],["Seals → 0",()=>devEcon((setManorSeals(0),"seals = 0"))]]],
@@ -6265,6 +6461,7 @@ const DEV_GROUPS=[
  ["Trophies / memorial",[["Unlock all trophies",devUnlockTrophies],["Unlock all memorials",devUnlockMemorials],["Reset trophies & memorials",devResetTrophies,"warn"]]],
  ["Story / flow",[["Replay opening intro",()=>showManorStory(MANOR_OPENING,null,"intro")],["Reset 'seen' flags",devResetSeen],["Go to Manor",()=>showManor()],["Reset EVERYTHING",devResetAll,"warn"]]],
  ["Quick launch",[["Routine (Easy)",()=>devStart("easy")],["Troubling (Medium)",()=>devStart("medium")],["Grim (Hard)",()=>devStart("hard")],["Cold (Extreme)",()=>devStart("extreme")]]],
+ ["Detective V1 (test)",[["🔪 The Ashwick Study",()=>{ startCase({ashwick:true}); devLog("Launched The Ashwick Study"); }]]],
  ["Toggles / diagnostics",[["Fill solution",devFillSolution],["Jump to accusation",()=>{ if(C&&!solved) openAccusation(); else devLog("No active case."); }],["Planted-weapon case",devPlanted],["Motion: toggle",devToggleMotion],["App-fit: toggle",devToggleAppfit],["Capture view: toggle",toggleCapture],["Framing guide: cycle",cycleFraming],["Capture preset: toggle",toggleCapturePreset],["Dump state → console",devDump]]],
 ];
 function buildDevPanel(){ if($("devPanel")) return $("devPanel");
