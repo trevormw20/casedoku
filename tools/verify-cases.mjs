@@ -46,12 +46,18 @@ function check(caseId, ok, msg, detail = '') {
   if (!ok) failures++;
 }
 
-function preAccusationStrings(c) {
-  // Everything the player can read BEFORE committing an accusation.
+function preAccusationStrings(c, { includeResolved = true } = {}) {
+  // Player-facing text BEFORE committing an accusation. resolvedText is a POST-SOLVE
+  // confirmation that names the marker the player themselves placed (via {who}); it is a
+  // deliberate name-carrier, so the name-leak pass excludes it (includeResolved:false),
+  // like winStory. The banned-word pass still covers it.
   const out = [];
   out.push(['narrative', c.narrative]);
   for (const o of c.observations) out.push([`obs:${o.tag}`, o.text]);
-  for (const L of c.labeledCells) { out.push([`role:${L.id}`, L.role]); out.push([`resolved:${L.id}`, L.resolvedText]); }
+  for (const L of c.labeledCells) {
+    out.push([`role:${L.id}`, L.role]);
+    if (includeResolved) out.push([`resolved:${L.id}`, L.resolvedText]);
+  }
   out.push(['motive:correct', c.motive.correct]);
   for (const d of c.motive.distractors) out.push(['motive:distractor', d]);
   return out; // [ [source, text], ... ]  — winStory intentionally excluded (post-accusation)
@@ -147,16 +153,25 @@ for (const c of HAND_CASES) {
   check(id, banHits.length === 0, 'CHECK 4: banned-word lint = 0 hits', banHits.join(' | '));
 
   // ── CHECK 5: no cast/culprit suspect name in pre-accusation text ──
+  // (resolvedText excluded — it is a post-solve confirmation that names the placed marker
+  //  via {who}; the anonymous ROLE, observations, narrative and motive options must stay clean.)
   const castNames = c.cast.flatMap((slug) => [suspectName[slug] || slug, slug]);
   let nameHits = [];
-  for (const [src, text] of preAccusationStrings(c)) {
+  for (const [src, text] of preAccusationStrings(c, { includeResolved: false })) {
     for (const h of findSuspectNames(text, castNames)) nameHits.push(`${src}: "${h.match}" (${h.name})`);
   }
   check(id, nameHits.length === 0, 'CHECK 5: no suspect name in pre-accusation text', nameHits.join(' | '));
-  // explicit: culprit display name is absent
+  // explicit: culprit display name is absent (roles/observations/narrative — not resolvedText)
   const culpritName = suspectName[c.culprit] || c.culprit;
-  const culpritLeak = preAccusationStrings(c).some(([, t]) => findSuspectNames(t, [culpritName, c.culprit]).length);
+  const culpritLeak = preAccusationStrings(c, { includeResolved: false }).some(([, t]) => findSuspectNames(t, [culpritName, c.culprit]).length);
   check(id, !culpritLeak, 'CHECK 5: culprit name never spoken before the accusation', culpritName);
+  // resolvedText must be a {who} template (names the marker the player placed, not hardcoded)
+  for (const L of c.labeledCells) {
+    check(id, typeof L.resolvedText === 'string' && L.resolvedText.includes('{who}'),
+      `CHECK 5: labeled '${L.id}' resolvedText names the marker via {who}`, L.resolvedText);
+    check(id, findSuspectNames(L.resolvedText.replace('{who}', ''), castNames).length === 0,
+      `CHECK 5: labeled '${L.id}' resolvedText hardcodes no other suspect name`);
+  }
 }
 
 // ── Drift check: index.html embedded copy matches the source ───────────────────
