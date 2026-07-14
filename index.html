@@ -2802,6 +2802,66 @@ const MANOR = {
     {role:"magician",    L:"N", name:"The Magician",    color:"#403d80", gender:"male",   mtag:"reputation",  motive:"an exposed trick"},
     {role:"antiquarian", L:"O", name:"The Antiquarian", color:"#764917", gender:"male",   mtag:"money",       motive:"a priceless forgery"},
     {role:"nurse",       L:"P", name:"The Nurse",       color:"#f0b2b3", gender:"female", mtag:"forbidden",   motive:"a forbidden love affair"},
+    {role:"vicar", L:"V", name:"The Vicar", color:"#1F6F6B", gender:"male", mtag:"shame", motive:"a lapse he confessed to no one"},
+    {role:"governess", L:"G", name:"The Governess", color:"#C48A9A", gender:"female", mtag:"forbidden", motive:"a forbidden attachment to the family"},
+    {role:"valet", L:"V", name:"The Valet", color:"#4A6584", gender:"male", mtag:"grudge", motive:"years of service passed over"},
+    {role:"baroness", L:"B", name:"The Baroness", color:"#5B3A8C", gender:"female", mtag:"reputation", motive:"a scandal she paid to bury"},
+    {role:"groundskeeper", L:"G", name:"The Groundskeeper", color:"#5C6B3B", gender:"male", mtag:"revenge", motive:"land taken from his family"},
+    {role:"pianist", L:"P", name:"The Pianist", color:"#7A2E3A", gender:"female", mtag:"jealousy", motive:"a rival's stolen acclaim"},
+    {role:"solicitor", L:"S", name:"The Solicitor", color:"#223049", gender:"male", mtag:"money", motive:"estate accounts he had skimmed"},
+    {role:"debutante", L:"D", name:"The Debutante", color:"#D9A15B", gender:"female", mtag:"ambition", motive:"a marriage she would kill to secure"},
+    {role:"boatswain", L:"B", name:"The Boatswain", color:"#3B8E91", gender:"male", mtag:"betrayal", motive:"a shipmate left to drown"},
+    {role:"seamstress", L:"S", name:"The Seamstress", color:"#3C7A78", gender:"female", mtag:"money", motive:"a season's wages withheld"},
+    {role:"huntsman", L:"H", name:"The Huntsman", color:"#5A4A2E", gender:"male", mtag:"fear", motive:"a secret that could hang him"},
+    {role:"librarian", L:"L", name:"The Librarian", color:"#8B8B3C", gender:"female", mtag:"secret", motive:"a forged provenance in the archive"},
+    {role:"footman", L:"F", name:"The Footman", color:"#6E4A2E", gender:"male", mtag:"debt", motive:"money owed to the victim"},
+    {role:"countess", L:"C", name:"The Countess", color:"#1F7A4A", gender:"female", mtag:"inheritance", motive:"a codicil that cut her out"},
+    {role:"apothecary", L:"A", name:"The Apothecary", color:"#2E5A44", gender:"male", mtag:"coverup", motive:"a fatal prescription hushed up"},
+    {role:"widower", L:"W", name:"The Widower", color:"#3A4658", gender:"male", mtag:"revenge", motive:"blame for his wife's death"},
+    {role:"milliner", L:"M", name:"The Milliner", color:"#9C3A6B", gender:"female", mtag:"jealousy", motive:"a design stolen and sold"},
+    {role:"steward", L:"S", name:"The Steward", color:"#8C6A2E", gender:"male", mtag:"blackmail", motive:"the family's secrets in his keeping"},
+    {role:"nanny", L:"N", name:"The Nanny", color:"#D98A70", gender:"female", mtag:"fear", motive:"a child she would protect at any cost"},
+    {role:"coachman", L:"C", name:"The Coachman", color:"#6E2A2A", gender:"male", mtag:"grudge", motive:"dismissed without a reference"},
+    {role:"viscount", L:"V", name:"The Viscount", color:"#34386E", gender:"male", mtag:"ambition", motive:"a title and fortune within reach"},
+    {role:"dowager", L:"D", name:"The Dowager", color:"#8A8A94", gender:"female", mtag:"inheritance", motive:"an estate promised, then denied"},
+    {role:"housekeeper", L:"H", name:"The Housekeeper", color:"#5A2E4A", gender:"female", mtag:"grudge", motive:"decades of loyalty unrewarded"},
+    {role:"underbutler", L:"U", name:"The Under-Butler", color:"#3E5A6E", gender:"male", mtag:"jealousy", motive:"the senior post he was denied"},
+    {role:"ladysmaid", L:"L", name:"The Lady's Maid", color:"#8C7AB0", gender:"female", mtag:"secret", motive:"a mistress's secret she carried"},
+    {role:"tutor", L:"T", name:"The Tutor", color:"#9B683D", gender:"male", mtag:"forbidden", motive:"a love that could not be known"},
+    {role:"companion", L:"C", name:"The Companion", color:"#7A8C6E", gender:"female", mtag:"money", motive:"a small fortune she was owed"},
+    {role:"curate", L:"C", name:"The Curate", color:"#46707A", gender:"male", mtag:"shame", motive:"a sin he could not confess"},
+    {role:"organist", L:"O", name:"The Organist", color:"#6E2440", gender:"female", mtag:"jealousy", motive:"a rival who took her place"},
+    {role:"sculptor", L:"S", name:"The Sculptor", color:"#B07A3A", gender:"female", mtag:"reputation", motive:"a work exposed as another's"},
+    {role:"portraitist", L:"P", name:"The Portraitist", color:"#2E4A8C", gender:"female", mtag:"jealousy", motive:"a commission stolen from her"},
+    {role:"poet", L:"P", name:"The Poet", color:"#5A3A6E", gender:"male", mtag:"forbidden", motive:"a love unrequited and ruinous"},
+    {role:"novelist", L:"N", name:"The Novelist", color:"#245A5A", gender:"female", mtag:"secret", motive:"a manuscript that named names"},
+    {role:"diplomat", L:"D", name:"The Diplomat", color:"#1E3A4A", gender:"male", mtag:"betrayal", motive:"a treaty he quietly sold"},
+    {role:"admiral", L:"A", name:"The Admiral", color:"#284165", gender:"male", mtag:"betrayal", motive:"a mutiny he never reported"},
+    {role:"constable", L:"C", name:"The Constable", color:"#2E4A46", gender:"male", mtag:"coverup", motive:"an old case he had buried"},
+    {role:"barrister", L:"B", name:"The Barrister", color:"#33343A", gender:"male", mtag:"reputation", motive:"a verdict he had fixed"},
+    {role:"judge", L:"J", name:"The Judge", color:"#92293D", gender:"male", mtag:"blackmail", motive:"a hold someone had over him"},
+    {role:"banker", L:"B", name:"The Banker", color:"#1F5230", gender:"male", mtag:"money", motive:"accounts that would not balance"},
+    {role:"jeweller", L:"J", name:"The Jeweller", color:"#355DAF", gender:"male", mtag:"debt", motive:"debts he could not cover"},
+    {role:"horologist", L:"H", name:"The Horologist", color:"#9A7A3A", gender:"male", mtag:"secret", motive:"a mechanism he alone understood"},
+    {role:"tailor", L:"T", name:"The Tailor", color:"#6A6E76", gender:"male", mtag:"money", motive:"a fortune sewn into a lining"},
+    {role:"blacksmith", L:"B", name:"The Blacksmith", color:"#8C3A2E", gender:"male", mtag:"revenge", motive:"a wrong he meant to repay"},
+    {role:"stablehand", L:"S", name:"The Stablehand", color:"#B0923A", gender:"male", mtag:"grudge", motive:"a beating he never forgave"},
+    {role:"falconer", L:"F", name:"The Falconer", color:"#785D42", gender:"male", mtag:"fear", motive:"a secret worth killing to keep"},
+    {role:"beekeeper", L:"B", name:"The Beekeeper", color:"#C89A3A", gender:"female", mtag:"secret", motive:"something hidden in the hives"},
+    {role:"vintner", L:"V", name:"The Vintner", color:"#5A2430", gender:"male", mtag:"debt", motive:"a cellar mortgaged to the hilt"},
+    {role:"botanist", L:"B", name:"The Botanist", color:"#4A8C5E", gender:"female", mtag:"ambition", motive:"a discovery she would claim alone"},
+    {role:"astronomer", L:"A", name:"The Astronomer", color:"#1E2A54", gender:"female", mtag:"secret", motive:"a finding she could not reveal"},
+    {role:"archaeologist", L:"A", name:"The Archaeologist", color:"#A08A5A", gender:"female", mtag:"reputation", motive:"a relic she had forged"},
+    {role:"cartographer", L:"C", name:"The Cartographer", color:"#B09A6A", gender:"male", mtag:"betrayal", motive:"a map that sold a secret"},
+    {role:"surgeon", L:"S", name:"The Surgeon", color:"#43A09B", gender:"male", mtag:"coverup", motive:"an operation that went wrong"},
+    {role:"midwife", L:"M", name:"The Midwife", color:"#C8809A", gender:"female", mtag:"love", motive:"a child she swore to protect"},
+    {role:"matron", L:"M", name:"The Matron", color:"#5B85A9", gender:"female", mtag:"reputation", motive:"a ward's death she concealed"},
+    {role:"laundress", L:"L", name:"The Laundress", color:"#6E8CA0", gender:"female", mtag:"money", motive:"wages long overdue"},
+    {role:"medium", L:"M", name:"The Medium", color:"#4A2E6E", gender:"female", mtag:"blackmail", motive:"secrets whispered in seances"},
+    {role:"fortuneteller", L:"F", name:"The Fortune-Teller", color:"#7A2450", gender:"female", mtag:"secret", motive:"a fortune that knew too much"},
+    {role:"soprano", L:"S", name:"The Soprano", color:"#D2B15E", gender:"female", mtag:"jealousy", motive:"an aria and acclaim stolen"},
+    {role:"ballerina", L:"B", name:"The Ballerina", color:"#E4ADC2", gender:"female", mtag:"ambition", motive:"a prima role she craved"},
+    {role:"reporter", L:"R", name:"The Reporter", color:"#4A4E56", gender:"female", mtag:"reputation", motive:"a story that would ruin someone"},
   ],
   victims:["Lord Blackwood","the Dowager Countess","Sir Hugh Pennington","the family solicitor","old Mr. Ashford"],
   // each weapon: `slug` -> assets/themes/manor/weapons/weapon-<slug>.png; `traits` drive the
@@ -2819,6 +2879,24 @@ const MANOR = {
     {n:"the letter opener", slug:"letteropener",traits:["sharp","narrow","small"]},
     {n:"the rolling pin",   slug:"rollingpin", traits:["heavy","wood"]},
     {n:"the garden shears", slug:"shears",     traits:["sharp","metal"]},
+    {n:"the crystal decanter",   slug:"decanter",       traits:["heavy","glass"]},
+    {n:"the silk cravat",        slug:"cravat",         traits:["ligature"]},
+    {n:"the marble bust",        slug:"bust",           traits:["heavy","blunt"]},
+    {n:"the duelling pistol",    slug:"duelpistol",     traits:["firearm"]},
+    {n:"the ice pick",           slug:"icepick",        traits:["sharp","small"]},
+    {n:"the sword-cane",         slug:"swordcane",      traits:["sharp","long"]},
+    {n:"the fireplace tongs",    slug:"firetongs",      traits:["blunt","long"]},
+    {n:"the garrote wire",       slug:"garrote",        traits:["ligature"]},
+    {n:"the brass paperweight",  slug:"paperweight",    traits:["heavy","blunt","small"]},
+    {n:"the hunting rifle",      slug:"rifle",          traits:["firearm","long"]},
+    {n:"the surgical scalpel",   slug:"scalpel",        traits:["sharp","small"]},
+    {n:"the hatpin",             slug:"hatpin",         traits:["sharp","small"]},
+    {n:"the candelabrum",        slug:"candelabrum",    traits:["heavy","blunt"]},
+    {n:"the riding crop",        slug:"crop",           traits:["blunt"]},
+    {n:"the cast-iron doorstop", slug:"doorstop",       traits:["heavy","blunt"]},
+    {n:"the broken bottle",      slug:"bottle",         traits:["sharp","glass"]},
+    {n:"the piano wire",         slug:"pianowire",      traits:["ligature"]},
+    {n:"the ceremonial sabre",   slug:"sabre",          traits:["sharp","long"]},
   ],
   // [WEAPON] clue templates per trait: confirm (weapon HAD the trait) / reject (it did NOT)
   weaponClues:{
@@ -2834,6 +2912,7 @@ const MANOR = {
     firearm:{yes:"A single gunshot rang out that night.", no:"No shot was fired — the house stayed silent."},
     ligature:{yes:"There were ligature marks around the throat.", no:"There were no marks of strangulation."},
     poison:{yes:"Toxicology confirms a dose of poison.", no:"The victim showed no signs of poison whatsoever."},
+    glass:{yes:"Shards of broken glass were found in the wound.", no:"There was no glass — nothing shattered in the attack."},
   },
   // [MOTIVE] clue templates per motive tag (each suspect carries an `mtag`)
   motiveClues:{
@@ -2849,6 +2928,10 @@ const MANOR = {
     forbidden:["A forbidden love lies behind this killing.","Someone killed to protect a love that was never allowed."],
     coverup:["The killer was burying a blunder that would have ended them.","This was done to cover up a ruinous mistake."],
     grudge:["A wrong suffered long ago was finally answered here.","An old grudge, nursed for years, at last boiled over."],
+    shame:["A private shame the killer could not live with drove this.","This was done to bury a disgrace that would have ruined them."],
+    ambition:["Naked ambition is behind this - the killer wanted what the victim held.","A ladder to be climbed, and the victim stood in the way."],
+    fear:["The killer struck out of fear - silencing what they most dreaded.","This was done in terror of a secret coming to light."],
+    love:["Love, fierce and protective, guided the killer's hand.","Someone killed for love - to shield the one they cherished."],
   },
   times:["just before midnight","at the stroke of nine","during the thunderstorm","at supper","as the clock struck two"],
   // victim cast — a SEPARATE roster from the playable suspects (never placeable, never a
@@ -2966,6 +3049,17 @@ const MANOR = {
     {name:"the Kitchen", slug:"kitchen", icon:"table", hue:200},
     {name:"the Bedroom", slug:"bedroom", icon:"bed", hue:320},
     {name:"the Dining Room", slug:"dining", icon:"painting", hue:20},
+    {name:"the Attic", slug:"attic", icon:"chair", hue:35},
+    {name:"the Ballroom", slug:"ballroom", icon:"vase", hue:35},
+    {name:"the Chapel", slug:"chapel", icon:"painting", hue:195},
+    {name:"the Drawing Room", slug:"drawingroom", icon:"chair", hue:35},
+    {name:"the Gun Room", slug:"gunroom", icon:"painting", hue:205},
+    {name:"the Nursery", slug:"nursery", icon:"bed", hue:35},
+    {name:"the Observatory", slug:"observatory", icon:"lamp", hue:220},
+    {name:"the Orangery", slug:"orangery", icon:"plant", hue:25},
+    {name:"the Servants' Hall", slug:"servantshall", icon:"table", hue:15},
+    {name:"the Smoking Room", slug:"smokingroom", icon:"fireplace", hue:25},
+    {name:"the Wine Cellar", slug:"wine-cellar", icon:"vase", hue:185},
   ],
   // token disc/ring styling (theme-aware; a pack can restyle the whole token system here)
   tokenStyle:{
@@ -3008,7 +3102,10 @@ function vocab(cfg){ return VOCAB[cfg.bh+"x"+cfg.bw] || VOCAB["3x3"]; }
 let CASE_CAST=null;
 function setCast(arr){ CASE_CAST = (arr && arr.length) ? arr.slice() : null; }
 function sName(theme,v){ const i = (CASE_CAST && CASE_CAST[v-1]!==undefined) ? CASE_CAST[v-1] : (v-1); return theme.suspects[i]; }
-function roomName(theme,box){ return theme.rooms[box % theme.rooms.length].name; }
+let CASE_ROOMS=null;                                                       // per-case room subset (seeded); box -> CASE_ROOMS[box]
+function setCaseRooms(arr){ CASE_ROOMS = (arr && arr.length) ? arr.slice() : null; }
+function roomForBox(theme,box){ return (CASE_ROOMS && CASE_ROOMS[box]) ? CASE_ROOMS[box] : theme.rooms[box % theme.rooms.length]; }
+function roomName(theme,box){ return roomForBox(theme,box).name; }
 function spotName(cfg,theme,cell){
   const N=cfg.N, r=Math.floor(cell/N), c=cell%N;
   const E=GLOBAL.CludokuEngine; const box=E.boxOf(cfg,r,c); const {r0,c0}=E.rcOfBox(cfg,box);
@@ -3021,7 +3118,7 @@ let CASE_OBJECTS=[];                       // box -> object landmark cell, for "
 function setCaseObjects(arr){ CASE_OBJECTS=Array.isArray(arr)?arr:[]; }
 let CASE_OBJECT_SLUGS=[];                  // box -> per-case object slug (rooms can vary their landmark object across cases)
 function setCaseObjectSlugs(arr){ CASE_OBJECT_SLUGS=Array.isArray(arr)?arr:[]; }
-function roomObjectSlug(theme,box){ const s=CASE_OBJECT_SLUGS[box]; return s!=null?s:theme.rooms[box%theme.rooms.length].icon; }
+function roomObjectSlug(theme,box){ const s=CASE_OBJECT_SLUGS[box]; return s!=null?s:roomForBox(theme,box).icon; }
 const OBJ_NAME={tv:"television"};          // slug -> readable; default = the slug itself
 function objName(slug){ return OBJ_NAME[slug]||slug; }
 function renderClue(cfg,theme,clue){
@@ -3075,7 +3172,7 @@ function renderStory(theme, facts, rng){
 }
 
 GLOBAL.CLUDOKU_THEMES={manor:MANOR};
-GLOBAL.CludokuSkin={ renderClue, renderStory, roomName, spotName, sName, setCast, vocab, TYPE_LABEL,
+GLOBAL.CludokuSkin={ renderClue, renderStory, roomName, spotName, sName, setCast, setCaseRooms, roomForBox, vocab, TYPE_LABEL,
   EV_TAG, weaponBySlug, renderWeaponClue, renderMotiveClue,
   setCaseObjects, setCaseObjectSlugs, roomObjectSlug, objName, pick:(rng,arr)=>arr[Math.floor(rng()*arr.length)] };
 })(typeof window!=="undefined" ? window : globalThis);
@@ -3382,7 +3479,7 @@ function dressStory(){
   // scene objects this case actually references (a SIGHTING landing beside a room's object landmark) — for Scene Marker trophies
   story.referencedObjects=(function(){ const set=new Set(), N=cfg.N;
     (C.clues||[]).forEach(cl=>{ if(cl.type!=="sighting"||!cl.p) return; const cell=cl.p.cell, r=Math.floor(cell/N), c=cell%N, box=E.boxOf(cfg,r,c), oc=C.objectCells?C.objectCells[box]:null;
-      if(oc!=null){ const dr=r-Math.floor(oc/N), dc=c-(oc%N); if(Math.abs(dr)+Math.abs(dc)===1) set.add((C.objectSlugs&&C.objectSlugs[box])||THEME.rooms[box%THEME.rooms.length].icon); } });
+      if(oc!=null){ const dr=r-Math.floor(oc/N), dc=c-(oc%N); if(Math.abs(dr)+Math.abs(dc)===1) set.add(Skin.roomObjectSlug(THEME,box)); } });
     return [...set]; })();
   story.extraOrder = story.evidence.map((e,i)=>e.key?-1:i).filter(i=>i>=0);   // discoverable corroborating extras, in their (seeded) order
   const _es=loadEvidenceState(C.code); story.discoveredExtras=_es.discovered; // restored on reload; gated by the Evidence setting
@@ -3426,11 +3523,18 @@ function pickCaseCast(seed, N){
   for(let k=0; cast.length<N; k++) cast.push(rest[k]);
   return shuf(cast);                                        // randomize which value maps to whom
 }
+function pickCaseRooms(seed, N){                            // seeded per-case room subset: draw N distinct rooms from the full pool, one per box
+  const rng=E.makeRNG((seed ^ E.hashStr("rooms"))>>>0);
+  const idx=[...Array(THEME.rooms.length).keys()];
+  for(let i=idx.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [idx[i],idx[j]]=[idx[j],idx[i]]; }
+  return idx.slice(0, Math.min(N, THEME.rooms.length)).map(i=>THEME.rooms[i]);
+}
 function startCase(opts){
   if(typeof hideManor==="function") hideManor();            // leaving the home hub into a case
   if($("manorStory")) $("manorStory").classList.remove("show");
   C=E.generateCase(opts); cfg=C.cfg;
   Skin.setCast(pickCaseCast(C.seed, cfg.N));                // shuffle the playable cast for this case
+  const caseRooms=pickCaseRooms(C.seed, cfg.N); Skin.setCaseRooms(caseRooms);   // seeded per-case room subset (one room per box)
   board=C.givens.slice(); given=C.givens.map(v=>v!==0);
   sel=-1; focusSuspect=0; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false; cluesUsed=new Set(); mistakes=0;
   _sceneMsgShown=false; _nudged=false;   // reset Feature A per-case state
@@ -3444,7 +3548,7 @@ function startCase(opts){
   document.documentElement.style.setProperty("--disc-cream",DISC_CREAM);
   Skin.setCaseObjects(C.objectCells);                         // object landmarks for "next to the X" clues
   { const orng=E.makeRNG((C.seed ^ E.hashStr("objects"))>>>0);   // seeded per-case object per room (from each room's pool) — deterministic, replays match
-    C.objectSlugs=THEME.rooms.map(rm=>{ const pool=(rm.icons&&rm.icons.length)?rm.icons:[rm.icon]; return pool[Math.floor(orng()*pool.length)]; });
+    C.objectSlugs=caseRooms.map(rm=>{ const pool=(rm.icons&&rm.icons.length)?rm.icons:[rm.icon]; return pool[Math.floor(orng()*pool.length)]; });
     Skin.setCaseObjectSlugs(C.objectSlugs); }
   dressStory();
   setVar("--cell-max", cfg.N<=6 ? "72px" : "62px"); setVar("--ncols", cfg.N);  // CSS derives --cell (mobile fits to width)
@@ -3544,7 +3648,7 @@ function renderBoard(){
     if(r%cfg.bh===0 && r!==0 && c%cfg.bw===cfg.bw-1)            cell.classList.add("door-h"); // gap in the horizontal wall
     if(c%cfg.bw===0 && c!==0 && r%cfg.bh===Math.floor(cfg.bh/2)) cell.classList.add("door-v"); // gap in the vertical wall
     if(i===C.murderCell) cell.classList.add("scene");
-    const box=E.boxOf(cfg,r,c), room=THEME.rooms[box%THEME.rooms.length], objSlug=Skin.roomObjectSlug(THEME,box);
+    const box=E.boxOf(cfg,r,c), room=Skin.roomForBox(THEME,box), objSlug=Skin.roomObjectSlug(THEME,box);
     const sr=r%cfg.bh, sc=c%cfg.bw;                                  // sub-position within the room
     const fx=cfg.bw>1?(sc/(cfg.bw-1))*100:0, fy=cfg.bh>1?(sr/(cfg.bh-1))*100:0;
     cell.style.backgroundColor=`hsla(${room.hue},30%,50%,0.08)`;      // P6: calmer fallback tint (lower sat+alpha) for the asset-missing first paint
@@ -4595,7 +4699,7 @@ function roomTier(rs){ if(!rs||!rs.wins) return null; return rs.gold?"gold":(rs.
 function noteDayWin(){ const day=nowStr(), size=(cfg.N===6)?6:9;   // track which grid sizes were won today (for the "one day" relic)
   let d=LS.get("dayWins",{})||{}; if(d.day!==day) d={day, sizes:{}};
   d.sizes[size]=true; LS.set("dayWins",d); return !!(d.sizes[6]&&d.sizes[9]); }
-function sceneRoomSlug(){ return THEME.rooms[E.boxOf(cfg, Math.floor(C.murderCell/cfg.N), C.murderCell%cfg.N) % THEME.rooms.length].slug; }
+function sceneRoomSlug(){ return Skin.roomForBox(THEME, E.boxOf(cfg, Math.floor(C.murderCell/cfg.N), C.murderCell%cfg.N)).slug; }
 /* is this trophy unlocked? (rooms read their tiered seal, everything else the binary unlock map) */
 function isUnlocked(t, map, seals){ if(t.cat==="room"){ const rs=seals[t.slug]; return !!(rs&&rs.wins); } return !!map[t.id]; }
 function trophyUnlock(t, map, seals){ if(t.cat==="room"){ const rs=seals[t.slug]; if(!rs||!rs.wins) return null;
