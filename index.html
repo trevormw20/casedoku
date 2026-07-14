@@ -3532,9 +3532,9 @@ function pickCaseRooms(seed, N){                            // seeded per-case r
 function startCase(opts){
   if(typeof hideManor==="function") hideManor();            // leaving the home hub into a case
   if($("manorStory")) $("manorStory").classList.remove("show");
-  C=E.generateCase(opts); cfg=C.cfg;
-  Skin.setCast(pickCaseCast(C.seed, cfg.N));                // shuffle the playable cast for this case
-  const caseRooms=pickCaseRooms(C.seed, cfg.N); Skin.setCaseRooms(caseRooms);   // seeded per-case room subset (one room per box)
+  C=(opts&&opts.hand)?buildHandCase(opts.hand):E.generateCase(opts); cfg=C.cfg;   // hand-authored detective case OR procedural
+  Skin.setCast(C.hand?C.castIdx.slice():pickCaseCast(C.seed, cfg.N));                // hand case pins its own cast
+  const caseRooms=C.hand?C.roomObjs.slice():pickCaseRooms(C.seed, cfg.N); Skin.setCaseRooms(caseRooms);   // hand case pins its own rooms
   board=C.givens.slice(); given=C.givens.map(v=>v!==0);
   sel=-1; focusSuspect=0; undoStack=[]; redoStack=[]; hintsUsed=0; solved=false; cluesUsed=new Set(); mistakes=0;
   _sceneMsgShown=false; _nudged=false;   // reset Feature A per-case state
@@ -3551,6 +3551,8 @@ function startCase(opts){
     C.objectSlugs=caseRooms.map(rm=>{ const pool=(rm.icons&&rm.icons.length)?rm.icons:[rm.icon]; return pool[Math.floor(orng()*pool.length)]; });
     Skin.setCaseObjectSlugs(C.objectSlugs); }
   dressStory();
+  if(C.hand) handDressStory();   // hand case: overwrite fiction with the authored observation layer
+  handSyncUI();                 // create/tear-down the Discovered-Facts panel
   setVar("--cell-max", cfg.N<=6 ? "72px" : "62px"); setVar("--ncols", cfg.N);  // CSS derives --cell (mobile fits to width)
   boardEl.style.gridTemplateColumns=`repeat(${cfg.N}, var(--cell))`;
   renderBoard(); renderTray(); renderCase(); updateBtns();   // P7: undo/redo start DISABLED on a fresh board (nothing to undo/redo yet)
@@ -3562,9 +3564,10 @@ function startCase(opts){
   $("diffPill").dataset.tier=C.tier;        // phone shows ONLY the tier colour (CSS swatch keyed off this)
   $("diffPill").title=_tierLbl;             // tooltip carries the full difficulty name (esp. for the colour-only phone view)
   // (Case No. lives in the case file's subtitle now — see caseSub in renderCase — not the top bar.)
-  $("loadBearingNote").innerHTML=
-    `Sudoku logic alone leaves <b>${C.completionsWithout}</b> ways to complete Graves' grid — `+
-    `only the evidence narrows it to one. The scene (dashed) hides the killer.`;
+  $("loadBearingNote").innerHTML= C.hand
+    ? `Settle Graves' grid as an ordinary sudoku; each position you prove lets the file speak. The scene (dashed) belongs to the culprit — read the marker the observations converge on.`
+    : `Sudoku logic alone leaves <b>${C.completionsWithout}</b> ways to complete Graves' grid — `+
+      `only the evidence narrows it to one. The scene (dashed) hides the killer.`;
   setStatus(`Case No. ${story.caseNo} opened — ${board.filter(v=>!v).length} empty spots to fill.`,"");
   document.body.classList.remove("clock-critical");
   clockBudget = isClock() ? clockBudgetMs() : 0; _lastTickSec=-1;   // On the Clock: countdown budget for this case
@@ -3733,6 +3736,7 @@ function saveEvidenceState(){ if(!C||!story) return; const all=LS.get("evidenceS
   const ks=Object.keys(all); while(ks.length>40){ delete all[ks.shift()]; } LS.set("evidenceState",all); }
 function effectiveDiscovered(){ if(!story) return 0; return (settings.evidence==="all") ? story.extraOrder.length : (story.discoveredExtras|0); }
 function evidenceVisible(idx){ if(!story) return true; const e=story.evidence[idx]; if(!e) return false;
+  if(C&&C.hand) return !!(HAND.revealed&&HAND.revealed.has(idx));   // hand case: visible once its grid proof unlocks it
   if(e.key) return true;                                  // ★ required clue — always visible
   const pos=story.extraOrder.indexOf(idx); return pos>=0 && pos<effectiveDiscovered(); }   // extra — visible once discovered
 function visibleEv(){ return (story&&story.evidence||[]).map((e,i)=>({e,i})).filter(x=>evidenceVisible(x.i)); }
@@ -4095,6 +4099,7 @@ function place(i,v){ if(given[i]||board[i]===v||(C&&i===C.murderCell))return;   
       LS.set("seenRepeat",true);
       assist(`That's a second <b>${_nm}</b> marker on the grid — the same suspect recurs across Graves' grid like a number in Sudoku, not the same person standing in two places.`); }
   }   // clean placement (P8: on the move that COMPLETES the grid, let maybeNudge's "grid is complete — name the killer" line stand instead)
+  if(C && C.hand) handCheckDiscoveries();   // hand case: resolve labeled cells + fire observation reveals
   checkWin(); }
 function erase(){ if(solved||sel<0||given[sel])return;
   if(board[sel]===0 && (!candidates[sel]||!candidates[sel].size)) return;
@@ -4508,6 +4513,7 @@ function makeHeadline(killerName){
           .replace(/\{PLACE\}/g,(THEME.place||"the manor").toUpperCase());
 }
 function buildChain(){
+  if(C&&C.hand){ handBuildChain(); return; }   // hand case: its own authored logic chain + winStory
   const k=Skin.sName(THEME,C.killer), chain=$("chain"); chain.innerHTML="";
   const scene=spotText(C.murderCell);
   const head=document.createElement("li");
@@ -6362,6 +6368,130 @@ function devToggleAppfit(){ const on=document.body.classList.toggle("appfit");
   devLog("App-fit layout "+(on?"ON":"OFF")); }
 function devDump(){ const o={}; try{ Object.keys(localStorage).filter(k=>k.indexOf("casedoku.")===0).forEach(k=>{ try{ o[k]=JSON.parse(localStorage.getItem(k)); }catch(e){ o[k]=localStorage.getItem(k); } }); }catch(e){}
   console.log("%c[Casedoku state]","color:#5fffd0",o); devLog("Dumped state → console ("+Object.keys(o).length+" keys)."); }
+/* ═══════════ HAND-AUTHORED DETECTIVE CASES (labeled-cell mystery layer) ═══════════
+   Active only when C.hand is set (launched from the dev panel). Reuses the generic
+   board / place() / accusation / payoff unchanged; adds the labeled-cell resolve + the
+   observation chain from DETECTIVE-CLUE-REDESIGN.md. Facts belong to the game; the name
+   is spoken only by the player at the accusation. Isolated from the procedural game. */
+/*HAND_CASES_START*/
+const HAND_CASES=[{"id":"case1","title":"The Blade on the Wall","caseNo":1,"misdirection":"planted weapon","tier":"hard","seed":101,"code":"DET-1","victim":{"display":"Lord Ambrose Vane","slug":"lord-ambrose-vane"},"sceneRoomName":"the Gun Room","cast":["colonel","doctor","baroness","viscount","governess","curate","huntsman","dowager","reporter"],"culprit":"baroness","culpritValue":3,"rooms":["study","hall","library","dining","gunroom","drawingroom","billiard","smokingroom","conservatory"],"solution":[1,6,7,5,8,2,4,9,3,3,5,2,7,9,4,6,8,1,4,9,8,6,3,1,2,5,7,2,8,9,4,1,6,3,7,5,7,4,6,8,5,3,9,1,2,5,1,3,9,2,7,8,6,4,9,7,1,2,4,8,5,3,6,8,3,4,1,6,5,7,2,9,6,2,5,3,7,9,1,4,8],"givens":[0,6,7,0,8,2,0,0,0,0,0,0,0,9,4,0,8,1,0,9,8,6,0,1,0,5,7,0,0,0,4,0,0,3,0,0,7,4,0,0,0,0,9,0,0,0,1,0,9,2,7,8,6,4,0,7,0,0,0,0,0,0,0,8,0,0,0,0,0,0,2,0,6,0,5,0,7,0,0,4,8],"murderCell":41,"sceneBox":4,"labeledCells":[{"cell":22,"id":"landing","role":"the figure seen crossing the landing at half past midnight","resolvedText":"The figure on the landing is now fixed on the grid — read the marker.","tiesToScene":true},{"cell":75,"id":"expose","role":"the name ringed in the margin of the morning proof-sheet","resolvedText":"The name from the proof-sheet is now fixed on the grid — read the marker.","tiesToScene":true}],"weapon":{"true":"hatpin","obvious":"sabre","candidates":["sabre","hatpin","letteropener"]},"motive":{"tag":"reputation","correct":"a scandal about to reach print","distractors":["a disputed inheritance","an old betrayal at sea"]},"keyProof":"landing","narrative":"Frost on the gun-room glass, and the great house very still. Lord Ambrose Vane will host no more shooting parties. Inspector Graves lays out the night on his grid; every place you can settle, the file can speak to.","observations":[{"tag":"OBJECTIVE","proof":false,"unlock":{"on":"open"},"text":"Reconstruct the night on Inspector Graves' grid. Each position you settle lets the file record a new observation."},{"tag":"THE SCENE","proof":false,"unlock":{"on":"open"},"text":"Lord Ambrose Vane lies in the Gun Room; the ceremonial sabre from the wall rests across the desk beside him. On the hall table, a hatpin cushion set for six holds only five."},{"tag":"OPPORTUNITY","proof":true,"unlock":{"on":"labeled","id":"landing"},"text":"A statement in the file: at half past midnight, a figure was seen crossing the landing above the hall."},{"tag":"THE WEAPON","proof":false,"unlock":{"on":"box","box":4},"text":"The sabre sits flush in its bracket, the dust along the mount unbroken in one line. The wound at the base of the skull is a single puncture, no wider than a pin."},{"tag":"THE DESK","proof":false,"revealsMotive":true,"unlock":{"on":"labeled","id":"expose"},"text":"In the desk drawer, a printer's proof-sheet for the morning society column — one name ringed in the margin, beside a paragraph marked for the front page."}],"winStory":"On Graves' grid, one marker stands on the landing at half past midnight, in the ringed margin of the morning's column, and in the Gun Room where Lord Ambrose fell — the same hand in all three. The sabre never left its bracket; the wound was a pin's width, and a hatpin was gone from the hall. The Baroness climbed the stairs to stop a column that would have printed her ruin, and left a blade on the wall to carry the blame."},{"id":"case2","title":"The Wet Umbrella","caseNo":2,"misdirection":"false alibi","tier":"hard","seed":202,"code":"DET-2","victim":{"display":"Harlan Cross","slug":"financier-harlan-cross"},"sceneRoomName":"the Library","cast":["butler","actress","doctor","colonel","medium","judge","banker","nurse","vicar"],"culprit":"judge","culpritValue":6,"rooms":["hall","lounge","library","dining","orangery","billiard","study","conservatory","drawingroom"],"solution":[6,7,3,5,1,8,4,9,2,1,9,2,4,3,7,5,6,8,4,8,5,2,9,6,3,1,7,2,6,1,3,7,5,9,8,4,5,3,8,9,4,1,2,7,6,9,4,7,6,8,2,1,5,3,8,5,4,7,2,9,6,3,1,7,2,9,1,6,3,8,4,5,3,1,6,8,5,4,7,2,9],"givens":[0,7,3,5,0,0,4,0,2,1,9,0,0,0,0,0,0,0,0,0,0,2,0,6,3,1,0,0,6,0,3,0,0,0,0,0,0,0,8,0,0,1,2,7,6,9,0,0,0,0,2,0,5,3,8,5,4,0,0,0,0,3,1,0,0,0,0,6,0,8,4,0,0,0,0,8,5,4,7,0,0],"murderCell":16,"sceneBox":2,"labeledCells":[{"cell":48,"id":"sidedoor","role":"the person the side door was unlatched for after the rain","resolvedText":"The one admitted at the side door is now fixed on the grid — read the marker.","tiesToScene":true},{"cell":74,"id":"club","role":"the member signed out of the club at eleven o'clock","resolvedText":"The member who left the club is now fixed on the grid — read the marker.","tiesToScene":true}],"weapon":{"true":"decanter","obvious":"revolver","candidates":["revolver","decanter","paperweight"]},"motive":{"tag":"blackmail","correct":"a secret paid off month after month","distractors":["a debt at the gaming table","an old grudge from the bench"]},"keyProof":"sidedoor","narrative":"Rain has come and gone over the park, and Harlan Cross keeps his last appointment in the Library. He was a lender of money and a keeper of secrets. Graves sets the evening on his grid and begins to sort the callers from the sworn-absent.","observations":[{"tag":"OBJECTIVE","proof":false,"unlock":{"on":"open"},"text":"Reconstruct the evening on Inspector Graves' grid. Each position you settle lets the file record a new observation."},{"tag":"THE SCENE","proof":false,"unlock":{"on":"open"},"text":"Harlan Cross lies in the Library; the revolver from the desk drawer lies open beside him, six chambers loaded. By the side door, a black umbrella stands in the stand, beaded with rain."},{"tag":"AN ACCOUNT","proof":false,"unlock":{"on":"open"},"text":"An account given to the file: one guest dined at his club across the park and did not leave it until morning."},{"tag":"THE WEAPON","proof":false,"unlock":{"on":"box","box":2},"text":"The revolver's six chambers are loaded and cold; no round has been fired. On the desk, a wet ring the width of a decanter's base, and a hairline of glass swept toward the hearth."},{"tag":"OPPORTUNITY","proof":true,"unlock":{"on":"labeled","id":"sidedoor"},"text":"The side-door latch was lifted from within after the rain. The umbrella in the stand is still wet to the touch; the rain over the park stopped at midnight."},{"tag":"THE CLUB BOOK","proof":false,"unlock":{"on":"labeled","id":"club"},"text":"The night-porter's book at the club records one member signed out at eleven o'clock, with no hand signing him in again."},{"tag":"THE SAFE","proof":false,"revealsMotive":true,"unlock":{"on":"grid"},"text":"Behind the shelves a wall-safe stands open: a strongbox of receipts, one for every month, each for a sum in cash, each initialled by the same hand."}],"winStory":"The club book shows one member gone by eleven; the side door was lifted from within after the rain, and the umbrella hung wet until dawn. The revolver was never fired — the decanter left its ring on the desk. On Graves' grid the same marker stands at the club door, the side door, and the Library where Cross fell. Month after month the Judge had paid Harlan Cross in cash to keep an old matter off the record, and walked in from the rain to close the account for good."},{"id":"case3","title":"The Cellar Ledger","caseNo":3,"misdirection":"overlooked culprit","tier":"hard","seed":303,"code":"DET-3","victim":{"display":"Old Mr. Pemberton","slug":"old-mr-pemberton"},"sceneRoomName":"the Wine Cellar","cast":["butler","viscount","doctor","baroness","colonel","housekeeper","vintner","groundskeeper","governess"],"culprit":"groundskeeper","culpritValue":8,"rooms":["hall","dining","library","servantshall","kitchen","study","billiard","gunroom","wine-cellar"],"solution":[5,7,4,2,9,1,3,8,6,9,6,1,5,3,8,2,7,4,2,3,8,7,6,4,1,5,9,3,5,2,1,8,9,4,6,7,4,8,9,3,7,6,5,2,1,7,1,6,4,5,2,9,3,8,1,9,5,6,2,7,8,4,3,6,4,3,8,1,5,7,9,2,8,2,7,9,4,3,6,1,5],"givens":[5,0,0,0,0,1,0,0,6,0,0,0,5,3,0,0,7,4,2,0,8,7,0,0,1,0,0,0,0,2,0,0,0,4,0,0,0,0,0,3,0,0,5,2,0,0,1,6,0,0,2,9,3,0,0,9,5,0,0,7,0,4,0,6,0,0,8,1,5,0,9,2,0,2,0,0,4,0,6,0,0],"murderCell":60,"sceneBox":8,"labeledCells":[{"cell":37,"id":"ledger","role":"whoever set down the last line in the cellar ledger","resolvedText":"The last hand in the ledger is now fixed on the grid — read the marker.","tiesToScene":true},{"cell":53,"id":"key","role":"whose key turned the cellar lock from the passage side","resolvedText":"The key that turned the cellar lock is now fixed on the grid — read the marker.","tiesToScene":true},{"cell":3,"id":"quarrel","role":"the guest who quarrelled with Mr. Pemberton at dinner","resolvedText":"The guest from the dinner quarrel is now fixed on the grid — read the marker.","tiesToScene":false}],"weapon":{"true":"wrench","obvious":"bottle","candidates":["bottle","wrench","doorstop"]},"motive":{"tag":"revenge","correct":"a family struck from its land","distractors":["a gambling debt come due","a share of the will denied"]},"keyProof":"key","narrative":"A raw wind off the downs, and Old Mr. Pemberton found among his own casks. Landlord to half the valley, and not loved by all of it. The house has already fixed on the quarrel at dinner — but Graves lets the grid speak before the household does.","observations":[{"tag":"OBJECTIVE","proof":false,"unlock":{"on":"open"},"text":"Reconstruct the night on Inspector Graves' grid. Each position you settle lets the file record a new observation."},{"tag":"THE SCENE","proof":false,"unlock":{"on":"open"},"text":"Old Mr. Pemberton lies in the Wine Cellar; a broken wine bottle lies in the straw by his hand. On the cellar step, a single boot-print in the damp — a workman's hobnail sole."},{"tag":"THE QUARREL","proof":false,"unlock":{"on":"labeled","id":"quarrel"},"text":"An account in the file: at dinner, raised voices — one guest and Mr. Pemberton, over the reading of the will, and a chair pushed back hard from the table."},{"tag":"THE WEAPON","proof":false,"unlock":{"on":"box","box":8},"text":"The bottle break is old — its edges dulled, the glass dry and grey with cellar dust. From the tool-rack a heavy spanner is gone, its outline left in the grease on the wall."},{"tag":"THE LEDGER","proof":false,"unlock":{"on":"labeled","id":"ledger"},"text":"The cellar ledger's last line was set down in a working hand, the ink still wet enough to smudge under a thumb."},{"tag":"THE KEY","proof":true,"unlock":{"on":"labeled","id":"key"},"text":"The cellar door was locked from the passage side. Of the household rings, one key turns that lock from without — the one kept with the garden staff."},{"tag":"THE TENANCY","proof":false,"revealsMotive":true,"unlock":{"on":"grid"},"text":"Folded into the ledger's spine, an eviction order under the estate seal: a cottage and its land named, and a family struck from the tenancy in a single line."}],"winStory":"The quarrel at dinner turned every head toward the man who stood to inherit — but the cellar kept its own account. The bottle was long broken; a spanner was gone from the rack. The last line of the ledger was set in a working hand, the door locked from the passage with the garden-staff key, and a hobnail print pressed into the step. On Graves' grid the ledger, the key, and the cellar floor where Mr. Pemberton fell all hold one marker — the Groundskeeper, whose family had been struck from their land in a single line, come back to answer it. The quarrel only raised a voice; the man no one watched raised his hand."}];
+/*HAND_CASES_END*/
+const HAND={ on:false, id:null, case:null, fired:new Set(), revealed:new Set(), facts:[], labeledResolved:new Set() };
+function handInjectCSS(){ if(document.getElementById("handCSS")) return; const s=document.createElement("style"); s.id="handCSS";
+  s.textContent=`
+  .hand-card{position:fixed;left:50%;top:14%;transform:translateX(-50%) translateY(-16px);z-index:9000;max-width:min(92vw,440px);
+    background:linear-gradient(180deg,#20242c,#171a20);color:#efe6d0;border:1px solid #3a4150;border-radius:12px;padding:12px 14px;
+    box-shadow:0 12px 40px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .28s,transform .28s;font-size:14px;line-height:1.45;}
+  .hand-card.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto;cursor:pointer;}
+  .hand-card-tag{font:700 11px/1 ui-sans-serif,system-ui;letter-spacing:.14em;color:#c8a24a;text-transform:uppercase;margin-bottom:6px;}
+  .hand-card-foot{margin-top:8px;font-size:11px;color:#8b93a2;}
+  .hand-facts{position:fixed;right:12px;bottom:12px;z-index:8000;width:min(300px,46vw);
+    background:linear-gradient(180deg,rgba(28,31,38,.97),rgba(20,22,28,.97));border:1px solid #313846;border-radius:12px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.45);}
+  .hand-facts-h{font:700 12px/1 ui-sans-serif;letter-spacing:.06em;color:#c8a24a;margin-bottom:6px;display:flex;justify-content:space-between;}
+  .hand-facts-list{margin:0;padding-left:18px;font-size:12.5px;line-height:1.5;color:#dfe4ea;max-height:40vh;overflow:auto;}
+  .hand-facts-list li{margin:4px 0;} .hand-empty{list-style:none;margin-left:-18px;color:#8b93a2;font-style:italic;}
+  `; document.head.appendChild(s); }
+
+function buildHandCase(id){
+  handInjectCSS();
+  const hc=HAND_CASES.find(c=>c.id===id);
+  if(!hc){ if(typeof devLog==="function") devLog("Unknown hand case: "+id); return E.generateCase({}); }
+  const cfg={N:9,bh:3,bw:3};
+  const castIdx=hc.cast.map(slug=>{ const i=THEME.suspects.findIndex(s=>s.role===slug); return i>=0?i:0; });
+  const roomObjs=hc.rooms.map(slug=>THEME.rooms.find(r=>r.slug===slug)||THEME.rooms[0]);
+  const objectCells=[]; for(let b=0;b<9;b++){ const {r0,c0}=E.rcOfBox(cfg,b); let cell=r0*9+c0; if(cell===hc.murderCell) cell=r0*9+c0+1; objectCells[b]=cell; }
+  HAND.on=true; HAND.id=id; HAND.case=hc; HAND.fired=new Set(); HAND.facts=[]; HAND.labeledResolved=new Set();
+  HAND.revealed=new Set(); hc.observations.forEach((o,i)=>{ if(o.unlock&&o.unlock.on==="open") HAND.revealed.add(i); });
+  return { tier:hc.tier, seed:hc.seed, code:hc.code, cfg, solution:hc.solution.slice(), givens:hc.givens.slice(),
+    clues:[], cluePreds:[], requiredCount:0, completionsWithout:1, ambiguousCells:[],
+    murderCell:hc.murderCell, killer:hc.culpritValue, sceneCandidates:[hc.culpritValue], reasoning:[], proofClues:[], objectCells,
+    hand:true, handId:id, castIdx, roomObjs };
+}
+
+function handDressStory(){
+  const hc=HAND.case; if(!hc) return;
+  const k=Skin.sName(THEME,C.killer);
+  story.victim=hc.victim.display; story.victimDisplay=hc.victim.display; story.victimSlug=hc.victim.slug; story.victimTags={};
+  story.title=hc.title; story.caseNo=hc.caseNo;
+  story.sceneObject=hc.weapon.obvious; story.trueWeapon=hc.weapon.true; story.weaponPlanted=true;
+  story.weaponCandidates=hc.weapon.candidates.slice(); story.weaponClues=[]; story.weaponMarks=loadWeaponMarks(C.code);
+  story.killerTag=hc.motive.tag; story.killer=k; story.motiveClues=[];
+  story.sceneRoom=hc.sceneRoomName; story.alibiRoom=hc.sceneRoomName;
+  const opts=[{motive:hc.motive.correct, correct:true, tag:hc.motive.tag}, ...hc.motive.distractors.map(m=>({motive:m, correct:false, tag:"other"}))];
+  { const r=E.makeRNG((C.seed ^ E.hashStr("handmot"))>>>0); for(let i=opts.length-1;i>0;i--){ const j=Math.floor(r()*(i+1)); [opts[i],opts[j]]=[opts[j],opts[i]]; } }
+  story.motiveOptions=opts;
+  { const ms=loadMotiveState(C.code); story.motiveRevealed=false; story.motiveMarks=ms.marks; }
+  story.evidence=hc.observations.map(o=>({ tag:o.tag, text:o.text, key:(o.tag!=="OBJECTIVE"), proof:!!o.proof, kind:"fact", clueIdx:-1 }));
+  story.referencedObjects=[]; story.extraOrder=[]; story.discoveredExtras=0;
+  story.time=""; story.atmosphere="still";
+  story.narrative=hc.narrative; story.intro=[hc.narrative];
+  try{ story.ambient=pickAmbient(story); }catch(e){}
+  _unitCredited=new Set();
+}
+
+function handCheckDiscoveries(){
+  if(!C||!C.hand||!HAND.case) return; const hc=HAND.case;
+  const correct=i=>board[i]===C.solution[i];
+  hc.labeledCells.forEach(L=>{ if(!HAND.labeledResolved.has(L.id) && correct(L.cell)) HAND.labeledResolved.add(L.id); });
+  const boxSolved=b=>{ const {r0,c0}=E.rcOfBox(C.cfg,b); for(let a=0;a<3;a++)for(let d=0;d<3;d++){ const i=(r0+a)*9+(c0+d); if(i===C.murderCell) continue; if(!correct(i)) return false; } return true; };
+  hc.observations.forEach((o,i)=>{ if(HAND.fired.has(i)) return; const u=o.unlock||{on:"open"};
+    if(u.on==="open") return;   // shown from the start; not a discovery
+    let met=false;
+    if(u.on==="labeled") met=HAND.labeledResolved.has(u.id);
+    else if(u.on==="box") met=boxSolved(u.box);
+    else if(u.on==="grid") met=gridComplete();
+    if(met) handFire(i);
+  });
+}
+
+function handFire(i){
+  const hc=HAND.case, o=hc.observations[i]; if(!o) return;
+  HAND.fired.add(i); HAND.revealed.add(i); HAND.facts.push(o.text);
+  if(o.revealsMotive && story) story.motiveRevealed=true;
+  handRenderFacts();
+  if(typeof renderEvidenceUI==="function") renderEvidenceUI();
+  if(o.revealsMotive && typeof renderCase==="function") renderCase();   // surface the Possible Motives panel
+  handCard(o.tag, o.text);
+  const at=document.getElementById("assistantText");
+  if(at){ at.innerHTML=`New observation on file. <span style="color:#c8a24a">Added to Discovered Facts.</span>`; const ap=document.getElementById("assistant"); if(ap) ap.hidden=false; }
+  try{ if(typeof sfx==="function") sfx("confirm"); }catch(e){}
+}
+
+let _handCardT=null;
+function handCard(tag, html){
+  let el=document.getElementById("handCard");
+  if(!el){ el=document.createElement("div"); el.id="handCard"; el.className="hand-card"; el.addEventListener("click",()=>el.classList.remove("show")); document.body.appendChild(el); }
+  el.innerHTML=`<div class="hand-card-tag">New observation · ${tag}</div><div>${html}</div><div class="hand-card-foot">Added to Discovered Facts · tap to dismiss</div>`;
+  el.classList.add("show"); clearTimeout(_handCardT); _handCardT=setTimeout(()=>el.classList.remove("show"),5200);
+}
+
+function handSyncUI(){
+  let panel=document.getElementById("handFacts");
+  if(C&&C.hand){
+    if(!panel){ panel=document.createElement("div"); panel.id="handFacts"; panel.className="hand-facts"; document.body.appendChild(panel); }
+    panel.hidden=false; handRenderFacts();
+  } else if(panel){ panel.hidden=true; }
+}
+function handRenderFacts(){
+  const panel=document.getElementById("handFacts"); if(!panel) return;
+  const hc=HAND.case, total=hc?hc.observations.filter(o=>!o.unlock||o.unlock.on!=="open").length:0;
+  const items=HAND.facts.length? HAND.facts.map(f=>`<li>${f}</li>`).join("")
+    : `<li class="hand-empty">No observations yet — settle positions on Graves' grid to uncover them.</li>`;
+  panel.innerHTML=`<div class="hand-facts-h"><span>🔎 Discovered Facts</span><span>${HAND.facts.length}/${total}</span></div><ul class="hand-facts-list">${items}</ul>`;
+}
+
+function handBuildChain(){
+  const hc=HAND.case, k=Skin.sName(THEME,C.killer), capF=s=>s.charAt(0).toUpperCase()+s.slice(1);
+  const chain=$("chain"); if(chain){ chain.innerHTML="";
+    const head=document.createElement("li"); head.innerHTML=`The body lay in <b>${hc.sceneRoomName}</b>. On Graves' grid, the scene and the positions the observations point to settle on a single marker.`; chain.appendChild(head);
+    hc.labeledCells.filter(L=>L.tiesToScene).forEach(L=>{ const li=document.createElement("li"); li.innerHTML=`<span class="x">→</span> ${capF(L.role)} — <b>${k.name}</b>.`; chain.appendChild(li); });
+    const tail=document.createElement("li"); tail.innerHTML=`Every thread meets one figure: <b>${k.name}</b>.`; chain.appendChild(tail);
+  }
+  const ws=$("winStory"); if(ws) ws.innerHTML=hc.winStory;
+}
+
+function startHandCase(id){ startCase({hand:id}); if(typeof devLog==="function") devLog("Launched hand case: "+id); }
+
 const DEV_GROUPS=[
  ["Manor progression",[["Unlock next room",devUnlockNext],["Lock previous room",devLockPrev],["Restore +1 step",devRestoreStep],["Restore room FULLY",devRestoreFull],["Reset room → ruined",devResetRoom],["Reset ALL manor",devResetManor,"warn"]]],
  ["Seals",[["+1 Seal",()=>devEcon((setManorSeals(manorSeals()+1),"+1 seal"))],["+10 Seals",()=>devEcon((setManorSeals(manorSeals()+10),"+10 seals"))],["Seals → 0",()=>devEcon((setManorSeals(0),"seals = 0"))]]],
@@ -6369,6 +6499,7 @@ const DEV_GROUPS=[
  ["Trophies / memorial",[["Unlock all trophies",devUnlockTrophies],["Unlock all memorials",devUnlockMemorials],["Reset trophies & memorials",devResetTrophies,"warn"]]],
  ["Story / flow",[["Replay opening intro",()=>showManorStory(MANOR_OPENING,null,"intro")],["Reset 'seen' flags",devResetSeen],["Go to Manor",()=>showManor()],["Reset EVERYTHING",devResetAll,"warn"]]],
  ["Quick launch",[["Routine (Easy)",()=>devStart("easy")],["Troubling (Medium)",()=>devStart("medium")],["Grim (Hard)",()=>devStart("hard")],["Cold (Extreme)",()=>devStart("extreme")]]],
+ ["Detective cases",[["🪚 The Blade on the Wall (planted weapon)",()=>startHandCase("case1")],["☂ The Wet Umbrella (false alibi)",()=>startHandCase("case2")],["📓 The Cellar Ledger (overlooked)",()=>startHandCase("case3")]]],
  ["Toggles / diagnostics",[["Fill solution",devFillSolution],["Jump to accusation",()=>{ if(C&&!solved) openAccusation(); else devLog("No active case."); }],["Planted-weapon case",devPlanted],["Motion: toggle",devToggleMotion],["App-fit: toggle",devToggleAppfit],["Capture view: toggle",toggleCapture],["Framing guide: cycle",cycleFraming],["Capture preset: toggle",toggleCapturePreset],["Dump state → console",devDump]]],
 ];
 function buildDevPanel(){ if($("devPanel")) return $("devPanel");
