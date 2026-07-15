@@ -24,7 +24,7 @@
     --disc-given:#473f2c;   /* darker disc for given/locked suspects (vs player-placed cream) */
     --ring-w:2.4px;         /* token ring thickness */
     --ring-rest:54%;        /* P6: resting token-ring colour mix toward the panel (lower = calmer; lit/selected/focus rings stay 100%) */
-    --wall-color:#a89668;   /* P6: region "house walls" get a lighter warm tan so the 3x3 rooms read as blocks (inter-cell gaps stay --grid-thick) */
+    --wall-color:#2A2F3A;   /* NOIR region "house walls" (was warm tan #a89668) so the gold selection glow contrasts instead of blending */
   }
   *{box-sizing:border-box;}
   /* hard guard: the page can never be wider than the device, so the browser renders at
@@ -107,8 +107,8 @@
   /* persistent reminder that clues describe the deduction grid, not a manor map */
   .clue-grid-note{font-size:11px;font-style:italic;color:var(--ink-dim);text-align:center;margin:6px 0 0;opacity:.85;}
   body.phone .clue-grid-note{font-size:calc(11px * var(--ps,1));}
-  .board{display:grid;background:var(--grid-thick);gap:1px;padding:3px;
-    border:3px solid var(--grid-thick);border-radius:6px;
+  .board{display:grid;background:#1B2330;gap:1px;padding:3px;   /* NOIR: grid gaps + board bg were --grid-thick #776b4f */
+    border:3px solid #1A1A22;border-radius:6px;   /* NOIR frame outline (was --grid-thick #776b4f) */
     box-shadow:0 14px 40px rgba(0,0,0,.6),inset 0 0 0 1px #000;user-select:none;}
   .cell{position:relative;display:flex;align-items:center;justify-content:center;
     background:var(--panel);cursor:pointer;width:var(--cell);height:var(--cell);
@@ -218,7 +218,7 @@
      slightly larger portrait — a strong jump above the dimmed rest (body.suspect-focus). The declared cell
      box-shadow is the resting/static halo (shown when Motion is off); matchPulse breathes it. */
   .cell.match{z-index:3;box-shadow:inset 0 0 0 2px rgba(231,185,77,.55), 0 0 14px 2px rgba(231,185,77,.4);
-    animation:matchPulse 1.8s ease-in-out infinite;}
+    animation:matchPulse 3.6s ease-in-out infinite;}   /* slow, calm breathe (was 1.8s) so the gold glow reads as a pulse, not a blink */
   .cell.match .token{transform:scale(1.06);filter:brightness(1.14) saturate(1.12) drop-shadow(0 0 6px rgba(231,185,77,.55));}
   @keyframes matchPulse{
     0%,100%{box-shadow:inset 0 0 0 2px rgba(231,185,77,.5), 0 0 10px 1px rgba(231,185,77,.3);}
@@ -700,22 +700,29 @@
   .accuse-feedback.good{color:var(--good);}
   /* payoff. background-image is a graceful hook: if assets/ui/newspaper.png is
      absent the image simply doesn't paint and the cream box (background-color) shows. */
-  .newspaper{position:relative;background-color:#efe6d0;color:#1a1a22;border:1px solid #b8a878;border-radius:6px;
-    background-image:url("assets/ui/newspaper.png");background-size:cover;background-position:center;
-    padding:12px 14px 14px;margin:2px 0 6px;box-shadow:0 4px 14px rgba(0,0,0,.5);text-align:center;}
-  .news-masthead{font-family:Georgia,serif;font-weight:bold;font-size:12px;letter-spacing:3px;text-transform:uppercase;
-    border-bottom:2px solid #1a1a22;padding-bottom:4px;margin-bottom:6px;}
-  .news-headline{font-family:Georgia,serif;font-weight:bold;font-size:20px;line-height:1.15;text-transform:uppercase;letter-spacing:.5px;}
+  /* payoff newspaper: the paper is a plain TEXTURE only (flat cream + faint grain). All text is HTML,
+     laid out as ONE centered column, so nothing double-layers or re-crops under the headline. */
+  .newspaper{position:relative;background:#efe6d0;color:#1a1a22;border:1px solid #b8a878;border-radius:6px;
+    padding:14px 16px 15px;margin:2px 0 8px;box-shadow:0 4px 14px rgba(0,0,0,.5);text-align:center;overflow:hidden;}
+  .newspaper::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:6px;opacity:.07;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cfilter id='ng'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='80' height='80' filter='url(%23ng)'/%3E%3C/svg%3E");}
+  .news-inner{position:relative;max-width:340px;margin:0 auto;}
+  .news-masthead{font-family:Georgia,serif;font-weight:bold;font-size:12.5px;letter-spacing:3px;text-transform:uppercase;color:#2a2620;}
+  .news-rule{height:0;border-top:2px solid #1a1a22;box-shadow:0 3px 0 -2px #1a1a22;margin:5px auto 8px;}   /* double hairline rule */
+  .news-headline{font-family:Georgia,serif;font-weight:bold;text-transform:uppercase;letter-spacing:.5px;color:#141018;
+    font-size:clamp(16px,4.7vw,23px);line-height:1.13;
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}   /* auto-fit: never blows out the box */
+  .news-byline{font-family:Georgia,serif;font-style:italic;font-size:11px;letter-spacing:.4px;color:#6a6152;margin-top:7px;}
   .news-headline.typing::after{content:"";display:inline-block;width:3px;height:.92em;background:currentColor;
     margin-left:2px;vertical-align:-1px;animation:hlCaret .6s steps(1) infinite;}
   @keyframes hlCaret{50%{opacity:0;}}
-  .news-stamp{position:absolute;right:-10px;top:-14px;width:78px;transform:rotate(9deg);pointer-events:none;
-    filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));}
-  /* fail: don't celebrate — the CASE CLOSED art is swapped for a cold grey-blue text stamp */
-  .modal.failed .news-stamp{display:none;}
-  .news-cold{display:none;position:absolute;right:-6px;top:-12px;transform:rotate(9deg);pointer-events:none;
-    font-family:"Courier New",monospace;font-weight:700;font-size:14px;letter-spacing:2px;text-transform:uppercase;
-    color:#8fa3c0;border:3px solid rgba(120,140,170,.8);border-radius:6px;padding:5px 10px;background:rgba(20,26,38,.55);}
+  /* CASE CLOSED / cold stamp: anchored INSIDE the box corner with non-negative, size-aware offsets */
+  .news-stamp-wrap{position:absolute;top:7px;right:7px;width:clamp(52px,20%,76px);pointer-events:none;z-index:2;}
+  .news-stamp{width:100%;transform:rotate(8deg);filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));}
+  .modal.failed .news-stamp-wrap{display:none;}
+  .news-cold{display:none;position:absolute;top:8px;right:8px;transform:rotate(8deg);pointer-events:none;z-index:2;
+    font-family:"Courier New",monospace;font-weight:700;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;
+    color:#8fa3c0;border:3px solid rgba(120,140,170,.8);border-radius:6px;padding:4px 8px;background:rgba(20,26,38,.55);}
   .modal.failed .news-cold{display:block;}
   .news-cold.j-thunk{animation:jThunk .42s cubic-bezier(.3,1.25,.5,1);}
   .payoff-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;text-align:left;}
@@ -1045,8 +1052,7 @@
   body.phone .howto-lead,body.phone .howto-steps li,body.phone .howto-foot{font-size:calc(16px * var(--ps,1));}
   body.phone .reveal-wrap{width:calc(128px * var(--ps,1));height:calc(128px * var(--ps,1));}
   body.phone .reveal-token{width:calc(76px * var(--ps,1));height:calc(76px * var(--ps,1));}
-  body.phone .news-headline{font-size:calc(20px * var(--ps,1));}
-  body.phone .news-stamp{right:0;width:calc(62px * var(--ps,1));}
+  /* newspaper: headline auto-fits via clamp(); stamp is corner-anchored via .news-stamp-wrap — no phone overrides needed */
   body.phone .payoff-grid{grid-template-columns:1fr;}
   body.phone .accuse-q{font-size:calc(14.5px * var(--ps,1));}
   body.phone .accuse-select,body.phone .field input{font-size:calc(16px * var(--ps,1));min-height:calc(46px * var(--ps,1));}
@@ -2066,10 +2072,14 @@
     <div class="modal center">
       <button class="x" id="winClose"><img src="assets/ui/icon-close.png" alt="close"/></button>
       <div class="newspaper">
-        <img class="news-stamp" src="assets/ui/stamp-caseclosed.png" alt="" />
+        <div class="news-stamp-wrap"><img class="news-stamp" src="assets/ui/stamp-caseclosed.png" alt="" /></div>
         <div class="news-cold">Case Gone Cold</div>
-        <div class="news-masthead">The Blackwood Herald</div>
-        <div class="news-headline" id="newsHeadline">—</div>
+        <div class="news-inner">
+          <div class="news-masthead">The Blackwood Herald</div>
+          <div class="news-rule"></div>
+          <div class="news-headline" id="newsHeadline">—</div>
+          <div class="news-byline">Late Evening Edition</div>
+        </div>
       </div>
       <div class="reveal-wrap" id="revealWrap"><div class="reveal-token" id="revealToken"></div><div class="reveal-bars" id="revealBars"></div></div>
       <div class="killer-name" id="killerName">—</div>
@@ -3764,7 +3774,7 @@ function renderClueList(){
     const li=document.createElement("li"); li.dataset.n=(idx+1);
     if(ev.key) li.classList.add("key"); else li.classList.add("discovered");
     const star=ev.key?`<span class="keymark" title="key evidence">★</span>`:`<span class="disc-mark" title="discovered during the investigation">✦</span>`;
-    li.innerHTML=`<span class="ev-tag tag-${ev.tag.toLowerCase()}">${ev.tag}</span>${star}${ev.text}`;
+    li.innerHTML=`<span class="ev-tag tag-${ev.tag.toLowerCase()}">${ev.tag}</span>${star}${(C&&C.hand)?glossaryWrap(ev.text):ev.text}`;
     li.style.cursor="pointer"; li.title="Click: show it on the board · Double-click: mark as used";
     li.addEventListener("click",()=>highlightClue(ev));
     li.addEventListener("dblclick",()=>{ li.classList.toggle("used"); if(li.classList.contains("used"))cluesUsed.add(idx); else cluesUsed.delete(idx); });
@@ -3782,7 +3792,7 @@ function renderEvCurrent(){
   clueStep=((clueStep%n)+n)%n;
   const e=vis[clueStep].e;
   const star=e.key?`<span class="keymark" title="key evidence">★</span>`:`<span class="disc-mark">✦</span>`;
-  const html=`<span class="ev-tag tag-${e.tag.toLowerCase()}">${e.tag}</span>${star}${e.text}`;
+  const html=`<span class="ev-tag tag-${e.tag.toLowerCase()}">${e.tag}</span>${star}${(C&&C.hand)?glossaryWrap(e.text):e.text}`;
   if(html!==_evClueHTML && motionOK()) restartAnim($("evClue"),"ev-swap");   // page-turn only when the clue actually changes
   _evClueHTML=html;
   $("evClue").innerHTML=html;
@@ -6417,6 +6427,14 @@ function handInjectCSS(){ if(document.getElementById("handCSS")) return; const s
   .story-cell::after{content:"";position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:#c8a24a;box-shadow:0 0 5px rgba(200,162,74,.9);pointer-events:none;z-index:4;}
   .story-cell.story-resolved{box-shadow:inset 0 0 0 2px rgba(90,190,130,.82);}
   .story-cell.story-resolved::after{background:#5abe82;box-shadow:0 0 5px rgba(90,190,130,.9);}
+  .term{background:none;border:0;padding:0 1px;margin:0;font:inherit;color:#b98f2e;cursor:pointer;border-bottom:1px dotted rgba(200,162,74,.75);}
+  .term:hover,.term:focus{color:#c8a24a;border-bottom-color:#c8a24a;outline:none;}
+  .glossary-pop{position:fixed;z-index:9600;max-width:min(280px,86vw);background:linear-gradient(180deg,#20242c,#171a20);color:#efe6d0;border:1px solid #3a4150;border-radius:10px;padding:11px 13px 12px;box-shadow:0 14px 44px rgba(0,0,0,.6);opacity:0;pointer-events:none;transform:translateY(4px);transition:opacity .14s,transform .14s;}
+  .glossary-pop.show{opacity:1;pointer-events:auto;transform:translateY(0);}
+  .gp-x{position:absolute;top:5px;right:7px;background:none;border:0;color:#8b93a2;font-size:15px;line-height:1;cursor:pointer;}
+  .gp-x:hover{color:#efe6d0;}
+  .gp-term{font-weight:700;color:#c8a24a;text-transform:capitalize;font-size:14px;margin-bottom:4px;padding-right:16px;}
+  .gp-def{font-size:13px;line-height:1.46;color:#dfe4ea;}
   `; document.head.appendChild(s); }
 
 function buildHandCase(id){
@@ -6511,7 +6529,7 @@ let _handCardT=null;
 function handCard(tag, html){
   let el=document.getElementById("handCard");
   if(!el){ el=document.createElement("div"); el.id="handCard"; el.className="hand-card"; el.addEventListener("click",()=>el.classList.remove("show")); document.body.appendChild(el); }
-  el.innerHTML=`<div class="hand-card-tag">${tag}</div><div>${html}</div><div class="hand-card-foot">Added to Discovered Facts · tap to dismiss</div>`;
+  el.innerHTML=`<div class="hand-card-tag">${tag}</div><div>${glossaryWrap(html)}</div><div class="hand-card-foot">Added to Discovered Facts · tap to dismiss</div>`;
   el.classList.add("show"); clearTimeout(_handCardT); _handCardT=setTimeout(()=>el.classList.remove("show"),5200);
 }
 
@@ -6535,7 +6553,7 @@ function handRenderFacts(){
   const panel=document.getElementById("handFactsMount"); if(!panel) return;
   // total facts = every non-open observation + one resolution line per labeled cell (who/how/why)
   const hc=HAND.case, total=hc?(hc.observations.filter(o=>!o.unlock||o.unlock.on!=="open").length + hc.labeledCells.length):0;
-  const items=HAND.facts.length? HAND.facts.map(f=>`<li>${f}</li>`).join("")
+  const items=HAND.facts.length? HAND.facts.map(f=>`<li>${glossaryWrap(f)}</li>`).join("")
     : `<li class="hand-empty">No observations yet — settle positions on Graves' grid to uncover them.</li>`;
   panel.innerHTML=`<div class="hand-facts-h"><span>🔎 Discovered Facts</span><span>${HAND.facts.length}/${total}</span></div><ul class="hand-facts-list">${items}</ul>`;
 }
@@ -6544,13 +6562,69 @@ function handBuildChain(){
   const hc=HAND.case, k=Skin.sName(THEME,C.killer), capF=s=>s.charAt(0).toUpperCase()+s.slice(1);
   const chain=$("chain"); if(chain){ chain.innerHTML="";
     const head=document.createElement("li"); head.innerHTML=`The body lay in <b>${hc.sceneRoomName}</b>. On Graves' grid, the scene and the positions the observations point to settle on a single marker.`; chain.appendChild(head);
-    hc.labeledCells.filter(L=>L.tiesToScene).forEach(L=>{ const li=document.createElement("li"); li.innerHTML=`<span class="x">→</span> ${capF(L.role)} — <b>${k.name}</b>.`; chain.appendChild(li); });
+    hc.labeledCells.filter(L=>L.tiesToScene).forEach(L=>{ const li=document.createElement("li"); li.innerHTML=`<span class="x">→</span> ${glossaryWrap(capF(L.role))} — <b>${k.name}</b>.`; chain.appendChild(li); });
     const tail=document.createElement("li"); tail.innerHTML=`Every thread meets one figure: <b>${k.name}</b>.`; chain.appendChild(tail);
   }
-  const ws=$("winStory"); if(ws) ws.innerHTML=hc.winStory;
+  const ws=$("winStory"); if(ws) ws.innerHTML=glossaryWrap(hc.winStory);
 }
 
 function startHandCase(id){ startCase({hand:id}); if(typeof devLog==="function") devLog("Launched hand case: "+id); }
+
+/* ═══ Tap-to-define glossary (period words) — hand (detective) cases only ═══ */
+const GLOSSARY={
+  "hobnail":"a short thick-headed nail driven into the soles of heavy work boots.",
+  "codicil":"an addition to a will that changes or adds to its terms.",
+  "proof-sheet":"a trial print of a newspaper page, checked for errors before it goes to press.",
+  "spanner":"a hand tool for turning nuts and bolts; a wrench.",
+  "garrote":"a length of wire or cord used to strangle from behind.",
+  "tastevin":"a shallow silver cup used to judge the colour and taste of wine.",
+  "chatelaine":"a chain worn at the waist to carry keys and small household tools.",
+  "lorgnette":"eyeglasses held up to the eyes on a handle.",
+  "provenance":"the documented history of who has owned an object, proving it genuine.",
+  "salver":"a small silver tray for presenting letters or drinks.",
+  "decanter":"a glass vessel wine is poured into for serving at the table.",
+  "cravat":"a wide band of cloth worn around the neck; a forerunner of the necktie.",
+  "night-porter":"a servant who keeps the door and register of a club through the night.",
+  "society column":"a newspaper feature reporting the doings and scandals of the fashionable set.",
+  "masthead":"the printed title banner at the top of a newspaper's front page."
+};
+const GLOSSARY_TERMS=Object.keys(GLOSSARY).sort((a,b)=>b.length-a.length);   // longest first so multi-word terms win
+function glossaryWrap(s){
+  if(typeof s!=="string" || !s) return s;
+  const used=new Set();
+  return s.replace(/<[^>]+>|[^<]+/g, seg=>{
+    if(seg.charAt(0)==="<") return seg;   // an HTML tag — never wrap inside it
+    const hits=[];
+    for(const term of GLOSSARY_TERMS){ if(used.has(term)) continue;
+      const pat=term.replace(/[.*+?^${}()|[\]\\]/g,"\\$&").replace(/-/g,"[-\\s]");   // hyphen matches hyphen OR space
+      const m=new RegExp("\\b"+pat+"\\b","i").exec(seg);
+      if(m){ hits.push({term,start:m.index,end:m.index+m[0].length,text:m[0]}); used.add(term); } }
+    if(!hits.length) return seg;
+    hits.sort((a,b)=>a.start-b.start);
+    const keep=[]; let last=-1; for(const h of hits){ if(h.start>=last){ keep.push(h); last=h.end; } }   // drop overlaps
+    let out="",cur=0;
+    for(const h of keep){ out+=seg.slice(cur,h.start)+'<button type="button" class="term" data-term="'+h.term+'">'+h.text+'</button>'; cur=h.end; }
+    return out+seg.slice(cur);
+  });
+}
+function showGlossaryPopup(term, anchor){
+  const def=GLOSSARY[String(term).toLowerCase()]; if(!def) return;
+  let pop=document.getElementById("glossaryPop");
+  if(!pop){ pop=document.createElement("div"); pop.id="glossaryPop"; pop.className="glossary-pop"; document.body.appendChild(pop); }
+  pop.innerHTML='<button class="gp-x" aria-label="close">✕</button><div class="gp-term">'+term+'</div><div class="gp-def">'+def+'</div>';
+  pop.querySelector(".gp-x").onclick=()=>pop.classList.remove("show");
+  pop.classList.add("show");
+  const r=anchor.getBoundingClientRect(), pw=pop.offsetWidth, ph=pop.offsetHeight, m=8;
+  let left=Math.max(m,Math.min(r.left+r.width/2-pw/2, innerWidth-pw-m));
+  let top=r.bottom+6; if(top+ph>innerHeight-m) top=r.top-ph-6; if(top<m) top=m;
+  pop.style.left=left+"px"; pop.style.top=top+"px";
+}
+document.addEventListener("click", e=>{
+  const t=e.target.closest && e.target.closest(".term");
+  if(t){ e.preventDefault(); e.stopPropagation(); showGlossaryPopup(t.dataset.term, t); return; }   // capture-phase: beat the clue-list li click
+  const pop=document.getElementById("glossaryPop");
+  if(pop && pop.classList.contains("show") && !(e.target.closest && e.target.closest("#glossaryPop"))) pop.classList.remove("show");
+}, true);
 
 const DEV_GROUPS=[
  ["Manor progression",[["Unlock next room",devUnlockNext],["Lock previous room",devLockPrev],["Restore +1 step",devRestoreStep],["Restore room FULLY",devRestoreFull],["Reset room → ruined",devResetRoom],["Reset ALL manor",devResetManor,"warn"]]],
