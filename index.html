@@ -956,6 +956,7 @@
   body.phone.hand-active #handFactsMount{display:none;margin:-4px auto -5px;}                 /* phone: only visible as its own tab */
   body.phone.hand-active.btab-facts #handFactsMount{display:block;}
   body.phone.btab-facts #evMount,body.phone.btab-facts #assistant{display:none;}             /* Facts tab active -> hide Objective + Wembly */
+  .casefile #handFactsMount{max-width:none;margin:0 0 8px;}   /* desktop/appfit: hosted in the scrollable case-file side panel */
   body.phone .tray-label{display:none;}   /* phone: hide the "Suspects — tap to select…" instruction label (removed from the flow → no gap; tray itself unaffected) */
   body.phone .tray-hint{font-size:calc(14px * var(--ps,1));}
   /* tray sized so all 9 suspects fall into exactly 2 rows (5 + 4): 5 must fit one row at ~360px */
@@ -4820,6 +4821,7 @@ function trophyCardHTML(t, unlock, opts){
 }
 /* the post-case strip: collection progress, newly-unlocked cards (motion-gated slide-in), memorial, teases */
 let _payoffStrip=null, _stripChimed=false;   // chime once per payoff (skipPayoff re-renders the strip)
+let _payoffLive=false;   // true only while the reveal sequence is running -> pointerdown may skip it ONCE (scrolls after are no-ops)
 function renderTrophyStrip(data){
   const strip=$("trophyStrip"); if(!strip) return;
   if(!data){ strip.hidden=true; strip.innerHTML=""; return; }
@@ -4836,6 +4838,7 @@ function renderTrophyStrip(data){
   }
   if(data.teases&&data.teases.length) html+=`<div class="ts-tease">`+data.teases.map(x=>`<div>🔓 ${x}</div>`).join("")+`</div>`;
   strip.innerHTML=html; strip.hidden=false;
+  strip.querySelectorAll(".ts-card").forEach(c=>c.addEventListener("animationend",()=>{ c.style.animation="none"; },{once:true}));   // one-shot: freeze after the slide-in
 }
 /* ---- Archive: tabbed trophy gallery ---- */
 let _trophyFilter="all";
@@ -5731,6 +5734,7 @@ function updatePhone(){
   document.documentElement.style.setProperty("--ps", ps.toFixed(3));
   document.documentElement.style.overflow = appfit ? "hidden" : "";   // belt-and-braces: no page scroll in appfit
   placeCaseFile();
+  if(typeof placeFacts==="function") placeFacts();   // re-home the Discovered-Facts panel when the layout mode changes
   if(appfit) fitBoard();
   else { document.documentElement.style.removeProperty("--cell"); const lay=document.querySelector(".layout"); if(lay) lay.style.removeProperty("height"); }   // off-appfit: CSS owns --cell + layout height
   if(typeof refresh==="function" && C) refresh();    // re-pick bold/normal footprints
@@ -6115,6 +6119,7 @@ function slamStamp(sel,depth){ const s=document.querySelector("#winModal "+sel);
   const host=s.closest(".trio-cell")||s.closest(".trio-proof"); if(host) fxShake(host); }   // tiny localized "screen" shake
 function playPayoff(grade, won, perfect, headlineText){
   _payoffHeadline=headlineText||"";
+  _payoffLive=true;
   clearRevealTimers();
   const trio=document.querySelector("#accuseScore .accuse-trio");
   const wrap=$("revealWrap"), stamp=document.querySelector("#winModal .news-stamp"), paper=document.querySelector("#winModal .newspaper"),
@@ -6124,7 +6129,7 @@ function playPayoff(grade, won, perfect, headlineText){
   if(trio) trio.classList.remove("seq");
   document.querySelectorAll("#winModal .trio-cell").forEach(c=>c.classList.remove("in"));
   document.querySelectorAll("#winModal .payoff-stamp").forEach(s=>s.classList.remove("pre","slam"));
-  if(!motionOK()){ setHeadline(_payoffHeadline); renderTrophyStrip(_payoffStrip); return; }   // Motion off / reduced-motion -> everything static (strip shown, no slide-in)
+  if(!motionOK()){ setHeadline(_payoffHeadline); renderTrophyStrip(_payoffStrip); _payoffLive=false; return; }   // Motion off / reduced-motion -> everything static (strip shown, no slide-in)
   // motion on: run the sequence
   if(trio) trio.classList.add("seq");
   document.querySelectorAll("#winModal .payoff-stamp").forEach(s=>s.classList.add("pre"));
@@ -6145,9 +6150,9 @@ function playPayoff(grade, won, perfect, headlineText){
     if(big){ restartAnim(big,"j-thunk"); fxPuff(big); } sfx(won?"thunkBig":"buzz");
     fxShake($("winModal").querySelector(".modal")); if(perfect) fxConfetti(); });
   T(2860,()=> setHeadline(_payoffHeadline));                             // typewriter headline (existing)
-  T(3120,()=> renderTrophyStrip(_payoffStrip));                          // trophies strip slides in after the close
+  T(3120,()=>{ renderTrophyStrip(_payoffStrip); _payoffLive=false; });   // trophies strip slides in after the close; then lock (scrolls won't replay it)
 }
-function skipPayoff(){ clearRevealTimers();
+function skipPayoff(){ if(!_payoffLive) return; _payoffLive=false; clearRevealTimers();   // ignore stray pointerdowns (e.g. scroll) once the payoff has settled -> no animation replay
   const trio=document.querySelector("#accuseScore .accuse-trio"); if(trio) trio.classList.remove("seq");
   document.querySelectorAll("#winModal .trio-cell").forEach(c=>c.classList.add("in"));
   document.querySelectorAll("#winModal .payoff-stamp").forEach(s=>s.classList.remove("pre","slam"));
@@ -6510,12 +6515,20 @@ function handCard(tag, html){
   el.classList.add("show"); clearTimeout(_handCardT); _handCardT=setTimeout(()=>el.classList.remove("show"),5200);
 }
 
+function placeFacts(){
+  const mount=document.getElementById("handFactsMount"); if(!mount) return;
+  const cf=document.querySelector(".casefile");
+  const useCasefile = cf && !document.body.classList.contains("phone") && getComputedStyle(cf).display!=="none";
+  if(useCasefile){ if(mount.parentElement!==cf){ const h2=cf.querySelector("h2"); cf.insertBefore(mount, h2?h2.nextSibling:cf.firstChild); } }
+  else { const bw=document.querySelector(".board-wrap"); if(bw && mount.parentElement!==bw) bw.appendChild(mount); }
+}
 function handSyncUI(){
   const active=!!(C&&C.hand);
   document.body.classList.toggle("hand-active", active);                       // shows the Discovered-Facts panel (inline desktop / tab phone)
   const tab=document.getElementById("btabFacts"); if(tab) tab.hidden=!active;   // the 3rd bottom tab only exists for hand cases
   if(!active && document.body.classList.contains("btab-facts")) setBottomTab("obj");   // never strand the Facts tab when leaving a hand case
   const legacy=document.getElementById("handFacts"); if(legacy) legacy.remove();   // tidy any floating overlay from an older build
+  placeFacts();   // host the panel where it is reachable (case file on desktop/appfit; inline/tab otherwise)
   handRenderFacts();
 }
 function handRenderFacts(){
